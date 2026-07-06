@@ -1,0 +1,9 @@
+Cleanup completed on: Mon  6 Jul 23:31:39 BST 2026
+All live task scripts passed checks for:
+- bash/python syntax
+- no non-ASCII comments/text
+- no Minhao hard-coded paths
+- no fixed gpu32/gpu15/gpu13/node037 locks
+
+Live script count:
+48

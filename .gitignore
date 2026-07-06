@@ -1,0 +1,41 @@
+# Large/generated data
+data/
+outputs/
+logs/
+envs/
+*.log
+*.err
+*.out
+
+# Python
+__pycache__/
+*.pyc
+.ipynb_checkpoints/
+
+# Model/checkpoint files
+*.ckpt
+*.pt
+*.pth
+*.npz
+*.pkl
+*.pickle
+
+# OpenFold large/generated folders
+code/COMP390_code/Result/
+code/COMP390_code/checkpoints/
+code/COMP390_code/demo_run_outputs_*/
+code/COMP390_code/openfold/
+
+# Archives
+*.tar
+*.tar.gz
+*.tar.zst
+*.zip
+
+# Slurm
+slurm-*.out
+
+# OS/editor
+.DS_Store
+.vscode/
+.idea/

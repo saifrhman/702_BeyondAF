@@ -1,0 +1,93 @@
+from pathlib import Path
+import re
+import pandas as pd
+
+# ===== 1. 输入根目录 =====
+ROOT = Path("/users/sgmwu14/scratch/openfold_inference_runs5times")
+
+# ===== 2. 输出目录 =====
+OUT_DIR = Path("/users/sgmwu14/scratch/plddt_analysis_results")
+OUT_DIR.mkdir(exist_ok=True, parents=True)
+
+OUT_CSV = OUT_DIR / "unrelaxed_plddt_summary.csv"
+
+# 只匹配 unrelaxed
+PATH_PAT = re.compile(
+    r"epoch_(\d+)/your_model_epoch_\d+/repeat_(\d+)/predictions/([^/]+?)_model_1_unrelaxed\.pdb$"
+)
+
+def extract_plddt_from_pdb(pdb_path: Path):
+    """
+    从 PDB 中提取整个蛋白的 pLDDT:
+    使用每个残基的 CA 原子 B-factor 作为该残基 pLDDT
+    再对整条链求平均
+    """
+    vals = []
+
+    with open(pdb_path, "r") as f:
+        for line in f:
+            if line.startswith("ATOM"):
+                atom_name = line[12:16].strip()
+                if atom_name == "CA":
+                    try:
+                        bfactor = float(line[60:66].strip())
+                        vals.append(bfactor)
+                    except ValueError:
+                        continue
+
+    if not vals:
+        return None
+
+    return {
+        "mean_plddt": sum(vals) / len(vals),
+        "min_plddt": min(vals),
+        "max_plddt": max(vals),
+        "num_residues": len(vals),
+    }
+
+def main():
+    rows = []
+
+    # 只扫描 unrelaxed
+    pdb_files = sorted(ROOT.rglob("*_unrelaxed.pdb"))
+
+    print(f"Found {len(pdb_files)} unrelaxed pdb files")
+
+    for pdb_path in pdb_files:
+        rel_str = str(pdb_path)
+        m = PATH_PAT.search(rel_str)
+        if not m:
+            continue
+
+        epoch, repeat, chain = m.groups()
+        plddt_stats = extract_plddt_from_pdb(pdb_path)
+
+        if plddt_stats is None:
+            print(f"WARNING: no CA atoms found in {pdb_path}")
+            continue
+
+        row = {
+            "epoch": int(epoch),
+            "repeat": int(repeat),
+            "chain": chain,
+            "state": "unrelaxed",
+            "pdb_path": str(pdb_path),
+            **plddt_stats,
+        }
+        rows.append(row)
+
+    df = pd.DataFrame(rows).sort_values(
+        ["epoch", "repeat", "chain"]
+    ).reset_index(drop=True)
+
+    df.to_csv(OUT_CSV, index=False)
+
+    print(f"Saved summary to: {OUT_CSV}")
+    print()
+    print("Rows:", len(df))
+    print()
+    print("Example rows:")
+    print(df.head())
+
+if __name__ == "__main__":
+    main()
