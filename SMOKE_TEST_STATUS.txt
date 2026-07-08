@@ -1,0 +1,14 @@
+2OLO AlphaFold-params smoke test completed successfully.
+
+Job ID: 9705636
+Node: gpu32
+Output:
+outputs/smoke_2olo_af_20260708_122525/repeat_1/predictions/2olo_A_model_1_unrelaxed.pdb
+outputs/smoke_2olo_af_20260708_122525/repeat_1/predictions/2olo_A_model_1_relaxed.pdb
+
+Status:
+- OpenFold code loaded successfully
+- JAX AlphaFold model_1 parameters loaded successfully
+- Precomputed alignments loaded successfully
+- GPU inference completed
+- Relaxation completed
