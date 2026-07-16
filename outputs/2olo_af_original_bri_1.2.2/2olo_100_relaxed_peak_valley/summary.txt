@@ -1,0 +1,48 @@
+2OLO peak-valley analysis
+==========================
+Input directory: /users/sgsrehm1/COMP702_BeyondAF/outputs/2olo_af_original_bri_1.2.2/2olo_100_relaxed_invariants/compute_invariants
+CSV files analysed: 100
+Residues represented: 389
+Descriptors represented: 30
+
+Tau descriptors are ranked using circular angular difference.
+Other descriptors are ranked using their raw maximum-minus-minimum range.
+
+Top 10 for tau(AC)
+------------------
+Residue 386 Q: valley=-26.19 (repeat 65), peak=153.21 (repeat 74), raw=179.40, circular=179.40, std=38.84, wraparound=False
+Residue 331 R: valley=-40.83 (repeat 61), peak=135.10 (repeat 65), raw=175.93, circular=175.93, std=78.84, wraparound=False
+Residue 38 F: valley=-17.01 (repeat 44), peak=155.01 (repeat 90), raw=172.02, circular=172.02, std=22.70, wraparound=False
+Residue 385 P: valley=-29.67 (repeat 65), peak=138.99 (repeat 40), raw=168.66, circular=168.66, std=42.11, wraparound=False
+Residue 268 G: valley=-39.88 (repeat 21), peak=170.97 (repeat 38), raw=210.85, circular=149.15, std=85.84, wraparound=True
+Residue 387 S: valley=8.19 (repeat 65), peak=140.46 (repeat 84), raw=132.27, circular=132.27, std=22.19, wraparound=False
+Residue 388 A: valley=-14.91 (repeat 98), peak=107.13 (repeat 52), raw=122.04, circular=122.04, std=19.88, wraparound=False
+Residue 266 A: valley=62.96 (repeat 98), peak=164.15 (repeat 77), raw=101.19, circular=101.19, std=44.12, wraparound=False
+Residue 45 T: valley=77.68 (repeat 50), peak=123.01 (repeat 70), raw=45.33, circular=45.33, std=8.80, wraparound=False
+Residue 177 T: valley=-57.62 (repeat 92), peak=-21.77 (repeat 71), raw=35.85, circular=35.85, std=3.53, wraparound=False
+
+Top 10 for tau(CN)
+------------------
+Residue 177 T: valley=-179.96 (repeat 21), peak=-156.19 (repeat 92), raw=23.77, circular=23.77, std=2.29, wraparound=False
+Residue 37 T: valley=-177.00 (repeat 44), peak=164.91 (repeat 53), raw=341.91, circular=18.09, std=47.82, wraparound=True
+Residue 54 L: valley=-169.73 (repeat 5), peak=-155.41 (repeat 82), raw=14.32, circular=14.32, std=2.30, wraparound=False
+Residue 251 P: valley=-176.87 (repeat 66), peak=-162.96 (repeat 69), raw=13.91, circular=13.91, std=1.98, wraparound=False
+Residue 148 G: valley=-177.96 (repeat 35), peak=-164.57 (repeat 79), raw=13.39, circular=13.39, std=2.13, wraparound=False
+Residue 325 L: valley=163.31 (repeat 6), peak=175.94 (repeat 86), raw=12.63, circular=12.63, std=1.23, wraparound=False
+Residue 48 A: valley=-178.49 (repeat 74), peak=-166.74 (repeat 70), raw=11.75, circular=11.75, std=2.57, wraparound=False
+Residue 204 C: valley=-178.34 (repeat 81), peak=170.12 (repeat 88), raw=348.46, circular=11.54, std=34.65, wraparound=True
+Residue 45 T: valley=167.06 (repeat 22), peak=178.53 (repeat 89), raw=11.47, circular=11.47, std=2.46, wraparound=False
+Residue 53 R: valley=168.38 (repeat 91), peak=179.59 (repeat 82), raw=11.21, circular=11.21, std=2.00, wraparound=False
+
+Top 10 for tau(NA)
+------------------
+Residue 44 G: valley=-77.16 (repeat 100), peak=98.25 (repeat 43), raw=175.41, circular=175.41, std=32.77, wraparound=False
+Residue 332 Q: valley=-106.45 (repeat 65), peak=64.52 (repeat 46), raw=170.97, circular=170.97, std=77.40, wraparound=False
+Residue 39 F: valley=-139.14 (repeat 2), peak=65.28 (repeat 53), raw=204.42, circular=155.58, std=27.11, wraparound=True
+Residue 388 A: valley=-137.91 (repeat 43), peak=-64.26 (repeat 31), raw=73.65, circular=73.65, std=8.49, wraparound=False
+Residue 386 Q: valley=-129.53 (repeat 47), peak=-69.84 (repeat 65), raw=59.69, circular=59.69, std=12.88, wraparound=False
+Residue 269 E: valley=-121.80 (repeat 61), peak=-65.29 (repeat 7), raw=56.51, circular=56.51, std=10.38, wraparound=False
+Residue 266 A: valley=-148.08 (repeat 48), peak=-92.14 (repeat 61), raw=55.94, circular=55.94, std=18.92, wraparound=False
+Residue 46 S: valley=-155.25 (repeat 64), peak=-103.31 (repeat 50), raw=51.94, circular=51.94, std=10.18, wraparound=False
+Residue 177 T: valley=-113.74 (repeat 5), peak=-63.32 (repeat 92), raw=50.42, circular=50.42, std=4.81, wraparound=False
+Residue 43 G: valley=-131.74 (repeat 48), peak=-86.25 (repeat 41), raw=45.49, circular=45.49, std=8.98, wraparound=False

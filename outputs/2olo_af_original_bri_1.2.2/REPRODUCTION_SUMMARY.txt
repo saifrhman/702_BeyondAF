@@ -1,0 +1,26 @@
+Minhao 2OLO BRI reproduction
+============================
+
+Input ensemble:
+- 100 relaxed 2OLO predictions
+- AlphaFold model_1 parameters: params_model_1.npz
+- 389 predicted residues
+- Experimental reference: 2OLO model 1 chain A
+
+Generated outputs:
+- 100 invariant CSV files
+- BRI comparison plot
+- LAI comparison plot
+- BTI comparison plot
+- residue-wise peak-valley analysis
+
+Exact reproduced examples:
+- tau(AC), residue 38: -17.01 to 155.01, repeats 44 and 90
+- tau(NA), residue 39: -139.14 to 65.28, repeats 2 and 53
+- tau(AC), residue 43: -179.86 to 179.86, repeats 41 and 90
+- tau(AC), residue 268: -39.88 to 170.97, repeats 21 and 38
+- tau(AC), residue 386: -26.19 to 153.21, repeats 65 and 74
+
+Conclusion:
+The original 2OLO BRI/LAI/BTI and peak-valley analysis has been
+successfully reproduced.

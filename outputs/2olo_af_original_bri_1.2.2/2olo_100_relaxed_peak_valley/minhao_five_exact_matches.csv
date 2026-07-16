@@ -1,0 +1,6 @@
+descriptor,residue_id,residue_label,valley_value,peak_value,raw_range,circular_difference_deg,valley_repeat,peak_repeat,possible_wraparound
+tau(AC),38,F,-17.01,155.01,172.01999999999998,172.01999999999998,44,90,False
+tau(NA),39,F,-139.14,65.28,204.42,155.58000000000004,2,53,True
+tau(AC),43,G,-179.86,179.86,359.72,0.2799999999999727,41,90,True
+tau(AC),268,G,-39.88,170.97,210.85,149.14999999999998,21,38,True
+tau(AC),386,Q,-26.19,153.21,179.4,179.39999999999998,65,74,False
