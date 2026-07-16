@@ -1,0 +1,26 @@
+
+ ********************************************************************
+ * US-align (Version 20260527)                                      *
+ * Universal Structure Alignment of Proteins and Nucleic Acids      *
+ * Reference: C Zhang, L Freddolino, Y Zhang. (2026) Nat Protoc     *
+ *            C Zhang, M Shine, AM Pyle, Y Zhang. (2022) Nat Methods*
+ *            C Zhang, AM Pyle (2022) iScience.                     *
+ * Please email comments and suggestions to zhang@zhanggroup.org    *
+ ********************************************************************
+
+Name of Structure_1: /users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/Result/reproduction_2olo_3models_20260715_123247/alphafold_params/repeat_1/predictions/2olo_A_model_1_unrelaxed.pdb:A (to be superimposed onto Structure_2)
+Name of Structure_2: /users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/demo_single_2olo/taskcif/2olo.cif:A
+Length of Structure_1: 389 residues
+Length of Structure_2: 393 residues
+
+Aligned length= 388, RMSD=   1.57, Seq_ID=n_identical/n_aligned= 1.000
+TM-score= 0.95346 (normalized by length of Structure_1: L=389, d0=7.13)
+TM-score= 0.94411 (normalized by length of Structure_2: L=393, d0=7.17)
+(You should use TM-score normalized by length of the reference structure)
+
+(":" denotes residue pairs of d < 5.0 Angstrom, "." denotes other aligned residues)
+MTESYDVVVVGGGPVGLATAWQVAERGHRVLVLERHTFFNENGGTSGAERHWRLQYTQEDLFRLTLETLPLWRALESRCERRLIHEIGSLWFGDTDVVTNEGQISGTAAMMDKLSVRYEWLKATDIERRFGFRGLPRDYEGFLQPDGGTIDVRGTLAALFTLAQAAGATLRAGETVTELVPDADGVSVTTDRGTYRAGKVVLACGPYTNDLLEPLGARLAYSVYEMAIAAYRQATPVTEAPFWFAFQQPTPQDTNLFYGFGHNPWAPGEFVRCGPDFEVDPLDHPSAATGVADRRQMDRLSGWLRDHLPTVDPDPVRTSTCLAVLPTDPERQFFLGTARDLMTHGEKLVVYGAGWAFKFVPLFGRICADLAVEDSTAYDISRLAPQSAL-----
+ ::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::     
+-TESYDVVVVGGGPVGLATAWQVAERGHRVLVLERHTFFNENGGTSGAERHWRLQYTQEDLFRLTLETLPLWRALESRCERRLIHEIGSLWFGDTDVVTNEGQISGTAAMMDKLSVRYEWLKATDIERRFGFRGLPRDYEGFLQPDGGTIDVRGTLAALFTLAQAAGATLRAGETVTELVPDADGVSVTTDRGTYRAGKVVLACGPYTNDLLEPLGARLAYSVYEMAIAAYRQATPVTEAPFWFAFQQPTPQDTNLFYGFGHNPWAPGEFVRCGPDFEVDPLDHPSAATGVADRRQMDRLSGWLRDHLPTVDPDPVRTSTCLAVLPTDPERQFFLGTARDLMTHGEKLVVYGAGWAFKFVPLFGRICADLAVEDSTAYDISRLAPQSALLEHHH
+
+#Total CPU time is  0.15 seconds

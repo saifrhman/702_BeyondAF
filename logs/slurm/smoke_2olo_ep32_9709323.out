@@ -1,0 +1,10 @@
+===== Job started on Wed  8 Jul 20:54:20 BST 2026 =====
+Hostname: gpu31.barkla2.liv.alces.network
+CUDA_VISIBLE_DEVICES=0
+[CHECK] OPENFOLD_SCRIPT=/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/openfold/run_pretrained_openfold.py
+[CHECK] FASTA_DIR=/users/sgsrehm1/scratch/openfold_inference/fasta_dir
+[CHECK] MMCIF_DIR=/users/sgsrehm1/scratch/taskcif
+[CHECK] ALIGN_DIR=/users/sgsrehm1/scratch/openfold_inference/alignments_cf
+[CHECK] CKPT=/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/checkpoints/run_subset_gpu32_h100_ep33/csv_logs/version_0/checkpoints/32-330000.ckpt
+Output dir: /users/sgsrehm1/COMP702_BeyondAF/outputs/smoke_2olo_trained_ep32_9709323
+===== Job finished on Wed  8 Jul 20:55:29 BST 2026 =====

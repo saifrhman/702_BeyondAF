@@ -15,6 +15,8 @@ source "$HOME/COMP702_BeyondAF/config/comp702_paths.sh"
 
 module load miniforge3/25.3.0-python3.12.10
 eval "$(conda shell.bash hook)"
+module load miniforge3/25.3.0-python3.12.10
+source "$(conda info --base)/etc/profile.d/conda.sh"
 conda activate "$OPENFOLD_ENV"
 
 export PYTHONPATH="$OPENFOLD_CODE_DIR:${PYTHONPATH:-}"

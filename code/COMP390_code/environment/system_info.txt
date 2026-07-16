@@ -1,0 +1,9 @@
+Hostname: login1.barkla2.liv.alces.network
+Date: Sun 10 May 00:31:52 BST 2026
+User: sgmwu14
+
+Python:
+Python 3.10.19
+
+Conda:
+conda 25.11.1

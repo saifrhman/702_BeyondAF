@@ -1,0 +1,7 @@
+Run root: /users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/Result/smoke_2olo_minhao_relaxed_20260716_111819
+Repeats: 1
+Checkpoint: /users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/checkpoints/run_subset_gpu32_h100_ep33/csv_logs/version_0/checkpoints/32-330000.ckpt
+[Thu 16 Jul 11:18:53 BST 2026] Repeat 1/1, seed 1001
+[Thu 16 Jul 11:19:50 BST 2026] Finished all 1 repeats
+PDB count:
+2

@@ -1,0 +1,4 @@
+Loaded rows: 707292
+Columns: ['pdb_id', 'entity_id', 'model_id', 'chain_id', 'start_residue', 'chain_length', 'auth_chain_length', 'auth_chain_id', 'auth_seq_id_start', 'auth_seq_id_end', 'seq']
+Model-1 unique chains: 461578
+Saved to: /users/sgsrehm1/COMP702_BeyondAF/outputs/pdb707k_model1_chain_keys.csv

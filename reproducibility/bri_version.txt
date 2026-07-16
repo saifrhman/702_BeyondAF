@@ -1,0 +1,2 @@
+BRI version: 1.2.2.2
+BRI location: /users/sgsrehm1/fastscratch/envs/bri_env_1.2.2/lib/python3.10/site-packages/bri/__init__.py

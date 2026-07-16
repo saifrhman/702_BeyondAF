@@ -1,0 +1,833 @@
+config: !!python/object:ml_collections.config_dict.config_dict.ConfigDict
+  _allow_dotted_keys: false
+  _convert_dict: true
+  _fields:
+    data: !!python/object:ml_collections.config_dict.config_dict.ConfigDict
+      _allow_dotted_keys: false
+      _convert_dict: true
+      _fields:
+        common: !!python/object:ml_collections.config_dict.config_dict.ConfigDict
+          _allow_dotted_keys: false
+          _convert_dict: true
+          _fields:
+            block_delete_msa: !!python/object:ml_collections.config_dict.config_dict.ConfigDict
+              _allow_dotted_keys: false
+              _convert_dict: true
+              _fields:
+                msa_fraction_per_block: 0.3
+                num_blocks: 5
+                randomize_num_blocks: false
+              _locked: false
+              _sort_keys: true
+              _type_safe: true
+            feat: !!python/object:ml_collections.config_dict.config_dict.ConfigDict
+              _allow_dotted_keys: false
+              _convert_dict: true
+              _fields:
+                aatype:
+                - num residues placeholder
+                all_atom_mask:
+                - num residues placeholder
+                - null
+                all_atom_positions:
+                - num residues placeholder
+                - null
+                - null
+                alt_chi_angles:
+                - num residues placeholder
+                - null
+                atom14_alt_gt_exists:
+                - num residues placeholder
+                - null
+                atom14_alt_gt_positions:
+                - num residues placeholder
+                - null
+                - null
+                atom14_atom_exists:
+                - num residues placeholder
+                - null
+                atom14_atom_is_ambiguous:
+                - num residues placeholder
+                - null
+                atom14_gt_exists:
+                - num residues placeholder
+                - null
+                atom14_gt_positions:
+                - num residues placeholder
+                - null
+                - null
+                atom37_atom_exists:
+                - num residues placeholder
+                - null
+                backbone_rigid_mask:
+                - num residues placeholder
+                backbone_rigid_tensor:
+                - num residues placeholder
+                - null
+                - null
+                bert_mask:
+                - msa placeholder
+                - num residues placeholder
+                chi_angles_sin_cos:
+                - num residues placeholder
+                - null
+                - null
+                chi_mask:
+                - num residues placeholder
+                - null
+                extra_deletion_value:
+                - extra msa placeholder
+                - num residues placeholder
+                extra_has_deletion:
+                - extra msa placeholder
+                - num residues placeholder
+                extra_msa:
+                - extra msa placeholder
+                - num residues placeholder
+                extra_msa_mask:
+                - extra msa placeholder
+                - num residues placeholder
+                extra_msa_row_mask:
+                - extra msa placeholder
+                is_distillation: []
+                msa_feat:
+                - msa placeholder
+                - num residues placeholder
+                - null
+                msa_mask:
+                - msa placeholder
+                - num residues placeholder
+                msa_row_mask:
+                - msa placeholder
+                no_recycling_iters: []
+                pseudo_beta:
+                - num residues placeholder
+                - null
+                pseudo_beta_mask:
+                - num residues placeholder
+                residue_index:
+                - num residues placeholder
+                residx_atom14_to_atom37:
+                - num residues placeholder
+                - null
+                residx_atom37_to_atom14:
+                - num residues placeholder
+                - null
+                resolution: []
+                rigidgroups_alt_gt_frames:
+                - num residues placeholder
+                - null
+                - null
+                - null
+                rigidgroups_group_exists:
+                - num residues placeholder
+                - null
+                rigidgroups_group_is_ambiguous:
+                - num residues placeholder
+                - null
+                rigidgroups_gt_exists:
+                - num residues placeholder
+                - null
+                rigidgroups_gt_frames:
+                - num residues placeholder
+                - null
+                - null
+                - null
+                seq_length: []
+                seq_mask:
+                - num residues placeholder
+                target_feat:
+                - num residues placeholder
+                - null
+                template_aatype:
+                - num templates placeholder
+                - num residues placeholder
+                template_all_atom_mask:
+                - num templates placeholder
+                - num residues placeholder
+                - null
+                template_all_atom_positions:
+                - num templates placeholder
+                - num residues placeholder
+                - null
+                - null
+                template_alt_torsion_angles_sin_cos:
+                - num templates placeholder
+                - num residues placeholder
+                - null
+                - null
+                template_backbone_rigid_mask:
+                - num templates placeholder
+                - num residues placeholder
+                template_backbone_rigid_tensor:
+                - num templates placeholder
+                - num residues placeholder
+                - null
+                - null
+                template_mask:
+                - num templates placeholder
+                template_pseudo_beta:
+                - num templates placeholder
+                - num residues placeholder
+                - null
+                template_pseudo_beta_mask:
+                - num templates placeholder
+                - num residues placeholder
+                template_sum_probs:
+                - num templates placeholder
+                - null
+                template_torsion_angles_mask:
+                - num templates placeholder
+                - num residues placeholder
+                - null
+                template_torsion_angles_sin_cos:
+                - num templates placeholder
+                - num residues placeholder
+                - null
+                - null
+                true_msa:
+                - msa placeholder
+                - num residues placeholder
+                use_clamped_fape: []
+              _locked: false
+              _sort_keys: true
+              _type_safe: true
+            masked_msa: !!python/object:ml_collections.config_dict.config_dict.ConfigDict
+              _allow_dotted_keys: false
+              _convert_dict: true
+              _fields:
+                profile_prob: 0.1
+                same_prob: 0.1
+                uniform_prob: 0.1
+              _locked: false
+              _sort_keys: true
+              _type_safe: true
+            max_recycling_iters: 3
+            msa_cluster_features: true
+            reduce_msa_clusters_by_max_templates: false
+            resample_msa_in_recycling: true
+            template_features:
+            - template_all_atom_positions
+            - template_sum_probs
+            - template_aatype
+            - template_all_atom_mask
+            unsupervised_features:
+            - aatype
+            - residue_index
+            - msa
+            - num_alignments
+            - seq_length
+            - between_segment_residues
+            - deletion_matrix
+            - no_recycling_iters
+            use_template_torsion_angles: &id012 !!python/object:ml_collections.config_dict.config_dict.FieldReference
+              _field_type: &id001 !!python/name:builtins.bool ''
+              _ops: []
+              _required: false
+              _value: true
+            use_templates: &id013 !!python/object:ml_collections.config_dict.config_dict.FieldReference
+              _field_type: *id001
+              _ops: []
+              _required: false
+              _value: true
+          _locked: false
+          _sort_keys: true
+          _type_safe: true
+        data_module: !!python/object:ml_collections.config_dict.config_dict.ConfigDict
+          _allow_dotted_keys: false
+          _convert_dict: true
+          _fields:
+            data_loaders: !!python/object:ml_collections.config_dict.config_dict.ConfigDict
+              _allow_dotted_keys: false
+              _convert_dict: true
+              _fields:
+                batch_size: 1
+                num_workers: 16
+                pin_memory: true
+              _locked: false
+              _sort_keys: true
+              _type_safe: true
+            use_small_bfd: false
+          _locked: false
+          _sort_keys: true
+          _type_safe: true
+        eval: !!python/object:ml_collections.config_dict.config_dict.ConfigDict
+          _allow_dotted_keys: false
+          _convert_dict: true
+          _fields:
+            block_delete_msa: false
+            crop: false
+            crop_size: null
+            fixed_size: true
+            interface_threshold: null
+            masked_msa_replace_fraction: 0.15
+            max_extra_msa: 1024
+            max_msa_clusters: 128
+            max_template_hits: 4
+            max_templates: 4
+            spatial_crop_prob: null
+            subsample_templates: false
+            supervised: true
+            uniform_recycling: false
+          _locked: false
+          _sort_keys: true
+          _type_safe: true
+        predict: !!python/object:ml_collections.config_dict.config_dict.ConfigDict
+          _allow_dotted_keys: false
+          _convert_dict: true
+          _fields:
+            block_delete_msa: false
+            crop: false
+            crop_size: null
+            fixed_size: true
+            interface_threshold: null
+            masked_msa_replace_fraction: 0.15
+            max_extra_msa: 1024
+            max_msa_clusters: 512
+            max_template_hits: 4
+            max_templates: 4
+            spatial_crop_prob: null
+            subsample_templates: false
+            supervised: false
+            uniform_recycling: false
+          _locked: false
+          _sort_keys: true
+          _type_safe: true
+        seqemb_mode: !!python/object:ml_collections.config_dict.config_dict.ConfigDict
+          _allow_dotted_keys: false
+          _convert_dict: true
+          _fields:
+            enabled: false
+          _locked: false
+          _sort_keys: true
+          _type_safe: true
+        supervised: !!python/object:ml_collections.config_dict.config_dict.ConfigDict
+          _allow_dotted_keys: false
+          _convert_dict: true
+          _fields:
+            clamp_prob: 0.9
+            supervised_features:
+            - all_atom_mask
+            - all_atom_positions
+            - resolution
+            - use_clamped_fape
+            - is_distillation
+          _locked: false
+          _sort_keys: true
+          _type_safe: true
+        train: !!python/object:ml_collections.config_dict.config_dict.ConfigDict
+          _allow_dotted_keys: false
+          _convert_dict: true
+          _fields:
+            block_delete_msa: true
+            clamp_prob: 0.9
+            crop: true
+            crop_size: 256
+            distillation_prob: 0.75
+            fixed_size: true
+            interface_threshold: null
+            masked_msa_replace_fraction: 0.15
+            max_distillation_msa_clusters: 1000
+            max_extra_msa: 1024
+            max_msa_clusters: 128
+            max_template_hits: 4
+            max_templates: 4
+            shuffle_top_k_prefiltered: 20
+            spatial_crop_prob: 0.0
+            subsample_templates: true
+            supervised: true
+            uniform_recycling: true
+          _locked: false
+          _sort_keys: true
+          _type_safe: true
+      _locked: false
+      _sort_keys: true
+      _type_safe: true
+    ema: !!python/object:ml_collections.config_dict.config_dict.ConfigDict
+      _allow_dotted_keys: false
+      _convert_dict: true
+      _fields:
+        decay: 0.999
+      _locked: false
+      _sort_keys: true
+      _type_safe: true
+    globals: !!python/object:ml_collections.config_dict.config_dict.ConfigDict
+      _allow_dotted_keys: false
+      _convert_dict: true
+      _fields:
+        blocks_per_ckpt: &id004 !!python/object:ml_collections.config_dict.config_dict.FieldReference
+          _field_type: &id002 !!python/name:builtins.int ''
+          _ops: []
+          _required: false
+          _value: 1
+        c_e: &id008 !!python/object:ml_collections.config_dict.config_dict.FieldReference
+          _field_type: *id002
+          _ops: []
+          _required: false
+          _value: 64
+        c_m: &id005 !!python/object:ml_collections.config_dict.config_dict.FieldReference
+          _field_type: *id002
+          _ops: []
+          _required: false
+          _value: 256
+        c_s: &id006 !!python/object:ml_collections.config_dict.config_dict.FieldReference
+          _field_type: *id002
+          _ops: []
+          _required: false
+          _value: 384
+        c_t: &id014 !!python/object:ml_collections.config_dict.config_dict.FieldReference
+          _field_type: *id002
+          _ops: []
+          _required: false
+          _value: 64
+        c_z: &id007 !!python/object:ml_collections.config_dict.config_dict.FieldReference
+          _field_type: *id002
+          _ops: []
+          _required: false
+          _value: 128
+        chunk_size: !!python/object:ml_collections.config_dict.config_dict.FieldReference
+          _field_type: *id002
+          _ops: []
+          _required: false
+          _value: null
+        eps: &id003 !!python/object:ml_collections.config_dict.config_dict.FieldReference
+          _field_type: !!python/name:builtins.float ''
+          _ops: []
+          _required: false
+          _value: 0.0001
+        is_multimer: false
+        offload_inference: false
+        seqemb_mode_enabled: false
+        use_cuequivariance_attention: false
+        use_cuequivariance_multiplicative_update: false
+        use_deepspeed_evo_attention: false
+        use_flash: false
+        use_lma: false
+      _locked: false
+      _sort_keys: true
+      _type_safe: true
+    loss: !!python/object:ml_collections.config_dict.config_dict.ConfigDict
+      _allow_dotted_keys: false
+      _convert_dict: true
+      _fields:
+        chain_center_of_mass: !!python/object:ml_collections.config_dict.config_dict.ConfigDict
+          _allow_dotted_keys: false
+          _convert_dict: true
+          _fields:
+            clamp_distance: -4.0
+            enabled: false
+            eps: *id003
+            weight: 0.0
+          _locked: false
+          _sort_keys: true
+          _type_safe: true
+        distogram: !!python/object:ml_collections.config_dict.config_dict.ConfigDict
+          _allow_dotted_keys: false
+          _convert_dict: true
+          _fields:
+            eps: *id003
+            max_bin: 21.6875
+            min_bin: 2.3125
+            no_bins: 64
+            weight: 0.3
+          _locked: false
+          _sort_keys: true
+          _type_safe: true
+        eps: *id003
+        experimentally_resolved: !!python/object:ml_collections.config_dict.config_dict.ConfigDict
+          _allow_dotted_keys: false
+          _convert_dict: true
+          _fields:
+            eps: *id003
+            max_resolution: 3.0
+            min_resolution: 0.1
+            weight: 0.0
+          _locked: false
+          _sort_keys: true
+          _type_safe: true
+        fape: !!python/object:ml_collections.config_dict.config_dict.ConfigDict
+          _allow_dotted_keys: false
+          _convert_dict: true
+          _fields:
+            backbone: !!python/object:ml_collections.config_dict.config_dict.ConfigDict
+              _allow_dotted_keys: false
+              _convert_dict: true
+              _fields:
+                clamp_distance: 10.0
+                loss_unit_distance: 10.0
+                weight: 0.5
+              _locked: false
+              _sort_keys: true
+              _type_safe: true
+            eps: 0.0001
+            sidechain: !!python/object:ml_collections.config_dict.config_dict.ConfigDict
+              _allow_dotted_keys: false
+              _convert_dict: true
+              _fields:
+                clamp_distance: 10.0
+                length_scale: 10.0
+                weight: 0.5
+              _locked: false
+              _sort_keys: true
+              _type_safe: true
+            weight: 1.0
+          _locked: false
+          _sort_keys: true
+          _type_safe: true
+        masked_msa: !!python/object:ml_collections.config_dict.config_dict.ConfigDict
+          _allow_dotted_keys: false
+          _convert_dict: true
+          _fields:
+            eps: *id003
+            num_classes: 23
+            weight: 2.0
+          _locked: false
+          _sort_keys: true
+          _type_safe: true
+        plddt_loss: !!python/object:ml_collections.config_dict.config_dict.ConfigDict
+          _allow_dotted_keys: false
+          _convert_dict: true
+          _fields:
+            cutoff: 15.0
+            eps: *id003
+            max_resolution: 3.0
+            min_resolution: 0.1
+            no_bins: 50
+            weight: 0.01
+          _locked: false
+          _sort_keys: true
+          _type_safe: true
+        supervised_chi: !!python/object:ml_collections.config_dict.config_dict.ConfigDict
+          _allow_dotted_keys: false
+          _convert_dict: true
+          _fields:
+            angle_norm_weight: 0.01
+            chi_weight: 0.5
+            eps: *id003
+            weight: 1.0
+          _locked: false
+          _sort_keys: true
+          _type_safe: true
+        tm: !!python/object:ml_collections.config_dict.config_dict.ConfigDict
+          _allow_dotted_keys: false
+          _convert_dict: true
+          _fields:
+            enabled: &id010 !!python/object:ml_collections.config_dict.config_dict.FieldReference
+              _field_type: *id001
+              _ops: []
+              _required: false
+              _value: false
+            eps: *id003
+            max_bin: 31
+            max_resolution: 3.0
+            min_resolution: 0.1
+            no_bins: 64
+            weight: 0.0
+          _locked: false
+          _sort_keys: true
+          _type_safe: true
+        violation: !!python/object:ml_collections.config_dict.config_dict.ConfigDict
+          _allow_dotted_keys: false
+          _convert_dict: true
+          _fields:
+            average_clashes: false
+            clash_overlap_tolerance: 1.5
+            eps: *id003
+            violation_tolerance_factor: 12.0
+            weight: 0.0
+          _locked: false
+          _sort_keys: true
+          _type_safe: true
+      _locked: false
+      _sort_keys: true
+      _type_safe: true
+    model: !!python/object:ml_collections.config_dict.config_dict.ConfigDict
+      _allow_dotted_keys: false
+      _convert_dict: true
+      _fields:
+        _mask_trans: false
+        evoformer_stack: !!python/object:ml_collections.config_dict.config_dict.ConfigDict
+          _allow_dotted_keys: false
+          _convert_dict: true
+          _fields:
+            blocks_per_ckpt: *id004
+            c_hidden_msa_att: 32
+            c_hidden_mul: 128
+            c_hidden_opm: 32
+            c_hidden_pair_att: 32
+            c_m: *id005
+            c_s: *id006
+            c_z: *id007
+            clear_cache_between_blocks: false
+            eps: *id003
+            fuse_projection_weights: false
+            inf: 10000.0
+            msa_dropout: 0.15
+            no_blocks: 48
+            no_column_attention: false
+            no_heads_msa: 8
+            no_heads_pair: 4
+            opm_first: false
+            pair_dropout: 0.25
+            transition_n: 4
+            tune_chunk_size: &id009 !!python/object:ml_collections.config_dict.config_dict.FieldReference
+              _field_type: *id001
+              _ops: []
+              _required: false
+              _value: true
+          _locked: false
+          _sort_keys: true
+          _type_safe: true
+        extra_msa: !!python/object:ml_collections.config_dict.config_dict.ConfigDict
+          _allow_dotted_keys: false
+          _convert_dict: true
+          _fields:
+            enabled: true
+            extra_msa_embedder: !!python/object:ml_collections.config_dict.config_dict.ConfigDict
+              _allow_dotted_keys: false
+              _convert_dict: true
+              _fields:
+                c_in: 25
+                c_out: *id008
+              _locked: false
+              _sort_keys: true
+              _type_safe: true
+            extra_msa_stack: !!python/object:ml_collections.config_dict.config_dict.ConfigDict
+              _allow_dotted_keys: false
+              _convert_dict: true
+              _fields:
+                c_hidden_msa_att: 8
+                c_hidden_mul: 128
+                c_hidden_opm: 32
+                c_hidden_pair_att: 32
+                c_m: *id008
+                c_z: *id007
+                ckpt: true
+                clear_cache_between_blocks: false
+                eps: *id003
+                fuse_projection_weights: false
+                inf: 10000.0
+                msa_dropout: 0.15
+                no_blocks: 4
+                no_heads_msa: 8
+                no_heads_pair: 4
+                opm_first: false
+                pair_dropout: 0.25
+                transition_n: 4
+                tune_chunk_size: *id009
+              _locked: false
+              _sort_keys: true
+              _type_safe: true
+          _locked: false
+          _sort_keys: true
+          _type_safe: true
+        heads: !!python/object:ml_collections.config_dict.config_dict.ConfigDict
+          _allow_dotted_keys: false
+          _convert_dict: true
+          _fields:
+            distogram: !!python/object:ml_collections.config_dict.config_dict.ConfigDict
+              _allow_dotted_keys: false
+              _convert_dict: true
+              _fields:
+                c_z: *id007
+                no_bins: &id011 !!python/object:ml_collections.config_dict.config_dict.FieldReference
+                  _field_type: *id002
+                  _ops: []
+                  _required: false
+                  _value: 64
+              _locked: false
+              _sort_keys: true
+              _type_safe: true
+            experimentally_resolved: !!python/object:ml_collections.config_dict.config_dict.ConfigDict
+              _allow_dotted_keys: false
+              _convert_dict: true
+              _fields:
+                c_out: 37
+                c_s: *id006
+              _locked: false
+              _sort_keys: true
+              _type_safe: true
+            lddt: !!python/object:ml_collections.config_dict.config_dict.ConfigDict
+              _allow_dotted_keys: false
+              _convert_dict: true
+              _fields:
+                c_hidden: 128
+                c_in: *id006
+                no_bins: 50
+              _locked: false
+              _sort_keys: true
+              _type_safe: true
+            masked_msa: !!python/object:ml_collections.config_dict.config_dict.ConfigDict
+              _allow_dotted_keys: false
+              _convert_dict: true
+              _fields:
+                c_m: *id005
+                c_out: 23
+              _locked: false
+              _sort_keys: true
+              _type_safe: true
+            tm: !!python/object:ml_collections.config_dict.config_dict.ConfigDict
+              _allow_dotted_keys: false
+              _convert_dict: true
+              _fields:
+                c_z: *id007
+                enabled: *id010
+                no_bins: *id011
+              _locked: false
+              _sort_keys: true
+              _type_safe: true
+          _locked: false
+          _sort_keys: true
+          _type_safe: true
+        input_embedder: !!python/object:ml_collections.config_dict.config_dict.ConfigDict
+          _allow_dotted_keys: false
+          _convert_dict: true
+          _fields:
+            c_m: *id005
+            c_z: *id007
+            msa_dim: 49
+            relpos_k: 32
+            tf_dim: 22
+          _locked: false
+          _sort_keys: true
+          _type_safe: true
+        recycle_early_stop_tolerance: -1.0
+        recycling_embedder: !!python/object:ml_collections.config_dict.config_dict.ConfigDict
+          _allow_dotted_keys: false
+          _convert_dict: true
+          _fields:
+            c_m: *id005
+            c_z: *id007
+            inf: 10000.0
+            max_bin: 20.75
+            min_bin: 3.25
+            no_bins: 15
+          _locked: false
+          _sort_keys: true
+          _type_safe: true
+        structure_module: !!python/object:ml_collections.config_dict.config_dict.ConfigDict
+          _allow_dotted_keys: false
+          _convert_dict: true
+          _fields:
+            c_ipa: 16
+            c_resnet: 128
+            c_s: *id006
+            c_z: *id007
+            dropout_rate: 0.1
+            epsilon: *id003
+            inf: 10000.0
+            no_angles: 7
+            no_blocks: 8
+            no_heads_ipa: 12
+            no_qk_points: 4
+            no_resnet_blocks: 2
+            no_transition_layers: 1
+            no_v_points: 8
+            trans_scale_factor: 10
+          _locked: false
+          _sort_keys: true
+          _type_safe: true
+        template: !!python/object:ml_collections.config_dict.config_dict.ConfigDict
+          _allow_dotted_keys: false
+          _convert_dict: true
+          _fields:
+            average_templates: false
+            distogram: !!python/object:ml_collections.config_dict.config_dict.ConfigDict
+              _allow_dotted_keys: false
+              _convert_dict: true
+              _fields:
+                max_bin: 50.75
+                min_bin: 3.25
+                no_bins: 39
+              _locked: false
+              _sort_keys: true
+              _type_safe: true
+            embed_angles: *id012
+            enabled: *id013
+            eps: *id003
+            inf: 10000.0
+            offload_templates: false
+            template_pair_embedder: !!python/object:ml_collections.config_dict.config_dict.ConfigDict
+              _allow_dotted_keys: false
+              _convert_dict: true
+              _fields:
+                c_in: 88
+                c_out: *id014
+              _locked: false
+              _sort_keys: true
+              _type_safe: true
+            template_pair_stack: !!python/object:ml_collections.config_dict.config_dict.ConfigDict
+              _allow_dotted_keys: false
+              _convert_dict: true
+              _fields:
+                blocks_per_ckpt: *id004
+                c_hidden_tri_att: 16
+                c_hidden_tri_mul: 64
+                c_t: *id014
+                dropout_rate: 0.25
+                fuse_projection_weights: false
+                inf: 10000.0
+                no_blocks: 2
+                no_heads: 4
+                pair_transition_n: 2
+                tri_mul_first: false
+                tune_chunk_size: *id009
+              _locked: false
+              _sort_keys: true
+              _type_safe: true
+            template_pointwise_attention: !!python/object:ml_collections.config_dict.config_dict.ConfigDict
+              _allow_dotted_keys: false
+              _convert_dict: true
+              _fields:
+                c_hidden: 16
+                c_t: *id014
+                c_z: *id007
+                inf: 10000.0
+                no_heads: 4
+              _locked: false
+              _sort_keys: true
+              _type_safe: true
+            template_single_embedder: !!python/object:ml_collections.config_dict.config_dict.ConfigDict
+              _allow_dotted_keys: false
+              _convert_dict: true
+              _fields:
+                c_in: 57
+                c_out: *id005
+              _locked: false
+              _sort_keys: true
+              _type_safe: true
+            use_unit_vector: false
+          _locked: false
+          _sort_keys: true
+          _type_safe: true
+      _locked: false
+      _sort_keys: true
+      _type_safe: true
+    precision: tf32
+    relax: !!python/object:ml_collections.config_dict.config_dict.ConfigDict
+      _allow_dotted_keys: false
+      _convert_dict: true
+      _fields:
+        exclude_residues: []
+        max_iterations: 0
+        max_outer_iterations: 20
+        stiffness: 10.0
+        tolerance: 10.0
+      _locked: false
+      _sort_keys: true
+      _type_safe: true
+    trt: !!python/object:ml_collections.config_dict.config_dict.ConfigDict
+      _allow_dotted_keys: false
+      _convert_dict: true
+      _fields:
+        engine_dir: null
+        max_sequence_len: 640
+        mode: null
+        num_profiles: 1
+        optimization_level: 3
+      _locked: false
+      _sort_keys: true
+      _type_safe: true
+  _locked: false
+  _sort_keys: true
+  _type_safe: true

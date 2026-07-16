@@ -1,0 +1,5 @@
+metric,value
+"pearson(epoch, mean_plddt)",0.7843192292877259
+"spearman(epoch, mean_plddt)",0.7718209984057661
+"pearson(mean_plddt, relax_error)",-0.5966760364569994
+"spearman(mean_plddt, relax_error)",-0.46552432703459906

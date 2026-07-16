@@ -1,0 +1,4 @@
+OpenFold source is vendored inside the COMP702 repository.
+Path: code/COMP390_code/openfold
+No nested OpenFold .git directory was present.
+Parent COMP702 commit at snapshot: b7ef846921b4dd6684e4ba6d9f5dcd8fcd243f00

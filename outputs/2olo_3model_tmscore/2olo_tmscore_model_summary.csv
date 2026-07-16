@@ -1,0 +1,4 @@
+model,predictions,mean_tm_score,std_tm_score,min_tm_score,max_tm_score,mean_usalign_rmsd,mean_aligned_length
+AlphaFold,5,0.945356,0.0013567903301542217,0.94411,0.94759,1.546,388.0
+OpenFold,5,0.9381360000000001,0.0008229094725424417,0.93717,0.9392,1.688,388.0
+Retrained_epoch_32,5,0.84627,0.015360216469828774,0.82374,0.86425,3.146,383.2

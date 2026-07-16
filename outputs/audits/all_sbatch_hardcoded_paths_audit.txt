@@ -1,0 +1,515 @@
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/run_openfold_inference_epoch33_3models_5inference.sbatch:3:#SBATCH -p gpu-h100
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/run_openfold_inference_epoch33_3models_5inference.sbatch:5:#SBATCH -w gpu32
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/run_openfold_inference_epoch33_3models_5inference.sbatch:10:#SBATCH --output=/users/%u/fastscratch/of_infer_ep33_x5_%j.log
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/run_openfold_inference_epoch33_3models_5inference.sbatch:11:#SBATCH --error=/users/%u/fastscratch/of_infer_ep33_x5_%j.err
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/run_openfold_inference_epoch33_3models_5inference.sbatch:19:source /mnt/data2/users/sgmwu14/tools/miniforge3/etc/profile.d/conda.sh
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/run_openfold_inference_epoch33_3models_5inference.sbatch:20:conda activate openfold_env
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/run_openfold_inference_epoch33_3models_5inference.sbatch:23:export PYTHONPATH=/users/sgmwu14/openfold:$PYTHONPATH
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/run_openfold_inference_epoch33_3models_5inference.sbatch:27:export TRITON_CACHE_DIR=/users/sgmwu14/fastscratch/triton_cache
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/run_openfold_inference_epoch33_3models_5inference.sbatch:33:FASTA_DIR=/users/sgmwu14/scratch/openfold_inference/fasta_dir
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/run_openfold_inference_epoch33_3models_5inference.sbatch:34:CIF_DIR=/users/sgmwu14/scratch/taskcif
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/run_openfold_inference_epoch33_3models_5inference.sbatch:35:ALIGN_DIR=/users/sgmwu14/scratch/openfold_inference/alignments_cf
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/run_openfold_inference_epoch33_3models_5inference.sbatch:41:MY_CKPT=/users/sgmwu14/scratch/openfold_runs/run_subset_gpu32_h100_ep33/csv_logs/version_0/checkpoints/27-280000.ckpt
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/run_openfold_inference_epoch33_3models_5inference.sbatch:44:RUN_ROOT=/users/sgmwu14/scratch/openfold_inference_runs/epoch_${EPOCH_NUM}
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/run_openfold_inference_epoch33_3models_5inference.sbatch:74:    python3 /users/sgmwu14/openfold/run_pretrained_openfold.py \
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/run_openfold_inference_epoch33_3models_5inference.sbatch:80:      --jax_param_path /users/sgmwu14/openfold/openfold/resources/params/params_model_1.npz \
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/run_openfold_inference_epoch33_3models_5inference.sbatch:89:    python3 /users/sgmwu14/openfold/run_pretrained_openfold.py \
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/run_openfold_inference_epoch33_3models_5inference.sbatch:95:      --openfold_checkpoint_path /users/sgmwu14/openfold/openfold/resources/openfold_params/finetuning_2.pt \
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/run_openfold_inference_epoch33_3models_5inference.sbatch:104:    python3 /users/sgmwu14/openfold/run_pretrained_openfold.py \
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/run_openfold_inference_epoch33v13.sbatch:3:#SBATCH -p gpu-h100
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/run_openfold_inference_epoch33v13.sbatch:5:#SBATCH -w gpu32
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/run_openfold_inference_epoch33v13.sbatch:10:#SBATCH --output=/users/%u/fastscratch/of_infer_ep27_32_x5_%j.log
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/run_openfold_inference_epoch33v13.sbatch:11:#SBATCH --error=/users/%u/fastscratch/of_infer_ep27_32_x5_%j.err
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/run_openfold_inference_epoch33v13.sbatch:19:source /mnt/data2/users/sgmwu14/tools/miniforge3/etc/profile.d/conda.sh
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/run_openfold_inference_epoch33v13.sbatch:20:conda activate openfold_env
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/run_openfold_inference_epoch33v13.sbatch:26:export PYTHONPATH=/users/sgmwu14/openfold:$PYTHONPATH
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/run_openfold_inference_epoch33v13.sbatch:29:export TRITON_CACHE_DIR=/users/sgmwu14/fastscratch/triton_cache
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/run_openfold_inference_epoch33v13.sbatch:35:FASTA_DIR=/users/sgmwu14/scratch/openfold_inference/fasta_dir
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/run_openfold_inference_epoch33v13.sbatch:36:CIF_DIR=/users/sgmwu14/scratch/taskcif
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/run_openfold_inference_epoch33v13.sbatch:37:ALIGN_DIR=/users/sgmwu14/scratch/openfold_inference/alignments_cf
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/run_openfold_inference_epoch33v13.sbatch:38:OUT_BASE=/users/sgmwu14/scratch/openfold_inference_runs
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/run_openfold_inference_epoch33v13.sbatch:46:  /users/sgmwu14/scratch/openfold_runs/run_subset_gpu32_h100_ep33/csv_logs/version_0/checkpoints/27-280000.ckpt
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/run_openfold_inference_epoch33v13.sbatch:47:  /users/sgmwu14/scratch/openfold_runs/run_subset_gpu32_h100_ep33/csv_logs/version_0/checkpoints/28-290000.ckpt
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/run_openfold_inference_epoch33v13.sbatch:48:  /users/sgmwu14/scratch/openfold_runs/run_subset_gpu32_h100_ep33/csv_logs/version_0/checkpoints/29-300000.ckpt
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/run_openfold_inference_epoch33v13.sbatch:49:  /users/sgmwu14/scratch/openfold_runs/run_subset_gpu32_h100_ep33/csv_logs/version_0/checkpoints/30-310000.ckpt
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/run_openfold_inference_epoch33v13.sbatch:50:  /users/sgmwu14/scratch/openfold_runs/run_subset_gpu32_h100_ep33/csv_logs/version_0/checkpoints/31-320000.ckpt
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/run_openfold_inference_epoch33v13.sbatch:51:  /users/sgmwu14/scratch/openfold_runs/run_subset_gpu32_h100_ep33/csv_logs/version_0/checkpoints/32-330000.ckpt
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/run_openfold_inference_epoch33v13.sbatch:86:        python3 /users/sgmwu14/openfold/run_pretrained_openfold.py \
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/run_openfold_inference_epoch33.sbatch:3:#SBATCH -p gpu-h100
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/run_openfold_inference_epoch33.sbatch:5:#SBATCH -w gpu32
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/run_openfold_inference_epoch33.sbatch:10:#SBATCH --output=/users/%u/fastscratch/of_infer3_ep33_%j.log
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/run_openfold_inference_epoch33.sbatch:11:#SBATCH --error=/users/%u/fastscratch/of_infer3_ep33_%j.err
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/run_openfold_inference_epoch33.sbatch:20:source /mnt/data2/users/sgmwu14/tools/miniforge3/etc/profile.d/conda.sh
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/run_openfold_inference_epoch33.sbatch:21:conda activate openfold_env
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/run_openfold_inference_epoch33.sbatch:24:export PYTHONPATH=/users/sgmwu14/openfold:$PYTHONPATH
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/run_openfold_inference_epoch33.sbatch:28:export TRITON_CACHE_DIR=/users/sgmwu14/fastscratch/triton_cache
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/run_openfold_inference_epoch33.sbatch:35:FASTA_DIR=/users/sgmwu14/scratch/openfold_inference/fasta_dir
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/run_openfold_inference_epoch33.sbatch:36:CIF_DIR=/users/sgmwu14/scratch/taskcif
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/run_openfold_inference_epoch33.sbatch:37:ALIGN_DIR=/users/sgmwu14/scratch/openfold_inference/alignments_cf
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/run_openfold_inference_epoch33.sbatch:40:RUN_ROOT=/users/sgmwu14/scratch/openfold_inference_ep33_rerun3
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/run_openfold_inference_epoch33.sbatch:46:MY_CKPT=/users/sgmwu14/scratch/openfold_runs/run_subset_gpu32_h100_ep33/csv_logs/version_0/checkpoints/27-280000.ckpt
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/run_openfold_inference_epoch33.sbatch:56:python3 /users/sgmwu14/openfold/run_pretrained_openfold.py \
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/run_openfold_inference_epoch33.sbatch:62:  --jax_param_path /users/sgmwu14/openfold/openfold/resources/params/params_model_1.npz \
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/run_openfold_inference_epoch33.sbatch:72:python3 /users/sgmwu14/openfold/run_pretrained_openfold.py \
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/run_openfold_inference_epoch33.sbatch:78:  --openfold_checkpoint_path /users/sgmwu14/openfold/openfold/resources/openfold_params/finetuning_2.pt \
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/run_openfold_inference_epoch33.sbatch:88:python3 /users/sgmwu14/openfold/run_pretrained_openfold.py \
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/openfold_subset_gpu15.sbatch:10:#SBATCH --output=/users/%u/fastscratch/of_subset_%j.log
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/openfold_subset_gpu15.sbatch:11:#SBATCH --error=/users/%u/fastscratch/of_subset_%j.err
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/openfold_subset_gpu15.sbatch:16:source /mnt/data2/users/sgmwu14/tools/miniforge3/etc/profile.d/conda.sh
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/openfold_subset_gpu15.sbatch:17:conda activate openfold_env
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/openfold_subset_gpu15.sbatch:20:export PYTHONPATH=/users/sgmwu14/openfold:$PYTHONPATH
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/openfold_subset_gpu15.sbatch:24:DATA_DIR=/users/sgmwu14/localscratch
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/openfold_subset_gpu15.sbatch:25:OUT_DIR=/users/sgmwu14/scratch/openfold_runs/run_subset_gpu15_a100
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/openfold_subset_gpu15.sbatch:41:python -u /users/sgmwu14/openfold/train_openfold.py \
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/run_openfold_inference_epoch33v8.sbatch:3:#SBATCH -p gpu-h100
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/run_openfold_inference_epoch33v8.sbatch:5:#SBATCH -w gpu32
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/run_openfold_inference_epoch33v8.sbatch:10:#SBATCH --output=/users/%u/fastscratch/of_infer_oneckpt_x5_%j.log
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/run_openfold_inference_epoch33v8.sbatch:11:#SBATCH --error=/users/%u/fastscratch/of_infer_oneckpt_x5_%j.err
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/run_openfold_inference_epoch33v8.sbatch:19:source /mnt/data2/users/sgmwu14/tools/miniforge3/etc/profile.d/conda.sh
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/run_openfold_inference_epoch33v8.sbatch:20:conda activate openfold_env
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/run_openfold_inference_epoch33v8.sbatch:26:export PYTHONPATH=/users/sgmwu14/openfold:$PYTHONPATH
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/run_openfold_inference_epoch33v8.sbatch:29:export TRITON_CACHE_DIR=/users/sgmwu14/fastscratch/triton_cache
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/run_openfold_inference_epoch33v8.sbatch:35:FASTA_DIR=/users/sgmwu14/scratch/openfold_inference/fasta_dir
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/run_openfold_inference_epoch33v8.sbatch:36:CIF_DIR=/users/sgmwu14/scratch/taskcif
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/run_openfold_inference_epoch33v8.sbatch:37:ALIGN_DIR=/users/sgmwu14/scratch/openfold_inference/alignments_cf
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/run_openfold_inference_epoch33v8.sbatch:38:OUT_BASE=/users/sgmwu14/scratch/openfold_inference_runs
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/run_openfold_inference_epoch33v8.sbatch:41:MY_CKPT=/users/sgmwu14/scratch/openfold_runs/run_subset_gpu32_h100_ep10/csv_logs/version_0/checkpoints/5-40000.ckpt
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/run_openfold_inference_epoch33v8.sbatch:71:    python3 /users/sgmwu14/openfold/run_pretrained_openfold.py \
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/run_openfold_inference_epoch33half1.sbatch:3:#SBATCH -p gpu-h100
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/run_openfold_inference_epoch33half1.sbatch:5:#SBATCH -w gpu32
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/run_openfold_inference_epoch33half1.sbatch:10:#SBATCH --output=/users/%u/fastscratch/of_infer_ep8_14_x5_%j.log
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/run_openfold_inference_epoch33half1.sbatch:11:#SBATCH --error=/users/%u/fastscratch/of_infer_ep8_14_x5_%j.err
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/run_openfold_inference_epoch33half1.sbatch:19:source /mnt/data2/users/sgmwu14/tools/miniforge3/etc/profile.d/conda.sh
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/run_openfold_inference_epoch33half1.sbatch:20:conda activate openfold_env
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/run_openfold_inference_epoch33half1.sbatch:26:export PYTHONPATH=/users/sgmwu14/openfold:$PYTHONPATH
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/run_openfold_inference_epoch33half1.sbatch:29:export TRITON_CACHE_DIR=/users/sgmwu14/fastscratch/triton_cache
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/run_openfold_inference_epoch33half1.sbatch:35:FASTA_DIR=/users/sgmwu14/scratch/openfold_inference/fasta_dir
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/run_openfold_inference_epoch33half1.sbatch:36:CIF_DIR=/users/sgmwu14/scratch/taskcif
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/run_openfold_inference_epoch33half1.sbatch:37:ALIGN_DIR=/users/sgmwu14/scratch/openfold_inference/alignments_cf
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/run_openfold_inference_epoch33half1.sbatch:38:OUT_BASE=/users/sgmwu14/scratch/openfold_inference_runs2
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/run_openfold_inference_epoch33half1.sbatch:46:  /users/sgmwu14/scratch/openfold_runs/run_subset_gpu32_h100_ep10/csv_logs/version_0/checkpoints/0-10000.ckpt
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/run_openfold_inference_epoch33half1.sbatch:47:  /users/sgmwu14/scratch/openfold_runs/run_subset_gpu32_h100_ep10/csv_logs/version_0/checkpoints/1-20000.ckpt
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/run_openfold_inference_epoch33half1.sbatch:48:  /users/sgmwu14/scratch/openfold_runs/run_subset_gpu32_h100_ep10/csv_logs/version_0/checkpoints/2-30000.ckpt
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/run_openfold_inference_epoch33half1.sbatch:49:  /users/sgmwu14/scratch/openfold_runs/run_subset_gpu32_h100_ep10/csv_logs/version_0/checkpoints/3-40000.ckpt
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/run_openfold_inference_epoch33half1.sbatch:50:  /users/sgmwu14/scratch/openfold_runs/run_subset_gpu32_h100_ep10/csv_logs/version_0/checkpoints/4-50000.ckpt
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/run_openfold_inference_epoch33half1.sbatch:51:  /users/sgmwu14/scratch/openfold_runs/run_subset_gpu32_h100_ep10/csv_logs/version_0/checkpoints/5-60000.ckpt
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/run_openfold_inference_epoch33half1.sbatch:52:  /users/sgmwu14/scratch/openfold_runs/run_subset_gpu32_h100_ep10/csv_logs/version_0/checkpoints/6-70000.ckpt
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/run_openfold_inference_epoch33half1.sbatch:53:  /users/sgmwu14/scratch/openfold_runs/run_subset_gpu32_h100_ep10/csv_logs/version_0/checkpoints/7-80000.ckpt
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/run_openfold_inference_epoch33half1.sbatch:54:  /users/sgmwu14/scratch/openfold_runs/run_subset_gpu32_h100_ep15/csv_logs/version_0/checkpoints/8-90000.ckpt
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/run_openfold_inference_epoch33half1.sbatch:55:  /users/sgmwu14/scratch/openfold_runs/run_subset_gpu32_h100_ep15/csv_logs/version_0/checkpoints/9-100000.ckpt
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/run_openfold_inference_epoch33half1.sbatch:56:  /users/sgmwu14/scratch/openfold_runs/run_subset_gpu32_h100_ep15/csv_logs/version_0/checkpoints/10-110000.ckpt
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/run_openfold_inference_epoch33half1.sbatch:57:  /users/sgmwu14/scratch/openfold_runs/run_subset_gpu32_h100_ep15/csv_logs/version_0/checkpoints/11-120000.ckpt
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/run_openfold_inference_epoch33half1.sbatch:58:  /users/sgmwu14/scratch/openfold_runs/run_subset_gpu32_h100_ep15/csv_logs/version_0/checkpoints/12-130000.ckpt
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/run_openfold_inference_epoch33half1.sbatch:59:  /users/sgmwu14/scratch/openfold_runs/run_subset_gpu32_h100_ep15/csv_logs/version_0/checkpoints/13-140000.ckpt
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/run_openfold_inference_epoch33half1.sbatch:60:  /users/sgmwu14/scratch/openfold_runs/run_subset_gpu32_h100_ep15/csv_logs/version_0/checkpoints/14-150000.ckpt
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/run_openfold_inference_epoch33half1.sbatch:92:        python3 /users/sgmwu14/openfold/run_pretrained_openfold.py \
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/run_openfold_inference_epoch33half2.sbatch:3:#SBATCH -p gpu-h100
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/run_openfold_inference_epoch33half2.sbatch:5:#SBATCH -w gpu32
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/run_openfold_inference_epoch33half2.sbatch:10:#SBATCH --output=/users/%u/fastscratch/of_infer_ep15_20_x5_%j.log
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/run_openfold_inference_epoch33half2.sbatch:11:#SBATCH --error=/users/%u/fastscratch/of_infer_ep15_20_x5_%j.err
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/run_openfold_inference_epoch33half2.sbatch:19:source /mnt/data2/users/sgmwu14/tools/miniforge3/etc/profile.d/conda.sh
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/run_openfold_inference_epoch33half2.sbatch:20:conda activate openfold_env
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/run_openfold_inference_epoch33half2.sbatch:26:export PYTHONPATH=/users/sgmwu14/openfold:$PYTHONPATH
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/run_openfold_inference_epoch33half2.sbatch:29:export TRITON_CACHE_DIR=/users/sgmwu14/fastscratch/triton_cache
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/run_openfold_inference_epoch33half2.sbatch:35:FASTA_DIR=/users/sgmwu14/scratch/openfold_inference/fasta_dir
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/run_openfold_inference_epoch33half2.sbatch:36:CIF_DIR=/users/sgmwu14/scratch/taskcif
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/run_openfold_inference_epoch33half2.sbatch:37:ALIGN_DIR=/users/sgmwu14/scratch/openfold_inference/alignments_cf
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/run_openfold_inference_epoch33half2.sbatch:38:OUT_BASE=/users/sgmwu14/scratch/openfold_inference_runs2
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/run_openfold_inference_epoch33half2.sbatch:46:  /users/sgmwu14/scratch/openfold_runs/run_subset_gpu32_h100_ep21/csv_logs/version_0/checkpoints/15-160000.ckpt
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/run_openfold_inference_epoch33half2.sbatch:47:  /users/sgmwu14/scratch/openfold_runs/run_subset_gpu32_h100_ep21/csv_logs/version_0/checkpoints/16-170000.ckpt
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/run_openfold_inference_epoch33half2.sbatch:48:  /users/sgmwu14/scratch/openfold_runs/run_subset_gpu32_h100_ep21/csv_logs/version_0/checkpoints/17-180000.ckpt
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/run_openfold_inference_epoch33half2.sbatch:49:  /users/sgmwu14/scratch/openfold_runs/run_subset_gpu32_h100_ep21/csv_logs/version_0/checkpoints/18-190000.ckpt
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/run_openfold_inference_epoch33half2.sbatch:50:  /users/sgmwu14/scratch/openfold_runs/run_subset_gpu32_h100_ep21/csv_logs/version_0/checkpoints/19-200000.ckpt
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/run_openfold_inference_epoch33half2.sbatch:51:  /users/sgmwu14/scratch/openfold_runs/run_subset_gpu32_h100_ep21/csv_logs/version_0/checkpoints/20-210000.ckpt
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/run_openfold_inference_epoch33half2.sbatch:52:  /users/sgmwu14/scratch/openfold_runs/run_subset_gpu32_h100_ep27/csv_logs/version_0/checkpoints/21-220000.ckpt
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/run_openfold_inference_epoch33half2.sbatch:53:  /users/sgmwu14/scratch/openfold_runs/run_subset_gpu32_h100_ep27/csv_logs/version_0/checkpoints/22-230000.ckpt
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/run_openfold_inference_epoch33half2.sbatch:54:  /users/sgmwu14/scratch/openfold_runs/run_subset_gpu32_h100_ep27/csv_logs/version_0/checkpoints/23-240000.ckpt
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/run_openfold_inference_epoch33half2.sbatch:55:  /users/sgmwu14/scratch/openfold_runs/run_subset_gpu32_h100_ep27/csv_logs/version_0/checkpoints/24-250000.ckpt
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/run_openfold_inference_epoch33half2.sbatch:56:  /users/sgmwu14/scratch/openfold_runs/run_subset_gpu32_h100_ep27/csv_logs/version_0/checkpoints/25-260000.ckpt
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/run_openfold_inference_epoch33half2.sbatch:57:  /users/sgmwu14/scratch/openfold_runs/run_subset_gpu32_h100_ep27/csv_logs/version_0/checkpoints/26-270000.ckpt
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/run_openfold_inference_epoch33half2.sbatch:58:  /users/sgmwu14/scratch/openfold_runs/run_subset_gpu32_h100_ep33/csv_logs/version_0/checkpoints/27-280000.ckpt
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/run_openfold_inference_epoch33half2.sbatch:59:  /users/sgmwu14/scratch/openfold_runs/run_subset_gpu32_h100_ep33/csv_logs/version_0/checkpoints/28-290000.ckpt
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/run_openfold_inference_epoch33half2.sbatch:60:  /users/sgmwu14/scratch/openfold_runs/run_subset_gpu32_h100_ep33/csv_logs/version_0/checkpoints/29-300000.ckpt
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/run_openfold_inference_epoch33half2.sbatch:61:  /users/sgmwu14/scratch/openfold_runs/run_subset_gpu32_h100_ep33/csv_logs/version_0/checkpoints/30-310000.ckpt
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/run_openfold_inference_epoch33half2.sbatch:62:  /users/sgmwu14/scratch/openfold_runs/run_subset_gpu32_h100_ep33/csv_logs/version_0/checkpoints/31-320000.ckpt
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/run_openfold_inference_epoch33half2.sbatch:63:  /users/sgmwu14/scratch/openfold_runs/run_subset_gpu32_h100_ep33/csv_logs/version_0/checkpoints/32-330000.ckpt
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/run_openfold_inference_epoch33half2.sbatch:98:        python3 /users/sgmwu14/openfold/run_pretrained_openfold.py \
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/run_openfold_inference_rerun.sbatch:3:#SBATCH -p gpu-h100
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/run_openfold_inference_rerun.sbatch:5:#SBATCH -w gpu32
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/run_openfold_inference_rerun.sbatch:10:#SBATCH --output=/users/%u/fastscratch/of_infer3_rerun1_%j.log
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/run_openfold_inference_rerun.sbatch:11:#SBATCH --error=/users/%u/fastscratch/of_infer3_rerun1_%j.err
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/run_openfold_inference_rerun.sbatch:20:source /mnt/data2/users/sgmwu14/tools/miniforge3/etc/profile.d/conda.sh
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/run_openfold_inference_rerun.sbatch:21:conda activate openfold_env
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/run_openfold_inference_rerun.sbatch:24:export PYTHONPATH=/users/sgmwu14/openfold:$PYTHONPATH
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/run_openfold_inference_rerun.sbatch:32:FASTA_DIR=/users/sgmwu14/scratch/openfold_inference/fasta_dir
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/run_openfold_inference_rerun.sbatch:33:CIF_DIR=/users/sgmwu14/scratch/taskcif
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/run_openfold_inference_rerun.sbatch:34:ALIGN_DIR=/users/sgmwu14/scratch/openfold_inference/alignments_cf
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/run_openfold_inference_rerun.sbatch:36:RUN_ROOT=/users/sgmwu14/scratch/openfold_inference_rerun1
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/run_openfold_inference_rerun.sbatch:52:python3 /users/sgmwu14/openfold/run_pretrained_openfold.py \
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/run_openfold_inference_rerun.sbatch:58:  --jax_param_path /users/sgmwu14/openfold/openfold/resources/params/params_model_1.npz \
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/run_openfold_inference_rerun.sbatch:67:python3 /users/sgmwu14/openfold/run_pretrained_openfold.py \
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/run_openfold_inference_rerun.sbatch:73:  --openfold_checkpoint_path /users/sgmwu14/openfold/openfold/resources/openfold_params/finetuning_2.pt \
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/run_openfold_inference_rerun.sbatch:82:python3 /users/sgmwu14/openfold/run_pretrained_openfold.py \
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/run_openfold_inference_rerun.sbatch:88:  --openfold_checkpoint_path /users/sgmwu14/scratch/openfold_runs/run_subset_gpu32_h100_ep21/csv_logs/version_0/checkpoints/20-210000.ckpt \
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/extract_alignment_gpu32.sbatch:3:#SBATCH -p gpu-h100
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/extract_alignment_gpu32.sbatch:5:#SBATCH -w gpu32
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/extract_alignment_gpu32.sbatch:10:#SBATCH --output=/users/%u/fastscratch/extract_align_%j.log
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/extract_alignment_gpu32.sbatch:11:#SBATCH --error=/users/%u/fastscratch/extract_align_%j.err
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/extract_alignment_gpu32.sbatch:17:SRC=/users/sgmwu14/scratch/alignment_data_node037_20260210_083640.tar.zst
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/extract_alignment_gpu32.sbatch:18:DEST_DIR=/users/sgmwu14/localscratch/alignment_openfold_full_20260210
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/pack_node037.sbatch:9:#SBATCH --output=/users/%u/fastscratch/pack_of_subset_%j.log
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/pack_node037.sbatch:10:#SBATCH --error=/users/%u/fastscratch/pack_of_subset_%j.err
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/run_openfold_inference_epoch33v9.sbatch:3:#SBATCH -p gpu-h100
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/run_openfold_inference_epoch33v9.sbatch:5:#SBATCH -w gpu32
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/run_openfold_inference_epoch33v9.sbatch:10:#SBATCH --output=/users/%u/fastscratch/of_infer_3ckpts_x5_%j.log
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/run_openfold_inference_epoch33v9.sbatch:11:#SBATCH --error=/users/%u/fastscratch/of_infer_3ckpts_x5_%j.err
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/run_openfold_inference_epoch33v9.sbatch:19:source /mnt/data2/users/sgmwu14/tools/miniforge3/etc/profile.d/conda.sh
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/run_openfold_inference_epoch33v9.sbatch:20:conda activate openfold_env
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/run_openfold_inference_epoch33v9.sbatch:26:export PYTHONPATH=/users/sgmwu14/openfold:$PYTHONPATH
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/run_openfold_inference_epoch33v9.sbatch:29:export TRITON_CACHE_DIR=/users/sgmwu14/fastscratch/triton_cache
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/run_openfold_inference_epoch33v9.sbatch:35:FASTA_DIR=/users/sgmwu14/scratch/openfold_inference/fasta_dir
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/run_openfold_inference_epoch33v9.sbatch:36:CIF_DIR=/users/sgmwu14/scratch/taskcif
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/run_openfold_inference_epoch33v9.sbatch:37:ALIGN_DIR=/users/sgmwu14/scratch/openfold_inference/alignments_cf
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/run_openfold_inference_epoch33v9.sbatch:38:OUT_BASE=/users/sgmwu14/scratch/openfold_inference_runs
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/run_openfold_inference_epoch33v9.sbatch:45:MY_CKPT=/users/sgmwu14/scratch/openfold_runs/run_subset_gpu32_h100_ep10/csv_logs/version_0/checkpoints/7-80000.ckpt
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/run_openfold_inference_epoch33v9.sbatch:66:    python3 /users/sgmwu14/openfold/run_pretrained_openfold.py \
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/run_openfold_inference_epoch33v9.sbatch:83:MY_CKPT=/users/sgmwu14/scratch/openfold_runs/run_subset_gpu32_h100_ep10/csv_logs/version_0/checkpoints/6-70000.ckpt
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/run_openfold_inference_epoch33v9.sbatch:104:    python3 /users/sgmwu14/openfold/run_pretrained_openfold.py \
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/run_openfold_inference_epoch33v9.sbatch:121:MY_CKPT=/users/sgmwu14/scratch/openfold_runs/run_subset_gpu32_h100_ep10/csv_logs/version_0/checkpoints/5-60000.ckpt
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/run_openfold_inference_epoch33v9.sbatch:142:    python3 /users/sgmwu14/openfold/run_pretrained_openfold.py \
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/openfold_subset_gpu.sbatch:9:#SBATCH --output=/users/%u/fastscratch/of_subset_%j.log
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/openfold_subset_gpu.sbatch:10:#SBATCH --error=/users/%u/fastscratch/of_subset_%j.err
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/openfold_subset_gpu.sbatch:22:source /mnt/data2/users/sgmwu14/tools/miniforge3/etc/profile.d/conda.sh
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/openfold_subset_gpu.sbatch:23:conda activate openfold_env
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/openfold_subset_gpu.sbatch:29:DATA_DIR=/users/sgmwu14/localscratch
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/openfold_subset_gpu.sbatch:30:OUT_DIR=/users/sgmwu14/scratch/openfold_runs/run_subset_gpu13_a100
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/openfold_subset_gpu.sbatch:69:python -u /users/sgmwu14/openfold/train_openfold.py \
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/openfold_subset_gpu13.sbatch:10:#SBATCH --output=/users/%u/fastscratch/of_subset_%j.log
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/openfold_subset_gpu13.sbatch:11:#SBATCH --error=/users/%u/fastscratch/of_subset_%j.err
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/openfold_subset_gpu13.sbatch:16:source /mnt/data2/users/sgmwu14/tools/miniforge3/etc/profile.d/conda.sh
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/openfold_subset_gpu13.sbatch:17:conda activate openfold_env
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/openfold_subset_gpu13.sbatch:20:export PYTHONPATH=/users/sgmwu14/openfold:$PYTHONPATH
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/openfold_subset_gpu13.sbatch:24:DATA_DIR=/users/sgmwu14/localscratch
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/openfold_subset_gpu13.sbatch:25:OUT_DIR=/users/sgmwu14/scratch/openfold_runs/run_subset_gpu13_a100
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/openfold_subset_gpu13.sbatch:41:python -u /users/sgmwu14/openfold/train_openfold.py \
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/openfold_inference_7dsq_100pred_af.sbatch:3:#SBATCH -p gpu-h100
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/openfold_inference_7dsq_100pred_af.sbatch:22:source /mnt/data2/users/sgmwu14/tools/miniforge3/etc/profile.d/conda.sh
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/openfold_inference_7dsq_100pred_af.sbatch:23:conda activate openfold_env
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/openfold_inference_7dsq_100pred_af.sbatch:29:export PYTHONPATH=/users/sgmwu14/openfold:$PYTHONPATH
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/openfold_inference_7dsq_100pred_af.sbatch:32:export TRITON_CACHE_DIR=/users/sgmwu14/fastscratch/triton_cache
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/openfold_inference_7dsq_100pred_af.sbatch:38:OPENFOLD_SCRIPT="/users/sgmwu14/openfold/run_pretrained_openfold.py"
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/openfold_inference_7dsq_100pred_af.sbatch:39:FASTA_FILE="/users/sgmwu14/scratch/openfold_inference/fasta_dir/7dsq.fasta"
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/openfold_inference_7dsq_100pred_af.sbatch:40:MMCIF_DIR="/users/sgmwu14/scratch/taskcif"
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/openfold_inference_7dsq_100pred_af.sbatch:41:ALIGN_ROOT="/users/sgmwu14/scratch/openfold_inference/alignments_cf"
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/openfold_inference_7dsq_100pred_af.sbatch:42:JAX_PARAM="/users/sgmwu14/openfold/openfold/resources/params/params_model_1.npz"
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/openfold_inference_7dsq_100pred_af.sbatch:47:BASE_OUT="/users/sgmwu14/scratch/openfold_inference_7dsq_100pred_af"
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/openfold_inference_7dsq_100pred_af.sbatch:49:LOG_DIR="/users/sgmwu14/scratch/logs"
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/pack_openfold_subset_to_scratch.sbatch:20:DST=/users/$USER/scratch/openfold_transfer
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/openfold_subset_gpu32_v3.sbatch:3:#SBATCH -p gpu-h100
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/openfold_subset_gpu32_v3.sbatch:5:#SBATCH -w gpu32
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/openfold_subset_gpu32_v3.sbatch:10:#SBATCH --output=/users/%u/fastscratch/of_subset_h100_%j.log
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/openfold_subset_gpu32_v3.sbatch:11:#SBATCH --error=/users/%u/fastscratch/of_subset_h100_%j.err
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/openfold_subset_gpu32_v3.sbatch:16:source /mnt/data2/users/sgmwu14/tools/miniforge3/etc/profile.d/conda.sh
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/openfold_subset_gpu32_v3.sbatch:17:conda activate openfold_env
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/openfold_subset_gpu32_v3.sbatch:21:export TRITON_CACHE_DIR=/users/sgmwu14/fastscratch/triton_cache
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/openfold_subset_gpu32_v3.sbatch:24:export PYTHONPATH=/users/sgmwu14/openfold:$PYTHONPATH
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/openfold_subset_gpu32_v3.sbatch:28:DATA_DIR=/users/sgmwu14/localscratch
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/openfold_subset_gpu32_v3.sbatch:32:OUT_DIR=/users/sgmwu14/scratch/openfold_runs/run_subset_gpu32_h100_ep33
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/openfold_subset_gpu32_v3.sbatch:36:CKPT_PATH=/users/sgmwu14/scratch/openfold_runs/run_subset_gpu32_h100_ep27/csv_logs/version_0/checkpoints/26-270000.ckpt
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/openfold_subset_gpu32_v3.sbatch:56:python -u /users/sgmwu14/openfold/train_openfold.py \
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/run_openfold_inference_epoch33v7.sbatch:3:#SBATCH -p gpu-h100
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/run_openfold_inference_epoch33v7.sbatch:5:#SBATCH -w gpu32
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/run_openfold_inference_epoch33v7.sbatch:10:#SBATCH --output=/users/%u/fastscratch/of_infer_ckpts_x5_%j.log
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/run_openfold_inference_epoch33v7.sbatch:11:#SBATCH --error=/users/%u/fastscratch/of_infer_ckpts_x5_%j.err
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/run_openfold_inference_epoch33v7.sbatch:19:source /mnt/data2/users/sgmwu14/tools/miniforge3/etc/profile.d/conda.sh
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/run_openfold_inference_epoch33v7.sbatch:20:conda activate openfold_env
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/run_openfold_inference_epoch33v7.sbatch:23:export PYTHONPATH=/users/sgmwu14/openfold:$PYTHONPATH
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/run_openfold_inference_epoch33v7.sbatch:27:export TRITON_CACHE_DIR=/users/sgmwu14/fastscratch/triton_cache
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/run_openfold_inference_epoch33v7.sbatch:33:FASTA_DIR=/users/sgmwu14/scratch/openfold_inference/fasta_dir
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/run_openfold_inference_epoch33v7.sbatch:34:CIF_DIR=/users/sgmwu14/scratch/taskcif
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/run_openfold_inference_epoch33v7.sbatch:35:ALIGN_DIR=/users/sgmwu14/scratch/openfold_inference/alignments_cf
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/run_openfold_inference_epoch33v7.sbatch:36:OUT_BASE=/users/sgmwu14/scratch/openfold_inference_runs
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/run_openfold_inference_epoch33v7.sbatch:44:/users/sgmwu14/scratch/openfold_runs/run_subset_gpu32_h100_ep27/csv_logs/version_0/checkpoints/21-220000.ckpt
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/run_openfold_inference_epoch33v7.sbatch:45:/users/sgmwu14/scratch/openfold_runs/run_subset_gpu32_h100_ep27/csv_logs/version_0/checkpoints/22-230000.ckpt
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/run_openfold_inference_epoch33v7.sbatch:46:/users/sgmwu14/scratch/openfold_runs/run_subset_gpu32_h100_ep27/csv_logs/version_0/checkpoints/23-240000.ckpt
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/run_openfold_inference_epoch33v7.sbatch:47:/users/sgmwu14/scratch/openfold_runs/run_subset_gpu32_h100_ep27/csv_logs/version_0/checkpoints/24-250000.ckpt
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/run_openfold_inference_epoch33v7.sbatch:48:/users/sgmwu14/scratch/openfold_runs/run_subset_gpu32_h100_ep27/csv_logs/version_0/checkpoints/25-260000.ckpt
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/run_openfold_inference_epoch33v7.sbatch:49:/users/sgmwu14/scratch/openfold_runs/run_subset_gpu32_h100_ep27/csv_logs/version_0/checkpoints/26-270000.ckpt
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/run_openfold_inference_epoch33v7.sbatch:85:        python3 /users/sgmwu14/openfold/run_pretrained_openfold.py \
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/run_4bp8_100pred_ep32_gpu32.sbatch:3:#SBATCH -p gpu-h100
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/run_4bp8_100pred_ep32_gpu32.sbatch:5:#SBATCH -w gpu32
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/run_4bp8_100pred_ep32_gpu32.sbatch:10:#SBATCH -o /users/sgmwu14/scratch/logs/of_4bp8_100pred_ep32_%j.out
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/run_4bp8_100pred_ep32_gpu32.sbatch:11:#SBATCH -e /users/sgmwu14/scratch/logs/of_4bp8_100pred_ep32_%j.err
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/run_4bp8_100pred_ep32_gpu32.sbatch:22:OPENFOLD_SCRIPT="/users/sgmwu14/openfold/run_pretrained_openfold.py"
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/run_4bp8_100pred_ep32_gpu32.sbatch:23:FASTA_FILE="/users/sgmwu14/scratch/openfold_inference/fasta_dir/4bp8.fasta"
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/run_4bp8_100pred_ep32_gpu32.sbatch:24:MMCIF_DIR="/users/sgmwu14/localscratch/pdb_data_full/mmcif_files"
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/run_4bp8_100pred_ep32_gpu32.sbatch:25:ALIGN_DIR="/users/sgmwu14/localscratch/alignment_openfold_full_20260210/alignment_data/alignments"
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/run_4bp8_100pred_ep32_gpu32.sbatch:26:CKPT="/users/sgmwu14/scratch/openfold_runs/run_subset_gpu32_h100_ep33/csv_logs/version_0/checkpoints/32-330000.ckpt"
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/run_4bp8_100pred_ep32_gpu32.sbatch:31:BASE_OUT="/users/sgmwu14/scratch/openfold_inference_4bp8_ep32_100pred"
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/run_4bp8_100pred_ep32_gpu32.sbatch:33:LOG_DIR="/users/sgmwu14/scratch/logs"
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/run_4bp8_100pred_ep32_gpu32.sbatch:50:# source /users/sgmwu14/.bashrc
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/openfold_subset_gpu32_v2.sbatch:3:#SBATCH -p gpu-h100
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/openfold_subset_gpu32_v2.sbatch:5:#SBATCH -w gpu32
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/openfold_subset_gpu32_v2.sbatch:10:#SBATCH --output=/users/%u/fastscratch/of_subset_h100_%j.log
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/openfold_subset_gpu32_v2.sbatch:11:#SBATCH --error=/users/%u/fastscratch/of_subset_h100_%j.err
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/openfold_subset_gpu32_v2.sbatch:16:source /mnt/data2/users/sgmwu14/tools/miniforge3/etc/profile.d/conda.sh
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/openfold_subset_gpu32_v2.sbatch:17:conda activate openfold_env
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/openfold_subset_gpu32_v2.sbatch:21:export TRITON_CACHE_DIR=/users/sgmwu14/fastscratch/triton_cache
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/openfold_subset_gpu32_v2.sbatch:24:export PYTHONPATH=/users/sgmwu14/openfold:$PYTHONPATH
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/openfold_subset_gpu32_v2.sbatch:28:DATA_DIR=/users/sgmwu14/localscratch
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/openfold_subset_gpu32_v2.sbatch:30:OUT_DIR=/users/sgmwu14/scratch/openfold_runs/run_subset_gpu32_h100_ep10
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/openfold_subset_gpu32_v2.sbatch:52:python -u /users/sgmwu14/openfold/train_openfold.py \
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/run_openfold_inference_epoch33v12.sbatch:3:#SBATCH -p gpu-h100
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/run_openfold_inference_epoch33v12.sbatch:5:#SBATCH -w gpu32
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/run_openfold_inference_epoch33v12.sbatch:10:#SBATCH --output=/users/%u/fastscratch/of_infer_ep21_26_x5_%j.log
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/run_openfold_inference_epoch33v12.sbatch:11:#SBATCH --error=/users/%u/fastscratch/of_infer_ep21_26_x5_%j.err
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/run_openfold_inference_epoch33v12.sbatch:19:source /mnt/data2/users/sgmwu14/tools/miniforge3/etc/profile.d/conda.sh
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/run_openfold_inference_epoch33v12.sbatch:20:conda activate openfold_env
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/run_openfold_inference_epoch33v12.sbatch:26:export PYTHONPATH=/users/sgmwu14/openfold:$PYTHONPATH
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/run_openfold_inference_epoch33v12.sbatch:29:export TRITON_CACHE_DIR=/users/sgmwu14/fastscratch/triton_cache
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/run_openfold_inference_epoch33v12.sbatch:35:FASTA_DIR=/users/sgmwu14/scratch/openfold_inference/fasta_dir
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/run_openfold_inference_epoch33v12.sbatch:36:CIF_DIR=/users/sgmwu14/scratch/taskcif
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/run_openfold_inference_epoch33v12.sbatch:37:ALIGN_DIR=/users/sgmwu14/scratch/openfold_inference/alignments_cf
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/run_openfold_inference_epoch33v12.sbatch:38:OUT_BASE=/users/sgmwu14/scratch/openfold_inference_runs
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/run_openfold_inference_epoch33v12.sbatch:46:  /users/sgmwu14/scratch/openfold_runs/run_subset_gpu32_h100_ep27/csv_logs/version_0/checkpoints/21-220000.ckpt
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/run_openfold_inference_epoch33v12.sbatch:47:  /users/sgmwu14/scratch/openfold_runs/run_subset_gpu32_h100_ep27/csv_logs/version_0/checkpoints/22-230000.ckpt
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/run_openfold_inference_epoch33v12.sbatch:48:  /users/sgmwu14/scratch/openfold_runs/run_subset_gpu32_h100_ep27/csv_logs/version_0/checkpoints/23-240000.ckpt
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/run_openfold_inference_epoch33v12.sbatch:49:  /users/sgmwu14/scratch/openfold_runs/run_subset_gpu32_h100_ep27/csv_logs/version_0/checkpoints/24-250000.ckpt
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/run_openfold_inference_epoch33v12.sbatch:50:  /users/sgmwu14/scratch/openfold_runs/run_subset_gpu32_h100_ep27/csv_logs/version_0/checkpoints/25-260000.ckpt
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/run_openfold_inference_epoch33v12.sbatch:51:  /users/sgmwu14/scratch/openfold_runs/run_subset_gpu32_h100_ep27/csv_logs/version_0/checkpoints/26-270000.ckpt
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/run_openfold_inference_epoch33v12.sbatch:86:        python3 /users/sgmwu14/openfold/run_pretrained_openfold.py \
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/openfold_subset_gpu32_v4.sbatch:3:#SBATCH -p gpu-h100
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/openfold_subset_gpu32_v4.sbatch:5:#SBATCH -w gpu32
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/openfold_subset_gpu32_v4.sbatch:10:#SBATCH --output=/users/%u/fastscratch/of_subset_h100_%j.log
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/openfold_subset_gpu32_v4.sbatch:11:#SBATCH --error=/users/%u/fastscratch/of_subset_h100_%j.err
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/openfold_subset_gpu32_v4.sbatch:16:source /mnt/data2/users/sgmwu14/tools/miniforge3/etc/profile.d/conda.sh
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/openfold_subset_gpu32_v4.sbatch:17:conda activate openfold_env
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/openfold_subset_gpu32_v4.sbatch:21:export TRITON_CACHE_DIR=/users/sgmwu14/fastscratch/triton_cache
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/openfold_subset_gpu32_v4.sbatch:24:export PYTHONPATH=/users/sgmwu14/openfold:$PYTHONPATH
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/openfold_subset_gpu32_v4.sbatch:28:DATA_DIR=/users/sgmwu14/localscratch
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/openfold_subset_gpu32_v4.sbatch:32:OUT_DIR=/users/sgmwu14/scratch/openfold_runs/run_subset_gpu32_h100_ep39
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/openfold_subset_gpu32_v4.sbatch:36:CKPT_PATH=/users/sgmwu14/scratch/openfold_runs/run_subset_gpu32_h100_ep33/csv_logs/version_0/checkpoints/32-330000.ckpt
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/openfold_subset_gpu32_v4.sbatch:56:python -u /users/sgmwu14/openfold/train_openfold.py \
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/run_openfold_inference_epoch33v5.sbatch:3:#SBATCH -p gpu-h100
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/run_openfold_inference_epoch33v5.sbatch:5:#SBATCH -w gpu32
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/run_openfold_inference_epoch33v5.sbatch:10:#SBATCH --output=/users/%u/fastscratch/of_infer_ckpts_x5_%j.log
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/run_openfold_inference_epoch33v5.sbatch:11:#SBATCH --error=/users/%u/fastscratch/of_infer_ckpts_x5_%j.err
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/run_openfold_inference_epoch33v5.sbatch:19:source /mnt/data2/users/sgmwu14/tools/miniforge3/etc/profile.d/conda.sh
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/run_openfold_inference_epoch33v5.sbatch:20:conda activate openfold_env
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/run_openfold_inference_epoch33v5.sbatch:23:export PYTHONPATH=/users/sgmwu14/openfold:$PYTHONPATH
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/run_openfold_inference_epoch33v5.sbatch:27:export TRITON_CACHE_DIR=/users/sgmwu14/fastscratch/triton_cache
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/run_openfold_inference_epoch33v5.sbatch:33:FASTA_DIR=/users/sgmwu14/scratch/openfold_inference/fasta_dir
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/run_openfold_inference_epoch33v5.sbatch:34:CIF_DIR=/users/sgmwu14/scratch/taskcif
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/run_openfold_inference_epoch33v5.sbatch:35:ALIGN_DIR=/users/sgmwu14/scratch/openfold_inference/alignments_cf
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/run_openfold_inference_epoch33v5.sbatch:36:OUT_BASE=/users/sgmwu14/scratch/openfold_inference_runs
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/run_openfold_inference_epoch33v5.sbatch:44:/users/sgmwu14/scratch/openfold_runs/run_subset_gpu32_h100_ep15/csv_logs/version_0/checkpoints/8-90000.ckpt
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/run_openfold_inference_epoch33v5.sbatch:45:/users/sgmwu14/scratch/openfold_runs/run_subset_gpu32_h100_ep15/csv_logs/version_0/checkpoints/9-100000.ckpt
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/run_openfold_inference_epoch33v5.sbatch:46:/users/sgmwu14/scratch/openfold_runs/run_subset_gpu32_h100_ep15/csv_logs/version_0/checkpoints/10-110000.ckpt
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/run_openfold_inference_epoch33v5.sbatch:47:/users/sgmwu14/scratch/openfold_runs/run_subset_gpu32_h100_ep15/csv_logs/version_0/checkpoints/11-120000.ckpt
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/run_openfold_inference_epoch33v5.sbatch:48:/users/sgmwu14/scratch/openfold_runs/run_subset_gpu32_h100_ep15/csv_logs/version_0/checkpoints/12-130000.ckpt
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/run_openfold_inference_epoch33v5.sbatch:49:/users/sgmwu14/scratch/openfold_runs/run_subset_gpu32_h100_ep15/csv_logs/version_0/checkpoints/13-140000.ckpt
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/run_openfold_inference_epoch33v5.sbatch:50:/users/sgmwu14/scratch/openfold_runs/run_subset_gpu32_h100_ep15/csv_logs/version_0/checkpoints/14-150000.ckpt
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/run_openfold_inference_epoch33v5.sbatch:86:        python3 /users/sgmwu14/openfold/run_pretrained_openfold.py \
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/make_testset_caches.sbatch:9:#SBATCH --output=/users/%u/fastscratch/make_testset_caches_%j.log
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/make_testset_caches.sbatch:10:#SBATCH --error=/users/%u/fastscratch/make_testset_caches_%j.err
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/make_testset_caches.sbatch:16:source /mnt/data2/users/sgmwu14/tools/miniforge3/etc/profile.d/conda.sh
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/make_testset_caches.sbatch:17:conda activate openfold_env
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/make_testset_caches.sbatch:21:MMCIF_DIR=/users/sgmwu14/localscratch/pdb_data/mmcif/mmcif_files
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/make_testset_caches.sbatch:22:CACHE_DIR=/users/sgmwu14/localscratch/pdb_data/data_caches
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/make_testset_caches.sbatch:23:CLUSTER_FILE=/users/sgmwu14/localscratch/alignment_testset/all-seqs_clusters-40.txt
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/make_testset_caches.sbatch:35:python /users/sgmwu14/openfold/scripts/generate_mmcif_cache.py \
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/make_testset_caches.sbatch:44:python /users/sgmwu14/openfold/scripts/generate_chain_data_cache.py \
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/run_openfold_inference_epoch33v2.sbatch:3:#SBATCH -p gpu-h100
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/run_openfold_inference_epoch33v2.sbatch:5:#SBATCH -w gpu32
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/run_openfold_inference_epoch33v2.sbatch:10:#SBATCH --output=/users/%u/fastscratch/of_infer3_ep33_%j.log
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/run_openfold_inference_epoch33v2.sbatch:11:#SBATCH --error=/users/%u/fastscratch/of_infer3_ep33_%j.err
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/run_openfold_inference_epoch33v2.sbatch:20:source /mnt/data2/users/sgmwu14/tools/miniforge3/etc/profile.d/conda.sh
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/run_openfold_inference_epoch33v2.sbatch:21:conda activate openfold_env
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/run_openfold_inference_epoch33v2.sbatch:24:export PYTHONPATH=/users/sgmwu14/openfold:$PYTHONPATH
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/run_openfold_inference_epoch33v2.sbatch:28:export TRITON_CACHE_DIR=/users/sgmwu14/fastscratch/triton_cache
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/run_openfold_inference_epoch33v2.sbatch:35:FASTA_DIR=/users/sgmwu14/scratch/openfold_inference/fasta_dir
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/run_openfold_inference_epoch33v2.sbatch:36:CIF_DIR=/users/sgmwu14/scratch/taskcif
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/run_openfold_inference_epoch33v2.sbatch:37:ALIGN_DIR=/users/sgmwu14/scratch/openfold_inference/alignments_cf
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/run_openfold_inference_epoch33v2.sbatch:40:RUN_ROOT=/users/sgmwu14/scratch/openfold_inference_ep33_rerun4
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/run_openfold_inference_epoch33v2.sbatch:46:MY_CKPT=/users/sgmwu14/scratch/openfold_runs/run_subset_gpu32_h100_ep33/csv_logs/version_0/checkpoints/27-280000.ckpt
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/run_openfold_inference_epoch33v2.sbatch:56:python3 /users/sgmwu14/openfold/run_pretrained_openfold.py \
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/run_openfold_inference_epoch33v2.sbatch:62:  --jax_param_path /users/sgmwu14/openfold/openfold/resources/params/params_model_1.npz \
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/run_openfold_inference_epoch33v2.sbatch:72:python3 /users/sgmwu14/openfold/run_pretrained_openfold.py \
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/run_openfold_inference_epoch33v2.sbatch:78:  --openfold_checkpoint_path /users/sgmwu14/openfold/openfold/resources/openfold_params/finetuning_2.pt \
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/run_openfold_inference_epoch33v2.sbatch:88:python3 /users/sgmwu14/openfold/run_pretrained_openfold.py \
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/openfold_inference_2olo_100pred_af.sbatch:3:#SBATCH -p gpu-h100
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/openfold_inference_2olo_100pred_af.sbatch:22:source /mnt/data2/users/sgmwu14/tools/miniforge3/etc/profile.d/conda.sh
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/openfold_inference_2olo_100pred_af.sbatch:23:conda activate openfold_env
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/openfold_inference_2olo_100pred_af.sbatch:29:export PYTHONPATH=/users/sgmwu14/openfold:$PYTHONPATH
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/openfold_inference_2olo_100pred_af.sbatch:32:export TRITON_CACHE_DIR=/users/sgmwu14/fastscratch/triton_cache
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/openfold_inference_2olo_100pred_af.sbatch:38:OPENFOLD_SCRIPT="/users/sgmwu14/openfold/run_pretrained_openfold.py"
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/openfold_inference_2olo_100pred_af.sbatch:39:FASTA_FILE="/users/sgmwu14/scratch/openfold_inference/fasta_dir/2olo.fasta"
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/openfold_inference_2olo_100pred_af.sbatch:40:MMCIF_DIR="/users/sgmwu14/scratch/taskcif"
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/openfold_inference_2olo_100pred_af.sbatch:41:ALIGN_ROOT="/users/sgmwu14/scratch/openfold_inference/alignments_cf"
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/openfold_inference_2olo_100pred_af.sbatch:42:JAX_PARAM="/users/sgmwu14/openfold/openfold/resources/params/params_model_1.npz"
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/openfold_inference_2olo_100pred_af.sbatch:47:BASE_OUT="/users/sgmwu14/scratch/openfold_inference_2olo_100pred_af"
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/openfold_inference_2olo_100pred_af.sbatch:49:LOG_DIR="/users/sgmwu14/scratch/logs"
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/run_openfold_inference.sbatch:3:#SBATCH -p gpu-h100
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/run_openfold_inference.sbatch:5:#SBATCH -w gpu32
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/run_openfold_inference.sbatch:10:#SBATCH --output=/users/%u/fastscratch/of_infer3_%j.log
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/run_openfold_inference.sbatch:11:#SBATCH --error=/users/%u/fastscratch/of_infer3_%j.err
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/run_openfold_inference.sbatch:20:source /mnt/data2/users/sgmwu14/tools/miniforge3/etc/profile.d/conda.sh
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/run_openfold_inference.sbatch:21:conda activate openfold_env
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/run_openfold_inference.sbatch:24:export PYTHONPATH=/users/sgmwu14/openfold:$PYTHONPATH
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/run_openfold_inference.sbatch:32:FASTA_DIR=/users/sgmwu14/scratch/openfold_inference/fasta_dir
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/run_openfold_inference.sbatch:33:CIF_DIR=/users/sgmwu14/scratch/taskcif
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/run_openfold_inference.sbatch:34:ALIGN_DIR=/users/sgmwu14/scratch/openfold_inference/alignments_cf
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/run_openfold_inference.sbatch:36:AF_OUT=/users/sgmwu14/scratch/openfold_inference/alphafold_output
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/run_openfold_inference.sbatch:37:OF_OUT=/users/sgmwu14/scratch/openfold_inference/openfold_output
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/run_openfold_inference.sbatch:38:MY_OUT=/users/sgmwu14/scratch/openfold_inference/your_model_output_ep21
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/run_openfold_inference.sbatch:50:python3 /users/sgmwu14/openfold/run_pretrained_openfold.py \
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/run_openfold_inference.sbatch:56:  --jax_param_path /users/sgmwu14/openfold/openfold/resources/params/params_model_1.npz \
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/run_openfold_inference.sbatch:65:python3 /users/sgmwu14/openfold/run_pretrained_openfold.py \
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/run_openfold_inference.sbatch:71:  --openfold_checkpoint_path /users/sgmwu14/openfold/openfold/resources/openfold_params/finetuning_2.pt \
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/run_openfold_inference.sbatch:80:python3 /users/sgmwu14/openfold/run_pretrained_openfold.py \
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/run_openfold_inference.sbatch:86:  --openfold_checkpoint_path /users/sgmwu14/scratch/openfold_runs/run_subset_gpu32_h100_ep21/csv_logs/version_0/checkpoints/20-210000.ckpt \
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/openfold_subset_pack_and_train.sbatch:10:#SBATCH --output=/users/%u/fastscratch/openfold_subset_%j.log
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/openfold_subset_pack_and_train.sbatch:11:#SBATCH --error=/users/%u/fastscratch/openfold_subset_%j.err
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/openfold_subset_pack_and_train.sbatch:25:conda activate openfold_env
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/openfold_subset_pack_and_train.sbatch:35:SRC_DATA=/users/sgmwu14/localscratch
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/openfold_subset_pack_and_train.sbatch:92:python /users/sgmwu14/openfold/train_openfold.py \
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/run_openfold_inference_epoch33v4.sbatch:3:#SBATCH -p gpu-h100
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/run_openfold_inference_epoch33v4.sbatch:5:#SBATCH -w gpu32
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/run_openfold_inference_epoch33v4.sbatch:10:#SBATCH --output=/users/%u/fastscratch/of_infer_ckpts_x5_%j.log
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/run_openfold_inference_epoch33v4.sbatch:11:#SBATCH --error=/users/%u/fastscratch/of_infer_ckpts_x5_%j.err
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/run_openfold_inference_epoch33v4.sbatch:19:source /mnt/data2/users/sgmwu14/tools/miniforge3/etc/profile.d/conda.sh
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/run_openfold_inference_epoch33v4.sbatch:20:conda activate openfold_env
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/run_openfold_inference_epoch33v4.sbatch:23:export PYTHONPATH=/users/sgmwu14/openfold:$PYTHONPATH
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/run_openfold_inference_epoch33v4.sbatch:27:export TRITON_CACHE_DIR=/users/sgmwu14/fastscratch/triton_cache
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/run_openfold_inference_epoch33v4.sbatch:33:FASTA_DIR=/users/sgmwu14/scratch/openfold_inference/fasta_dir
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/run_openfold_inference_epoch33v4.sbatch:34:CIF_DIR=/users/sgmwu14/scratch/taskcif
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/run_openfold_inference_epoch33v4.sbatch:35:ALIGN_DIR=/users/sgmwu14/scratch/openfold_inference/alignments_cf
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/run_openfold_inference_epoch33v4.sbatch:36:OUT_BASE=/users/sgmwu14/scratch/openfold_inference_runs
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/run_openfold_inference_epoch33v4.sbatch:44:/users/sgmwu14/scratch/openfold_runs/run_subset_gpu32_h100_ep10/csv_logs/version_0/checkpoints/0-10000.ckpt
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/run_openfold_inference_epoch33v4.sbatch:45:/users/sgmwu14/scratch/openfold_runs/run_subset_gpu32_h100_ep10/csv_logs/version_0/checkpoints/1-20000.ckpt
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/run_openfold_inference_epoch33v4.sbatch:46:/users/sgmwu14/scratch/openfold_runs/run_subset_gpu32_h100_ep10/csv_logs/version_0/checkpoints/2-30000.ckpt
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/run_openfold_inference_epoch33v4.sbatch:47:/users/sgmwu14/scratch/openfold_runs/run_subset_gpu32_h100_ep10/csv_logs/version_0/checkpoints/3-40000.ckpt
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/run_openfold_inference_epoch33v4.sbatch:48:/users/sgmwu14/scratch/openfold_runs/run_subset_gpu32_h100_ep10/csv_logs/version_0/checkpoints/4-50000.ckpt
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/run_openfold_inference_epoch33v4.sbatch:49:/users/sgmwu14/scratch/openfold_runs/run_subset_gpu32_h100_ep10/csv_logs/version_0/checkpoints/5-60000.ckpt
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/run_openfold_inference_epoch33v4.sbatch:50:/users/sgmwu14/scratch/openfold_runs/run_subset_gpu32_h100_ep10/csv_logs/version_0/checkpoints/6-70000.ckpt
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/run_openfold_inference_epoch33v4.sbatch:51:/users/sgmwu14/scratch/openfold_runs/run_subset_gpu32_h100_ep10/csv_logs/version_0/checkpoints/7-80000.ckpt
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/run_openfold_inference_epoch33v4.sbatch:87:        python3 /users/sgmwu14/openfold/run_pretrained_openfold.py \
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/relaxtions.sbatch:3:#SBATCH -p gpu-h100
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/relaxtions.sbatch:5:#SBATCH -w gpu32
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/relaxtions.sbatch:10:#SBATCH --output=/users/%u/fastscratch/of_relax_all_%j.log
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/relaxtions.sbatch:11:#SBATCH --error=/users/%u/fastscratch/of_relax_all_%j.err
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/relaxtions.sbatch:19:source /mnt/data2/users/sgmwu14/tools/miniforge3/etc/profile.d/conda.sh
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/relaxtions.sbatch:20:conda activate openfold_env
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/relaxtions.sbatch:23:export PYTHONPATH=/users/sgmwu14/openfold:$PYTHONPATH
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/relaxtions.sbatch:28:ROOT=/users/sgmwu14/scratch/openfold_inference_runs5times
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/pack_roda_node037.sbatch:9:#SBATCH --output=/users/%u/fastscratch/pack_roda_%j.log
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/run_openfold_inference_epoch33v11.sbatch:3:#SBATCH -p gpu-h100
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/run_openfold_inference_epoch33v11.sbatch:5:#SBATCH -w gpu32
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/run_openfold_inference_epoch33v11.sbatch:10:#SBATCH --output=/users/%u/fastscratch/of_infer_ep15_20_x5_%j.log
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/run_openfold_inference_epoch33v11.sbatch:11:#SBATCH --error=/users/%u/fastscratch/of_infer_ep15_20_x5_%j.err
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/run_openfold_inference_epoch33v11.sbatch:19:source /mnt/data2/users/sgmwu14/tools/miniforge3/etc/profile.d/conda.sh
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/run_openfold_inference_epoch33v11.sbatch:20:conda activate openfold_env
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/run_openfold_inference_epoch33v11.sbatch:26:export PYTHONPATH=/users/sgmwu14/openfold:$PYTHONPATH
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/run_openfold_inference_epoch33v11.sbatch:29:export TRITON_CACHE_DIR=/users/sgmwu14/fastscratch/triton_cache
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/run_openfold_inference_epoch33v11.sbatch:35:FASTA_DIR=/users/sgmwu14/scratch/openfold_inference/fasta_dir
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/run_openfold_inference_epoch33v11.sbatch:36:CIF_DIR=/users/sgmwu14/scratch/taskcif
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/run_openfold_inference_epoch33v11.sbatch:37:ALIGN_DIR=/users/sgmwu14/scratch/openfold_inference/alignments_cf
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/run_openfold_inference_epoch33v11.sbatch:38:OUT_BASE=/users/sgmwu14/scratch/openfold_inference_runs
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/run_openfold_inference_epoch33v11.sbatch:46:  /users/sgmwu14/scratch/openfold_runs/run_subset_gpu32_h100_ep21/csv_logs/version_0/checkpoints/15-160000.ckpt
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/run_openfold_inference_epoch33v11.sbatch:47:  /users/sgmwu14/scratch/openfold_runs/run_subset_gpu32_h100_ep21/csv_logs/version_0/checkpoints/16-170000.ckpt
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/run_openfold_inference_epoch33v11.sbatch:48:  /users/sgmwu14/scratch/openfold_runs/run_subset_gpu32_h100_ep21/csv_logs/version_0/checkpoints/17-180000.ckpt
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/run_openfold_inference_epoch33v11.sbatch:49:  /users/sgmwu14/scratch/openfold_runs/run_subset_gpu32_h100_ep21/csv_logs/version_0/checkpoints/18-190000.ckpt
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/run_openfold_inference_epoch33v11.sbatch:50:  /users/sgmwu14/scratch/openfold_runs/run_subset_gpu32_h100_ep21/csv_logs/version_0/checkpoints/19-200000.ckpt
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/run_openfold_inference_epoch33v11.sbatch:51:  /users/sgmwu14/scratch/openfold_runs/run_subset_gpu32_h100_ep21/csv_logs/version_0/checkpoints/20-210000.ckpt
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/run_openfold_inference_epoch33v11.sbatch:52:  /users/sgmwu14/scratch/openfold_runs/run_subset_gpu32_h100_ep27/csv_logs/version_0/checkpoints/21-220000.ckpt
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/run_openfold_inference_epoch33v11.sbatch:87:        python3 /users/sgmwu14/openfold/run_pretrained_openfold.py \
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/openfold_inference_4bp8_100pred_af.sbatch:22:source /mnt/data2/users/sgmwu14/tools/miniforge3/etc/profile.d/conda.sh
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/openfold_inference_4bp8_100pred_af.sbatch:23:conda activate openfold_env
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/openfold_inference_4bp8_100pred_af.sbatch:29:export PYTHONPATH=/users/sgmwu14/openfold:$PYTHONPATH
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/openfold_inference_4bp8_100pred_af.sbatch:32:export TRITON_CACHE_DIR=/users/sgmwu14/fastscratch/triton_cache
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/openfold_inference_4bp8_100pred_af.sbatch:38:OPENFOLD_SCRIPT="/users/sgmwu14/openfold/run_pretrained_openfold.py"
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/openfold_inference_4bp8_100pred_af.sbatch:39:FASTA_FILE="/users/sgmwu14/scratch/openfold_inference/fasta_dir/4bp8.fasta"
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/openfold_inference_4bp8_100pred_af.sbatch:40:MMCIF_DIR="/users/sgmwu14/scratch/taskcif"
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/openfold_inference_4bp8_100pred_af.sbatch:41:ALIGN_ROOT="/users/sgmwu14/scratch/openfold_inference/alignments_cf"
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/openfold_inference_4bp8_100pred_af.sbatch:42:JAX_PARAM="/users/sgmwu14/openfold/openfold/resources/params/params_model_1.npz"
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/openfold_inference_4bp8_100pred_af.sbatch:47:BASE_OUT="/users/sgmwu14/scratch/openfold_inference_4bp8_100pred_af"
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/openfold_inference_4bp8_100pred_af.sbatch:49:LOG_DIR="/users/sgmwu14/scratch/logs"
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/openfold_gpu32_h100.sbatch:3:#SBATCH -p gpu-h100
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/openfold_gpu32_h100.sbatch:5:#SBATCH -w gpu32
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/openfold_gpu32_h100.sbatch:10:#SBATCH --output=/users/%u/fastscratch/of_h100_%j.log
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/openfold_gpu32_h100.sbatch:11:#SBATCH --error=/users/%u/fastscratch/of_h100_%j.err
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/openfold_gpu32_h100.sbatch:24:source /mnt/data2/users/sgmwu14/tools/miniforge3/etc/profile.d/conda.sh
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/openfold_gpu32_h100.sbatch:25:conda activate openfold_env
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/openfold_gpu32_h100.sbatch:32:DATA_DIR=/users/sgmwu14/localscratch
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/openfold_gpu32_h100.sbatch:33:OUT_DIR=/users/sgmwu14/scratch/openfold_runs/run_subset_gpu32_h100
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/openfold_gpu32_h100.sbatch:45:python -u /users/sgmwu14/openfold/train_openfold.py \
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/run_openfold_inference_epoch33v10.sbatch:3:#SBATCH -p gpu-h100
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/run_openfold_inference_epoch33v10.sbatch:5:#SBATCH -w gpu32
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/run_openfold_inference_epoch33v10.sbatch:10:#SBATCH --output=/users/%u/fastscratch/of_infer_ep8_14_x5_%j.log
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/run_openfold_inference_epoch33v10.sbatch:11:#SBATCH --error=/users/%u/fastscratch/of_infer_ep8_14_x5_%j.err
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/run_openfold_inference_epoch33v10.sbatch:19:source /mnt/data2/users/sgmwu14/tools/miniforge3/etc/profile.d/conda.sh
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/run_openfold_inference_epoch33v10.sbatch:20:conda activate openfold_env
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/run_openfold_inference_epoch33v10.sbatch:26:export PYTHONPATH=/users/sgmwu14/openfold:$PYTHONPATH
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/run_openfold_inference_epoch33v10.sbatch:29:export TRITON_CACHE_DIR=/users/sgmwu14/fastscratch/triton_cache
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/run_openfold_inference_epoch33v10.sbatch:35:FASTA_DIR=/users/sgmwu14/scratch/openfold_inference/fasta_dir
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/run_openfold_inference_epoch33v10.sbatch:36:CIF_DIR=/users/sgmwu14/scratch/taskcif
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/run_openfold_inference_epoch33v10.sbatch:37:ALIGN_DIR=/users/sgmwu14/scratch/openfold_inference/alignments_cf
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/run_openfold_inference_epoch33v10.sbatch:38:OUT_BASE=/users/sgmwu14/scratch/openfold_inference_runs
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/run_openfold_inference_epoch33v10.sbatch:46:  /users/sgmwu14/scratch/openfold_runs/run_subset_gpu32_h100_ep10/csv_logs/version_0/checkpoints/0-10000.ckpt
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/run_openfold_inference_epoch33v10.sbatch:47:  /users/sgmwu14/scratch/openfold_runs/run_subset_gpu32_h100_ep10/csv_logs/version_0/checkpoints/1-20000.ckpt
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/run_openfold_inference_epoch33v10.sbatch:48:  /users/sgmwu14/scratch/openfold_runs/run_subset_gpu32_h100_ep10/csv_logs/version_0/checkpoints/2-30000.ckpt
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/run_openfold_inference_epoch33v10.sbatch:49:  /users/sgmwu14/scratch/openfold_runs/run_subset_gpu32_h100_ep10/csv_logs/version_0/checkpoints/3-40000.ckpt
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/run_openfold_inference_epoch33v10.sbatch:50:  /users/sgmwu14/scratch/openfold_runs/run_subset_gpu32_h100_ep10/csv_logs/version_0/checkpoints/4-50000.ckpt
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/run_openfold_inference_epoch33v10.sbatch:51:  /users/sgmwu14/scratch/openfold_runs/run_subset_gpu32_h100_ep10/csv_logs/version_0/checkpoints/5-60000.ckpt
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/run_openfold_inference_epoch33v10.sbatch:52:  /users/sgmwu14/scratch/openfold_runs/run_subset_gpu32_h100_ep10/csv_logs/version_0/checkpoints/6-70000.ckpt
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/run_openfold_inference_epoch33v10.sbatch:53:  /users/sgmwu14/scratch/openfold_runs/run_subset_gpu32_h100_ep10/csv_logs/version_0/checkpoints/7-80000.ckpt
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/run_openfold_inference_epoch33v10.sbatch:85:        python3 /users/sgmwu14/openfold/run_pretrained_openfold.py \
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/run_openfold_inference_epoch33all.sbatch:3:#SBATCH -p gpu-h100
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/run_openfold_inference_epoch33all.sbatch:5:#SBATCH -w gpu32
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/run_openfold_inference_epoch33all.sbatch:10:#SBATCH --output=/users/%u/fastscratch/of_infer_ep0_32_x5_%j.log
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/run_openfold_inference_epoch33all.sbatch:11:#SBATCH --error=/users/%u/fastscratch/of_infer_ep0_32_x5_%j.err
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/run_openfold_inference_epoch33all.sbatch:19:source /mnt/data2/users/sgmwu14/tools/miniforge3/etc/profile.d/conda.sh
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/run_openfold_inference_epoch33all.sbatch:20:conda activate openfold_env
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/run_openfold_inference_epoch33all.sbatch:26:export PYTHONPATH=/users/sgmwu14/openfold:$PYTHONPATH
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/run_openfold_inference_epoch33all.sbatch:29:export TRITON_CACHE_DIR=/users/sgmwu14/fastscratch/triton_cache
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/run_openfold_inference_epoch33all.sbatch:35:FASTA_DIR=/users/sgmwu14/scratch/openfold_inference/fasta_dir
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/run_openfold_inference_epoch33all.sbatch:36:CIF_DIR=/users/sgmwu14/scratch/taskcif
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/run_openfold_inference_epoch33all.sbatch:37:ALIGN_DIR=/users/sgmwu14/scratch/openfold_inference/alignments_cf
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/run_openfold_inference_epoch33all.sbatch:38:OUT_BASE=/users/sgmwu14/scratch/openfold_inference_runs2
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/run_openfold_inference_epoch33all.sbatch:46:  /users/sgmwu14/scratch/openfold_runs/run_subset_gpu32_h100_ep10/csv_logs/version_0/checkpoints/0-10000.ckpt
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/run_openfold_inference_epoch33all.sbatch:47:  /users/sgmwu14/scratch/openfold_runs/run_subset_gpu32_h100_ep10/csv_logs/version_0/checkpoints/1-20000.ckpt
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/run_openfold_inference_epoch33all.sbatch:48:  /users/sgmwu14/scratch/openfold_runs/run_subset_gpu32_h100_ep10/csv_logs/version_0/checkpoints/2-30000.ckpt
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/run_openfold_inference_epoch33all.sbatch:49:  /users/sgmwu14/scratch/openfold_runs/run_subset_gpu32_h100_ep10/csv_logs/version_0/checkpoints/3-40000.ckpt
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/run_openfold_inference_epoch33all.sbatch:50:  /users/sgmwu14/scratch/openfold_runs/run_subset_gpu32_h100_ep10/csv_logs/version_0/checkpoints/4-50000.ckpt
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/run_openfold_inference_epoch33all.sbatch:51:  /users/sgmwu14/scratch/openfold_runs/run_subset_gpu32_h100_ep10/csv_logs/version_0/checkpoints/5-60000.ckpt
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/run_openfold_inference_epoch33all.sbatch:52:  /users/sgmwu14/scratch/openfold_runs/run_subset_gpu32_h100_ep10/csv_logs/version_0/checkpoints/6-70000.ckpt
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/run_openfold_inference_epoch33all.sbatch:53:  /users/sgmwu14/scratch/openfold_runs/run_subset_gpu32_h100_ep10/csv_logs/version_0/checkpoints/7-80000.ckpt
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/run_openfold_inference_epoch33all.sbatch:55:  /users/sgmwu14/scratch/openfold_runs/run_subset_gpu32_h100_ep15/csv_logs/version_0/checkpoints/8-90000.ckpt
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/run_openfold_inference_epoch33all.sbatch:56:  /users/sgmwu14/scratch/openfold_runs/run_subset_gpu32_h100_ep15/csv_logs/version_0/checkpoints/9-100000.ckpt
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/run_openfold_inference_epoch33all.sbatch:57:  /users/sgmwu14/scratch/openfold_runs/run_subset_gpu32_h100_ep15/csv_logs/version_0/checkpoints/10-110000.ckpt
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/run_openfold_inference_epoch33all.sbatch:58:  /users/sgmwu14/scratch/openfold_runs/run_subset_gpu32_h100_ep15/csv_logs/version_0/checkpoints/11-120000.ckpt
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/run_openfold_inference_epoch33all.sbatch:59:  /users/sgmwu14/scratch/openfold_runs/run_subset_gpu32_h100_ep15/csv_logs/version_0/checkpoints/12-130000.ckpt
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/run_openfold_inference_epoch33all.sbatch:60:  /users/sgmwu14/scratch/openfold_runs/run_subset_gpu32_h100_ep15/csv_logs/version_0/checkpoints/13-140000.ckpt
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/run_openfold_inference_epoch33all.sbatch:61:  /users/sgmwu14/scratch/openfold_runs/run_subset_gpu32_h100_ep15/csv_logs/version_0/checkpoints/14-150000.ckpt
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/run_openfold_inference_epoch33all.sbatch:63:  /users/sgmwu14/scratch/openfold_runs/run_subset_gpu32_h100_ep21/csv_logs/version_0/checkpoints/15-160000.ckpt
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/run_openfold_inference_epoch33all.sbatch:64:  /users/sgmwu14/scratch/openfold_runs/run_subset_gpu32_h100_ep21/csv_logs/version_0/checkpoints/16-170000.ckpt
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/run_openfold_inference_epoch33all.sbatch:65:  /users/sgmwu14/scratch/openfold_runs/run_subset_gpu32_h100_ep21/csv_logs/version_0/checkpoints/17-180000.ckpt
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/run_openfold_inference_epoch33all.sbatch:66:  /users/sgmwu14/scratch/openfold_runs/run_subset_gpu32_h100_ep21/csv_logs/version_0/checkpoints/18-190000.ckpt
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/run_openfold_inference_epoch33all.sbatch:67:  /users/sgmwu14/scratch/openfold_runs/run_subset_gpu32_h100_ep21/csv_logs/version_0/checkpoints/19-200000.ckpt
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/run_openfold_inference_epoch33all.sbatch:68:  /users/sgmwu14/scratch/openfold_runs/run_subset_gpu32_h100_ep21/csv_logs/version_0/checkpoints/20-210000.ckpt
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/run_openfold_inference_epoch33all.sbatch:70:  /users/sgmwu14/scratch/openfold_runs/run_subset_gpu32_h100_ep27/csv_logs/version_0/checkpoints/21-220000.ckpt
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/run_openfold_inference_epoch33all.sbatch:71:  /users/sgmwu14/scratch/openfold_runs/run_subset_gpu32_h100_ep27/csv_logs/version_0/checkpoints/22-230000.ckpt
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/run_openfold_inference_epoch33all.sbatch:72:  /users/sgmwu14/scratch/openfold_runs/run_subset_gpu32_h100_ep27/csv_logs/version_0/checkpoints/23-240000.ckpt
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/run_openfold_inference_epoch33all.sbatch:73:  /users/sgmwu14/scratch/openfold_runs/run_subset_gpu32_h100_ep27/csv_logs/version_0/checkpoints/24-250000.ckpt
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/run_openfold_inference_epoch33all.sbatch:74:  /users/sgmwu14/scratch/openfold_runs/run_subset_gpu32_h100_ep27/csv_logs/version_0/checkpoints/25-260000.ckpt
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/run_openfold_inference_epoch33all.sbatch:75:  /users/sgmwu14/scratch/openfold_runs/run_subset_gpu32_h100_ep27/csv_logs/version_0/checkpoints/26-270000.ckpt
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/run_openfold_inference_epoch33all.sbatch:77:  /users/sgmwu14/scratch/openfold_runs/run_subset_gpu32_h100_ep33/csv_logs/version_0/checkpoints/27-280000.ckpt
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/run_openfold_inference_epoch33all.sbatch:78:  /users/sgmwu14/scratch/openfold_runs/run_subset_gpu32_h100_ep33/csv_logs/version_0/checkpoints/28-290000.ckpt
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/run_openfold_inference_epoch33all.sbatch:79:  /users/sgmwu14/scratch/openfold_runs/run_subset_gpu32_h100_ep33/csv_logs/version_0/checkpoints/29-300000.ckpt
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/run_openfold_inference_epoch33all.sbatch:80:  /users/sgmwu14/scratch/openfold_runs/run_subset_gpu32_h100_ep33/csv_logs/version_0/checkpoints/30-310000.ckpt
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/run_openfold_inference_epoch33all.sbatch:81:  /users/sgmwu14/scratch/openfold_runs/run_subset_gpu32_h100_ep33/csv_logs/version_0/checkpoints/31-320000.ckpt
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/run_openfold_inference_epoch33all.sbatch:82:  /users/sgmwu14/scratch/openfold_runs/run_subset_gpu32_h100_ep33/csv_logs/version_0/checkpoints/32-330000.ckpt
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/run_openfold_inference_epoch33all.sbatch:117:        python3 /users/sgmwu14/openfold/run_pretrained_openfold.py \
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/download_openfold_pdb_roda.sbatch:8:#SBATCH --output=/users/%u/fastscratch/of_roda_dl_%j.log
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/pack_openfold_testset.sbatch:9:#SBATCH --output=/users/%u/fastscratch/pack_of_testset_%j.log
+/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/pack_openfold_testset.sbatch:10:#SBATCH --error=/users/%u/fastscratch/pack_of_testset_%j.err

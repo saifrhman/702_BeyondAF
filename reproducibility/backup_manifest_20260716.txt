@@ -1,0 +1,23 @@
+COMP702 full backup
+Created: Thu 16 Jul 15:30:22 BST 2026
+
+OpenFold environment:
+/users/sgsrehm1/COMP702_BeyondAF/envs/openfold_env
+
+BRI environment:
+/users/sgsrehm1/fastscratch/envs/bri_env_1.2.2
+
+2OLO prediction root:
+code/COMP390_code/Result/2olo_minhao_relaxed_100_20260716_113129
+
+Generated PDB count:
+200
+
+Invariant CSV count:
+200
+
+PNG result count:
+17
+
+OpenFold checkpoint:
+code/COMP390_code/checkpoints/run_subset_gpu32_h100_ep33/csv_logs/version_0/checkpoints/32-330000.ckpt

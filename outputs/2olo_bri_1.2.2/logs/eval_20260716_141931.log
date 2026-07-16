@@ -1,0 +1,10 @@
+2026-07-16 14:19:31,221 - BRI - INFO - Start at 2026-07-16 14:19:31
+2026-07-16 14:19:31,221 - BRI - INFO - ========================================
+2026-07-16 14:19:31,222 - BRI - INFO - Available CPUs: 4
+2026-07-16 14:19:31,222 - BRI - INFO - Processing /users/sgsrehm1/COMP702_BeyondAF/outputs/2olo_bri_1.2.2/smoke_input as input
+2026-07-16 14:19:31,223 - BRI - INFO - Pre-processing data for BRI computation task
+2026-07-16 14:19:31,223 - BRI - INFO - Start running task: bri
+2026-07-16 14:19:31,253 - BRI - WARNING - Failed to compute invariant for /users/sgsrehm1/COMP702_BeyondAF/outputs/2olo_bri_1.2.2/smoke_input/repeat_001_relaxed.pdb: There are multiple blocks in the file
+2026-07-16 14:19:33,366 - BRI - INFO - Post-processing BRI computation results
+2026-07-16 14:19:33,367 - BRI - INFO - Saved 1 BRIs to /users/sgsrehm1/COMP702_BeyondAF/outputs/2olo_bri_1.2.2/smoke_invariants
+2026-07-16 14:19:33,367 - BRI - INFO - Completed with total time: 2.14s

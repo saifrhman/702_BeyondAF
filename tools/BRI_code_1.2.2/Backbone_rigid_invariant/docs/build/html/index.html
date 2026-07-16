@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+
+<html lang="en" data-content_root="./">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>Backbone Rigid Invariants &#8212; Backbone-Rigid-Invariant 1.0.0 documentation</title>
+    <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=d1102ebc" />
+    <link rel="stylesheet" type="text/css" href="_static/basic.css?v=686e5160" />
+    <link rel="stylesheet" type="text/css" href="_static/alabaster.css?v=27fed22d" />
+    <script src="_static/documentation_options.js?v=8d563738"></script>
+    <script src="_static/doctools.js?v=9bcbadda"></script>
+    <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script async="async" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Use of Pipelines" href="pipelines.html" />
+   
+  <link rel="stylesheet" href="_static/custom.css" type="text/css" />
+  
+
+  
+  
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <section id="backbone-rigid-invariants">
+<h1>Backbone Rigid Invariants<a class="headerlink" href="#backbone-rigid-invariants" title="Link to this heading">¶</a></h1>
+<section id="introduction">
+<h2>Introduction<a class="headerlink" href="#introduction" title="Link to this heading">¶</a></h2>
+<p>This program is enables:</p>
+<ol class="arabic simple">
+<li><p>Cleaning the PDB dataset (from <a class="reference external" href="https://www.rcsb.org/">RCSB</a>) using the regulations we defined to obtain the cleaned protein chains.</p></li>
+<li><p>Computing Backbone Rigid Invariants (BRIs) with triangular invariants (trins) and Average Invariant (Brain) for a given cleaned chain.</p></li>
+<li><p>Quick comparison of BRIs, generating distances between chains to find near-duplicates of proteins.</p></li>
+</ol>
+</section>
+<section id="getting-started">
+<h2>Getting started<a class="headerlink" href="#getting-started" title="Link to this heading">¶</a></h2>
+<section id="prerequisites">
+<h3>Prerequisites<a class="headerlink" href="#prerequisites" title="Link to this heading">¶</a></h3>
+<p>Python versions &gt;=3.10.</p>
+</section>
+<section id="installation">
+<h3>Installation<a class="headerlink" href="#installation" title="Link to this heading">¶</a></h3>
+<p>Use pip to install backbone-rigid-invariant:</p>
+<blockquote>
+<div><p>Currently, you may have to install with released distributions.</p>
+</div></blockquote>
+<p>Install with a <code class="docutils literal notranslate"><span class="pre">wheel</span></code> file:</p>
+<div class="highlight-shell notranslate"><div class="highlight"><pre><span></span>pip<span class="w"> </span>install<span class="w"> </span>backbone_rigid_invariant-1.1.0-py3-none-any.whl
+</pre></div>
+</div>
+<p>Or install with a <code class="docutils literal notranslate"><span class="pre">.tar.gz</span></code> compression file:</p>
+<div class="highlight-shell notranslate"><div class="highlight"><pre><span></span>pip<span class="w"> </span>install<span class="w"> </span>backbone_rigid_invariant-1.1.0.tar.gz
+</pre></div>
+</div>
+<p>Then import the package by <code class="docutils literal notranslate"><span class="pre">import</span> <span class="pre">bri</span></code>.</p>
+</section>
+<section id="read-chains-compute-invariants">
+<h3>Read chains &amp; compute invariants<a class="headerlink" href="#read-chains-compute-invariants" title="Link to this heading">¶</a></h3>
+<p>This example reads one single protein chain from PDB and computes the Backbone Rigid Invariant:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">bri</span> <span class="kn">import</span> <span class="n">Chain</span>
+
+
+<span class="c1"># create a Chain instance using pdb_id, entity_id, model_id, chain_id, start of residue_id, and chain length</span>
+<span class="n">reference_1hho</span> <span class="o">=</span> <span class="n">Chain</span><span class="p">(</span><span class="s1">&#39;1hho&#39;</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="s1">&#39;A&#39;</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">141</span><span class="p">)</span>
+
+<span class="c1"># get Backbone Rigid Invariant</span>
+<span class="n">invariant</span> <span class="o">=</span> <span class="n">reference_1hho</span><span class="o">.</span><span class="n">invariant</span>
+</pre></div>
+</div>
+<p>The variable <code class="docutils literal notranslate"><span class="pre">invariant</span></code> is a <code class="docutils literal notranslate"><span class="pre">Pandas.DataFrame</span></code> object with <em>n</em> rows, where <em>n</em> represents the length of the chain.</p>
+</section>
+<section id="implement-perturbation-validate-lipschitz-constant">
+<h3>Implement perturbation &amp; validate Lipschitz Constant<a class="headerlink" href="#implement-perturbation-validate-lipschitz-constant" title="Link to this heading">¶</a></h3>
+<p>To perturb a protein chain and validate Lipschitz Constants:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">bri</span> <span class="kn">import</span> <span class="n">Chain</span><span class="p">,</span> <span class="n">get_e_lipschitz_constant</span><span class="p">,</span> <span class="n">get_theo_lipschitz_constant</span>
+
+
+<span class="c1"># create chain instances</span>
+<span class="n">reference_1hho</span> <span class="o">=</span> <span class="n">Chain</span><span class="p">(</span><span class="s1">&#39;1hho&#39;</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="s1">&#39;A&#39;</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">141</span><span class="p">)</span>
+<span class="n">perturb_1hho</span> <span class="o">=</span> <span class="n">Chain</span><span class="p">(</span><span class="s1">&#39;1hho&#39;</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="s1">&#39;A&#39;</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">141</span><span class="p">)</span>
+
+<span class="c1"># set perturbation</span>
+<span class="n">perturb_1hho</span><span class="o">.</span><span class="n">perturb_radius</span> <span class="o">=</span> <span class="mf">0.01</span>
+
+<span class="c1"># compute lipschitz_constant</span>
+<span class="n">experimental_constant</span> <span class="o">=</span> <span class="n">get_e_lipschitz_constant</span><span class="p">(</span><span class="n">reference_1hho</span><span class="p">,</span> <span class="n">perturb_1hho</span><span class="p">)</span>
+<span class="n">theoretical_constant</span> <span class="o">=</span> <span class="n">get_theo_lipschitz_constant</span><span class="p">(</span><span class="n">reference_1hho</span><span class="p">,</span> <span class="n">perturb_1hho</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>Specifying the attribute <code class="docutils literal notranslate"><span class="pre">Chain.perturb_radius</span> <span class="pre">=</span> <span class="pre">epsilon</span></code> induces a perturbation within a sphere with <code class="docutils literal notranslate"><span class="pre">epsilon</span></code> radius, and updates <code class="docutils literal notranslate"><span class="pre">Chain.invariant</span></code> at the same time.</p>
+<p><code class="docutils literal notranslate"><span class="pre">get_e_lipschitz_constant()</span></code> and <code class="docutils literal notranslate"><span class="pre">get_theo_lipschitz_constant()</span></code> use the <code class="docutils literal notranslate"><span class="pre">Chain</span></code> objects they get to compute experimental and theoretical Lipschitz Constant namely.</p>
+</section>
+<section id="plot-backbone-invariant-diagram-bid-backbone-invariant-barcode-bib">
+<h3>Plot Backbone Invariant Diagram (BID) &amp; Backbone Invariant Barcode (BIB)<a class="headerlink" href="#plot-backbone-invariant-diagram-bid-backbone-invariant-barcode-bib" title="Link to this heading">¶</a></h3>
+<p>BID and BIB are plots that can straight show some features of a chain. Class <code class="docutils literal notranslate"><span class="pre">Chain</span></code> integrates methods to generate these plots powered by library <code class="docutils literal notranslate"><span class="pre">matplotlib</span></code>:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">bri</span> <span class="kn">import</span> <span class="n">Chain</span>
+
+<span class="c1"># initial chain instances</span>
+<span class="n">reference_1hho</span> <span class="o">=</span> <span class="n">Chain</span><span class="p">(</span><span class="s1">&#39;1hho&#39;</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="s1">&#39;A&#39;</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">141</span><span class="p">)</span>
+
+<span class="c1"># show and save Backbone Invariants Diagram</span>
+<span class="n">reference_1hho</span><span class="o">.</span><span class="n">generate_BID</span><span class="p">()</span><span class="o">.</span><span class="n">savefig</span><span class="p">(</span><span class="s1">&#39;1HHO_BID.png&#39;</span><span class="p">)</span>
+<span class="n">reference_1hho</span><span class="o">.</span><span class="n">generate_BIB</span><span class="p">()</span><span class="o">.</span><span class="n">savefig</span><span class="p">(</span><span class="s1">&#39;1HHO_BIB.png&#39;</span><span class="p">)</span>
+</pre></div>
+</div>
+<p><code class="docutils literal notranslate"><span class="pre">.generate_BID()</span></code> and <code class="docutils literal notranslate"><span class="pre">.generate_BIB()</span></code> show generated plots and return <code class="docutils literal notranslate"><span class="pre">matplotlib.pyplot.1</span></code> objects. So it is easy to save with its <code class="docutils literal notranslate"><span class="pre">.savefig()</span></code> method, with arguments it supports.</p>
+<!-- **For use details， please see the [example notebook](examples/BRI_examples.ipynb)** --><div class="toctree-wrapper compound">
+</div>
+<div class="toctree-wrapper compound">
+</div>
+</section>
+</section>
+</section>
+<section id="indices-and-tables">
+<h1>Indices and tables<a class="headerlink" href="#indices-and-tables" title="Link to this heading">¶</a></h1>
+<ul class="simple">
+<li><p><a class="reference internal" href="genindex.html"><span class="std std-ref">Index</span></a></p></li>
+<li><p><a class="reference internal" href="py-modindex.html"><span class="std std-ref">Module Index</span></a></p></li>
+<li><p><a class="reference internal" href="search.html"><span class="std std-ref">Search Page</span></a></p></li>
+</ul>
+</section>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="Main">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="#">Backbone-Rigid-Invariant</a></h1>
+
+
+
+
+
+
+
+
+
+<search id="searchbox" style="display: none" role="search">
+    <div class="searchformwrapper">
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" placeholder="Search"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</search>
+<script>document.getElementById('searchbox').style.display = "block"</script><h3>Navigation</h3>
+<p class="caption" role="heading"><span class="caption-text">Using bri:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="pipelines.html">Use of Pipelines</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Modules:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="bri.base.html">bri.base module</a></li>
+<li class="toctree-l1"><a class="reference internal" href="bri.filter.html">bri.filter module</a></li>
+<li class="toctree-l1"><a class="reference internal" href="bri.invariant.html">bri.invariant module</a></li>
+<li class="toctree-l1"><a class="reference internal" href="bri.invariant_compare.html">bri.invariant_compare module</a></li>
+<li class="toctree-l1"><a class="reference internal" href="bri.pdbx2df.html">bri.pdbx2df module</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="#">Documentation overview</a><ul>
+      <li>Next: <a href="pipelines.html" title="next chapter">Use of Pipelines</a></li>
+  </ul></li>
+</ul>
+</div>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &#169;2024, Ziqiu Jiang.
+      
+      |
+      Powered by <a href="https://www.sphinx-doc.org/">Sphinx 8.1.3</a>
+      &amp; <a href="https://alabaster.readthedocs.io">Alabaster 1.0.0</a>
+      
+      |
+      <a href="_sources/index.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

@@ -1,0 +1,35 @@
+name: openfold_env
+channels:
+  - pytorch
+  - nvidia
+  - conda-forge
+  - bioconda
+dependencies:
+  - cuda
+  - gcc=12.4
+  - python=3.10
+  - setuptools=59.5.0
+  - openmm
+  - pdbfixer
+  - biopython
+  - pyyaml
+  - requests
+  - tqdm
+  - typing-extensions
+  - wandb
+  - modelcif=0.7
+  - awscli
+  - ml-collections
+  - aria2
+  - mkl
+  - git
+  - hmmer
+  - hhsuite
+  - kalign2
+  - pytorch=2.5
+  - pytorch-cuda=12.4
+  - mmseqs2
+variables:
+  CUTLASS_PATH: /users/sgmwu14/openfold/cutlass
+  KMP_AFFINITY: none
+prefix: /mnt/data2/users/sgmwu14/tools/miniforge3/envs/openfold_env

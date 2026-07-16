@@ -1,0 +1,6 @@
+
+[cuequivariance]
+
+[cuequivariance:sys_platform != "darwin"]
+cuequivariance-torch
+triton>=3.3.0

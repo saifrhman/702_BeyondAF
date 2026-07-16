@@ -1,0 +1,336 @@
+<!DOCTYPE html>
+
+<html lang="en" data-content_root="./">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>Use of Pipelines &#8212; Backbone-Rigid-Invariant 1.0.0 documentation</title>
+    <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=d1102ebc" />
+    <link rel="stylesheet" type="text/css" href="_static/basic.css?v=686e5160" />
+    <link rel="stylesheet" type="text/css" href="_static/alabaster.css?v=27fed22d" />
+    <script src="_static/documentation_options.js?v=8d563738"></script>
+    <script src="_static/doctools.js?v=9bcbadda"></script>
+    <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="bri.base module" href="bri.base.html" />
+    <link rel="prev" title="Backbone Rigid Invariants" href="index.html" />
+   
+  <link rel="stylesheet" href="_static/custom.css" type="text/css" />
+  
+
+  
+  
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <section id="use-of-pipelines">
+<h1>Use of Pipelines<a class="headerlink" href="#use-of-pipelines" title="Link to this heading">¶</a></h1>
+<p>This package so far provides convenient functions to streamline common
+workflows cleaning protein chains, computing Backbone Rigid Invariants, and
+searching near-duplicates in groups.</p>
+<p>This section introduces the available pipelines and demonstrates how they can
+be used directly from the command line.</p>
+<section id="overview">
+<h2>Overview<a class="headerlink" href="#overview" title="Link to this heading">¶</a></h2>
+<p>The pipelines are designed to:</p>
+<ul class="simple">
+<li><p>Clean protein chain data from mmCIF files</p></li>
+<li><p>Compute Backbone Rigid Invariants (BRIs) in a reproducible manner</p></li>
+<li><p>Search for near-duplicate structures within or across datasets</p></li>
+</ul>
+<p>All pipelines are exposed through a command-line interface (CLI), making them
+easy to integrate into shell scripts and larger workflows.</p>
+<div class="admonition caution">
+<p class="admonition-title">Caution</p>
+<p>The pipelines defaults to utilize all the available CPU cores for computation. It may
+put a strain on the computer. So please check and evaluate the available resource
+before use these pipelines.</p>
+</div>
+</section>
+<section id="general-command-line-usage">
+<h2>General Command-Line Usage<a class="headerlink" href="#general-command-line-usage" title="Link to this heading">¶</a></h2>
+<p>After installing the package, the main entry point can be accessed via</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">python</span> <span class="o">-</span><span class="n">m</span> <span class="n">bri</span> <span class="o">--</span><span class="n">task</span> <span class="o">&lt;</span><span class="n">pipeline</span><span class="o">&gt;</span> <span class="p">[</span><span class="n">OPTIONS</span><span class="p">]</span>
+</pre></div>
+</div>
+<p>Where:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">&lt;pipeline&gt;</span></code> specifies the workflow to execute</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">[OPTIONS]</span></code> control input files, output locations, and algorithm-specific
+parameters</p></li>
+</ul>
+<p>You can list all available pipelines with</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">python</span> <span class="o">-</span><span class="n">m</span> <span class="n">bri</span> <span class="o">--</span><span class="n">help</span>
+</pre></div>
+</div>
+</section>
+<section id="pipeline-1-cleaning-protein-chains">
+<h2>Pipeline 1: Cleaning Protein Chains<a class="headerlink" href="#pipeline-1-cleaning-protein-chains" title="Link to this heading">¶</a></h2>
+<p>This pipeline applies standard cleaning steps, including selection of chains,
+and removal of chains broken by missing atoms and residues, and atom clashes.</p>
+<section id="example">
+<h3>Example<a class="headerlink" href="#example" title="Link to this heading">¶</a></h3>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">python</span> <span class="o">-</span><span class="n">m</span> <span class="n">bri</span> <span class="o">--</span><span class="n">task</span> <span class="n">clean</span> \
+    <span class="o">--</span><span class="nb">input</span><span class="o">-</span><span class="n">data</span> <span class="n">data_list</span><span class="o">/</span><span class="n">entry_ids</span><span class="o">.</span><span class="n">txt</span> \
+    <span class="o">--</span><span class="n">output</span> <span class="n">results</span><span class="o">/</span> \
+</pre></div>
+</div>
+</section>
+<section id="options">
+<h3>Options<a class="headerlink" href="#options" title="Link to this heading">¶</a></h3>
+<ul>
+<li><p><code class="docutils literal notranslate"><span class="pre">--input-data</span></code>: Path to a directory or <code class="docutils literal notranslate"><span class="pre">.txt</span></code> file containing accessible protein
+structure data</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">--output</span></code>: Directory to save cleaned protein chains</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">--max-samples</span></code>: Number of entries to use from the input data. Default is
+to use all.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">--process</span></code>: If to show a process bar. Default is not to show.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">--extend</span></code>: If to use an extended workflow. Defaults to <cite>True</cite>. Use
+<code class="docutils literal notranslate"><span class="pre">--no-extend</span></code> to disable.</p>
+<blockquote>
+<div><div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>For the cleaning pipeline, the extended version includes additional
+steps including entity inspection and author data extraction. The
+output of cleaned chains will be represented with columns:</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>pdb_id: represents the entry name of the mmCIF file</p></li>
+<li><p>entity_id: represents the labelled entity id of the chain</p></li>
+<li><p>model_id: represents the model id (pdbx_PDB_model_num) of the chain</p></li>
+<li><p>chain_id: represents the chain id (label_asym_id)</p></li>
+<li><p>start_residue: represents the first residue number (label_seq_id) of
+the cleaned chain</p></li>
+<li><p>chain_length: represents the length of this cleaned chain</p></li>
+<li><p>auth_chain_id: represents the author-assigned chain id (auth_asym_id)</p></li>
+<li><p>auth_seq_id_start: represents the first author-assigned residue
+number (auth_seq_id) of the cleaned chain</p></li>
+<li><p>auth_seq_id_end: represents the last author-assigned residue number
+(auth_seq_id) of the cleaned chain</p></li>
+<li><p>seq: represents the amino acid sequence of the cleaned chain</p></li>
+</ul>
+</div></blockquote>
+<p>However, entity information was not always included in protein strcutures
+(especially computed strcutures). In this case, the non-extended version
+is recommended to ensure compatibility. Also, the output of it will be
+more concise as the minimal required information for identifying a
+protein chain:</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>pdb_id</p></li>
+<li><p>model_id</p></li>
+<li><p>chain_id</p></li>
+<li><p>start_residue</p></li>
+<li><p>chain_length</p></li>
+<li><p>seq</p></li>
+</ul>
+</div></blockquote>
+</div>
+</div></blockquote>
+</li>
+</ul>
+</section>
+<section id="outputs">
+<h3>Outputs<a class="headerlink" href="#outputs" title="Link to this heading">¶</a></h3>
+<ul class="simple">
+<li><p>File of cleaned protein chains <code class="docutils literal notranslate"><span class="pre">chains_cleaned.csv</span></code> written to the
+specified output directory</p></li>
+<li><p>File of removed items <code class="docutils literal notranslate"><span class="pre">chains_filtered.csv</span></code> written to the specified
+output directory</p></li>
+</ul>
+</section>
+</section>
+<section id="pipeline-2-computing-backbone-rigid-invariants">
+<h2>Pipeline 2: Computing Backbone Rigid Invariants<a class="headerlink" href="#pipeline-2-computing-backbone-rigid-invariants" title="Link to this heading">¶</a></h2>
+<p>This pipeline computes Backbone Rigid Invariants (BRIs) for cleaned protein
+chains.
+.. These invariants provide a compact geometric description of backbone conformations.</p>
+<section id="id1">
+<h3>Example<a class="headerlink" href="#id1" title="Link to this heading">¶</a></h3>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">python</span> <span class="o">-</span><span class="n">m</span> <span class="n">bri</span> <span class="o">--</span><span class="n">task</span> <span class="n">bri</span> \
+    <span class="o">--</span><span class="nb">input</span><span class="o">-</span><span class="n">data</span> <span class="n">results</span><span class="o">/</span><span class="n">chains_cleaned</span><span class="o">.</span><span class="n">csv</span> \
+    <span class="o">--</span><span class="n">output</span> <span class="n">results</span><span class="o">/</span><span class="n">bri</span><span class="o">/</span> \
+</pre></div>
+</div>
+</section>
+<section id="id2">
+<h3>Options<a class="headerlink" href="#id2" title="Link to this heading">¶</a></h3>
+<ul>
+<li><p><code class="docutils literal notranslate"><span class="pre">--input-data</span></code>: A <code class="docutils literal notranslate"><span class="pre">.csv</span></code> file containing cleaned protein chains, a <code class="docutils literal notranslate"><span class="pre">.txt</span></code> file
+containing accessable entries, or a directory of mmCIF/bcif files.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">--output</span></code>: Directory to save BRIs seperately for each chain, or a single file for
+all chains.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">--max-samples</span></code>: Number of entries to use from the input data. Default is to use all.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">--process</span></code>: If to show a process bar. Default is not to show.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">--extend</span></code>: If to use an extended workflow. Defaults to <cite>True</cite>. Use <code class="docutils literal notranslate"><span class="pre">--no-extend</span></code>
+to disable.</p>
+<blockquote>
+<div><div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>For the BRI computation pipeline, the extended version will include bond angles
+and tausion angles additional to the standard BRIs.</p>
+</div>
+</div></blockquote>
+</li>
+</ul>
+</section>
+<section id="id3">
+<h3>Outputs<a class="headerlink" href="#id3" title="Link to this heading">¶</a></h3>
+<ul class="simple">
+<li><p>A file containing all BRIs, or files saved in the target directory seperately by chains.</p></li>
+</ul>
+</section>
+</section>
+<section id="pipeline-3-searching-for-near-duplicates">
+<h2>Pipeline 3: Searching for Near-Duplicates<a class="headerlink" href="#pipeline-3-searching-for-near-duplicates" title="Link to this heading">¶</a></h2>
+<p>This pipeline searches for near-duplicate protein structures based on their BRIs.</p>
+<section id="id4">
+<h3>Example<a class="headerlink" href="#id4" title="Link to this heading">¶</a></h3>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">python</span> <span class="o">-</span><span class="n">m</span> <span class="n">bri</span> <span class="o">--</span><span class="n">task</span> <span class="n">duplicate</span> \
+    <span class="o">--</span><span class="nb">input</span><span class="o">-</span><span class="n">data</span> <span class="n">results</span><span class="o">/</span><span class="n">chains_cleaned</span><span class="o">.</span><span class="n">csv</span> \
+    <span class="o">--</span><span class="n">output</span> <span class="n">results</span><span class="o">/</span><span class="n">duplicates</span>
+</pre></div>
+</div>
+</section>
+<section id="id5">
+<h3>Options<a class="headerlink" href="#id5" title="Link to this heading">¶</a></h3>
+<ul>
+<li><p><code class="docutils literal notranslate"><span class="pre">--input-data</span></code>: A <code class="docutils literal notranslate"><span class="pre">.csv</span></code> file containing cleaned protein chains.
+<cite>More input options will be added in the future.</cite></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">--output</span></code>: If not specified, the full results of pairwise distances will be saved
+into the directory by chain length. Two tables will always be saved even without
+the specified output option:</p>
+<blockquote>
+<div><ol class="arabic simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">L_inf_lt1_&lt;time&gt;.csv</span></code>: All pairs of structures with L-infinity distances
+less than 1.0 Angstrom.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">L_inf_lt001_eq_seq_&lt;time&gt;.csv</span></code>: All pairs of structures with the same amino
+sequences and L-infinity distances less than 0.01 Angstrom.</p></li>
+</ol>
+</div></blockquote>
+</li>
+<li><p><code class="docutils literal notranslate"><span class="pre">--max-samples</span></code>: Number of entries to use from the input data. Default is to use all.</p></li>
+</ul>
+</section>
+<section id="id6">
+<h3>Outputs<a class="headerlink" href="#id6" title="Link to this heading">¶</a></h3>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">.csv</span></code> files listing pairs of near-duplicate structures</p></li>
+</ul>
+</section>
+</section>
+<section id="chaining-pipelines">
+<h2>Chaining Pipelines<a class="headerlink" href="#chaining-pipelines" title="Link to this heading">¶</a></h2>
+<p>The pipelines are designed to be composable. For example, cleaning, invariant
+computation, and duplicate search can be executed sequentially:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">python</span> <span class="o">-</span><span class="n">m</span> <span class="n">bri</span> <span class="o">--</span><span class="n">task</span> <span class="n">clean</span> <span class="o">--</span><span class="nb">input</span><span class="o">-</span><span class="n">data</span> <span class="n">entry_ids</span><span class="o">.</span><span class="n">txt</span> <span class="o">--</span><span class="n">output</span> <span class="n">results</span><span class="o">/</span>
+<span class="n">python</span> <span class="o">-</span><span class="n">m</span> <span class="n">bri</span> <span class="o">--</span><span class="n">task</span> <span class="n">bri</span> <span class="o">--</span><span class="nb">input</span><span class="o">-</span><span class="n">data</span> <span class="n">results</span><span class="o">/</span><span class="n">chains_cleaned</span><span class="o">.</span><span class="n">csv</span> <span class="o">--</span><span class="n">output</span> <span class="n">results</span><span class="o">/</span><span class="n">bri</span><span class="o">/</span>
+<span class="n">python</span> <span class="o">-</span><span class="n">m</span> <span class="n">bri</span> <span class="o">--</span><span class="n">task</span> <span class="n">duplicate</span> <span class="o">--</span><span class="nb">input</span><span class="o">-</span><span class="n">data</span> <span class="n">results</span><span class="o">/</span><span class="n">chains_cleaned</span><span class="o">.</span><span class="n">csv</span> <span class="o">--</span><span class="n">output</span> <span class="n">results</span><span class="o">/</span>
+</pre></div>
+</div>
+</section>
+<section id="notes">
+<h2>Notes<a class="headerlink" href="#notes" title="Link to this heading">¶</a></h2>
+<ul class="simple">
+<li><p>Logs will be printed and saved in the current working directory by default for
+troubleshooting.</p></li>
+</ul>
+</section>
+</section>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="Main">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="index.html">Backbone-Rigid-Invariant</a></h1>
+
+
+
+
+
+
+
+
+
+<search id="searchbox" style="display: none" role="search">
+    <div class="searchformwrapper">
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" placeholder="Search"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</search>
+<script>document.getElementById('searchbox').style.display = "block"</script><h3>Navigation</h3>
+<p class="caption" role="heading"><span class="caption-text">Using bri:</span></p>
+<ul class="current">
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Use of Pipelines</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#overview">Overview</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#general-command-line-usage">General Command-Line Usage</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#pipeline-1-cleaning-protein-chains">Pipeline 1: Cleaning Protein Chains</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#pipeline-2-computing-backbone-rigid-invariants">Pipeline 2: Computing Backbone Rigid Invariants</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#pipeline-3-searching-for-near-duplicates">Pipeline 3: Searching for Near-Duplicates</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#chaining-pipelines">Chaining Pipelines</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#notes">Notes</a></li>
+</ul>
+</li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Modules:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="bri.base.html">bri.base module</a></li>
+<li class="toctree-l1"><a class="reference internal" href="bri.filter.html">bri.filter module</a></li>
+<li class="toctree-l1"><a class="reference internal" href="bri.invariant.html">bri.invariant module</a></li>
+<li class="toctree-l1"><a class="reference internal" href="bri.invariant_compare.html">bri.invariant_compare module</a></li>
+<li class="toctree-l1"><a class="reference internal" href="bri.pdbx2df.html">bri.pdbx2df module</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="index.html">Documentation overview</a><ul>
+      <li>Previous: <a href="index.html" title="previous chapter">Backbone Rigid Invariants</a></li>
+      <li>Next: <a href="bri.base.html" title="next chapter">bri.base module</a></li>
+  </ul></li>
+</ul>
+</div>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &#169;2024, Ziqiu Jiang.
+      
+      |
+      Powered by <a href="https://www.sphinx-doc.org/">Sphinx 8.1.3</a>
+      &amp; <a href="https://alabaster.readthedocs.io">Alabaster 1.0.0</a>
+      
+      |
+      <a href="_sources/pipelines.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>
