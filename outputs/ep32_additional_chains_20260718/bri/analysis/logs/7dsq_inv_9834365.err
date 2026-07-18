@@ -1,0 +1,4 @@
+/users/sgsrehm1/fastscratch/COMP702_ep32_bri/analysis/analyze_ep32_invariant_ensemble.py:65: RuntimeWarning: Mean of empty slice
+  mean_sin = np.nanmean(np.sin(radians), axis=0)
+/users/sgsrehm1/fastscratch/COMP702_ep32_bri/analysis/analyze_ep32_invariant_ensemble.py:66: RuntimeWarning: Mean of empty slice
+  mean_cos = np.nanmean(np.cos(radians), axis=0)

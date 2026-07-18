@@ -1,0 +1,8 @@
+Target: 7DSQ-B
+Prediction directory: /mnt/fastscratch/users/sgsrehm1/COMP702_ep32_bri/invariants/7dsq_ep32_relaxed_100
+Experimental reference: /mnt/fastscratch/users/sgsrehm1/COMP702_ep32_bri/invariants/experimental_references/7dsq_B_experimental.csv
+Alignment mapping: /mnt/fastscratch/users/sgsrehm1/COMP702_ep32_bri/alignment/7dsq_prediction_to_experimental_chain_B_mapping.csv
+Prediction CSV count: 100
+Mapped residue count used: 464
+Sequence mismatches included: False
+BTI treatment: signed circular differences relative to experimental angles

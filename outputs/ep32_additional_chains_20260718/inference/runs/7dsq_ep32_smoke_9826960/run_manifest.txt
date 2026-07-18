@@ -1,0 +1,19 @@
+Target: 7dsq_A
+Model: retrained OpenFold epoch 32
+Checkpoint: /users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/checkpoints/run_subset_gpu32_h100_ep33/csv_logs/version_0/checkpoints/32-330000.ckpt
+Run label: smoke
+Run root: /users/sgsrehm1/fastscratch/COMP702_ep32_inference/runs/7dsq_ep32_smoke_9826960
+Source FASTA: /users/sgsrehm1/scratch/openfold_inference/fasta_dir/7dsq.fasta
+Target alignment directory: /users/sgsrehm1/scratch/openfold_inference/alignments_cf/7dsq_A
+Alignment file count: 4
+Template mmCIF directory: /users/sgsrehm1/scratch/openfold_inference/template_mmcifs_4bp8_7dsq/mmcif_files
+Template mmCIF count: 224
+Repeat count: 1
+Seed base: 1000
+Seed formula: seed base + repeat number
+Slurm job ID: 9826960
+Started: Fri 17 Jul 13:28:04 BST 2026
+Finished: Fri 17 Jul 13:29:06 BST 2026
+Unrelaxed PDB count: 1
+Relaxed PDB count: 1
+Total PDB count: 2

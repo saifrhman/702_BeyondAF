@@ -1,0 +1,511 @@
+Target: 7dsq
+Run root: /users/sgsrehm1/fastscratch/COMP702_ep32_inference/runs/7dsq_ep32_relaxed_100_9827080
+Prediction output: /users/sgsrehm1/fastscratch/COMP702_ep32_bri/invariants/7dsq_ep32_relaxed_100
+Reference: /users/sgsrehm1/fastscratch/COMP702_ep32_bri/reference_pdbs/7dsq_A_experimental.pdb
+Input: /users/sgsrehm1/fastscratch/COMP702_ep32_bri/reference_pdbs/7dsq_A_experimental.pdb
+Residue rows: 470
+Chains: ['A']
+Saved: /users/sgsrehm1/fastscratch/COMP702_ep32_bri/invariants/experimental_references/7dsq_A_experimental.csv
+[Fri 17 Jul 22:04:04 BST 2026] 7dsq: repeat 1/100
+Input: /users/sgsrehm1/fastscratch/COMP702_ep32_inference/runs/7dsq_ep32_relaxed_100_9827080/repeat_1/predictions/7dsq_A_model_1_relaxed.pdb
+Residue rows: 464
+Chains: ['A']
+Saved: /users/sgsrehm1/fastscratch/COMP702_ep32_bri/invariants/7dsq_ep32_relaxed_100/repeat_001.csv
+[Fri 17 Jul 22:04:07 BST 2026] 7dsq: repeat 2/100
+Input: /users/sgsrehm1/fastscratch/COMP702_ep32_inference/runs/7dsq_ep32_relaxed_100_9827080/repeat_2/predictions/7dsq_A_model_1_relaxed.pdb
+Residue rows: 464
+Chains: ['A']
+Saved: /users/sgsrehm1/fastscratch/COMP702_ep32_bri/invariants/7dsq_ep32_relaxed_100/repeat_002.csv
+[Fri 17 Jul 22:04:10 BST 2026] 7dsq: repeat 3/100
+Input: /users/sgsrehm1/fastscratch/COMP702_ep32_inference/runs/7dsq_ep32_relaxed_100_9827080/repeat_3/predictions/7dsq_A_model_1_relaxed.pdb
+Residue rows: 464
+Chains: ['A']
+Saved: /users/sgsrehm1/fastscratch/COMP702_ep32_bri/invariants/7dsq_ep32_relaxed_100/repeat_003.csv
+[Fri 17 Jul 22:04:13 BST 2026] 7dsq: repeat 4/100
+Input: /users/sgsrehm1/fastscratch/COMP702_ep32_inference/runs/7dsq_ep32_relaxed_100_9827080/repeat_4/predictions/7dsq_A_model_1_relaxed.pdb
+Residue rows: 464
+Chains: ['A']
+Saved: /users/sgsrehm1/fastscratch/COMP702_ep32_bri/invariants/7dsq_ep32_relaxed_100/repeat_004.csv
+[Fri 17 Jul 22:04:15 BST 2026] 7dsq: repeat 5/100
+Input: /users/sgsrehm1/fastscratch/COMP702_ep32_inference/runs/7dsq_ep32_relaxed_100_9827080/repeat_5/predictions/7dsq_A_model_1_relaxed.pdb
+Residue rows: 464
+Chains: ['A']
+Saved: /users/sgsrehm1/fastscratch/COMP702_ep32_bri/invariants/7dsq_ep32_relaxed_100/repeat_005.csv
+[Fri 17 Jul 22:04:18 BST 2026] 7dsq: repeat 6/100
+Input: /users/sgsrehm1/fastscratch/COMP702_ep32_inference/runs/7dsq_ep32_relaxed_100_9827080/repeat_6/predictions/7dsq_A_model_1_relaxed.pdb
+Residue rows: 464
+Chains: ['A']
+Saved: /users/sgsrehm1/fastscratch/COMP702_ep32_bri/invariants/7dsq_ep32_relaxed_100/repeat_006.csv
+[Fri 17 Jul 22:04:21 BST 2026] 7dsq: repeat 7/100
+Input: /users/sgsrehm1/fastscratch/COMP702_ep32_inference/runs/7dsq_ep32_relaxed_100_9827080/repeat_7/predictions/7dsq_A_model_1_relaxed.pdb
+Residue rows: 464
+Chains: ['A']
+Saved: /users/sgsrehm1/fastscratch/COMP702_ep32_bri/invariants/7dsq_ep32_relaxed_100/repeat_007.csv
+[Fri 17 Jul 22:04:23 BST 2026] 7dsq: repeat 8/100
+Input: /users/sgsrehm1/fastscratch/COMP702_ep32_inference/runs/7dsq_ep32_relaxed_100_9827080/repeat_8/predictions/7dsq_A_model_1_relaxed.pdb
+Residue rows: 464
+Chains: ['A']
+Saved: /users/sgsrehm1/fastscratch/COMP702_ep32_bri/invariants/7dsq_ep32_relaxed_100/repeat_008.csv
+[Fri 17 Jul 22:04:26 BST 2026] 7dsq: repeat 9/100
+Input: /users/sgsrehm1/fastscratch/COMP702_ep32_inference/runs/7dsq_ep32_relaxed_100_9827080/repeat_9/predictions/7dsq_A_model_1_relaxed.pdb
+Residue rows: 464
+Chains: ['A']
+Saved: /users/sgsrehm1/fastscratch/COMP702_ep32_bri/invariants/7dsq_ep32_relaxed_100/repeat_009.csv
+[Fri 17 Jul 22:04:28 BST 2026] 7dsq: repeat 10/100
+Input: /users/sgsrehm1/fastscratch/COMP702_ep32_inference/runs/7dsq_ep32_relaxed_100_9827080/repeat_10/predictions/7dsq_A_model_1_relaxed.pdb
+Residue rows: 464
+Chains: ['A']
+Saved: /users/sgsrehm1/fastscratch/COMP702_ep32_bri/invariants/7dsq_ep32_relaxed_100/repeat_010.csv
+[Fri 17 Jul 22:04:31 BST 2026] 7dsq: repeat 11/100
+Input: /users/sgsrehm1/fastscratch/COMP702_ep32_inference/runs/7dsq_ep32_relaxed_100_9827080/repeat_11/predictions/7dsq_A_model_1_relaxed.pdb
+Residue rows: 464
+Chains: ['A']
+Saved: /users/sgsrehm1/fastscratch/COMP702_ep32_bri/invariants/7dsq_ep32_relaxed_100/repeat_011.csv
+[Fri 17 Jul 22:04:33 BST 2026] 7dsq: repeat 12/100
+Input: /users/sgsrehm1/fastscratch/COMP702_ep32_inference/runs/7dsq_ep32_relaxed_100_9827080/repeat_12/predictions/7dsq_A_model_1_relaxed.pdb
+Residue rows: 464
+Chains: ['A']
+Saved: /users/sgsrehm1/fastscratch/COMP702_ep32_bri/invariants/7dsq_ep32_relaxed_100/repeat_012.csv
+[Fri 17 Jul 22:04:36 BST 2026] 7dsq: repeat 13/100
+Input: /users/sgsrehm1/fastscratch/COMP702_ep32_inference/runs/7dsq_ep32_relaxed_100_9827080/repeat_13/predictions/7dsq_A_model_1_relaxed.pdb
+Residue rows: 464
+Chains: ['A']
+Saved: /users/sgsrehm1/fastscratch/COMP702_ep32_bri/invariants/7dsq_ep32_relaxed_100/repeat_013.csv
+[Fri 17 Jul 22:04:39 BST 2026] 7dsq: repeat 14/100
+Input: /users/sgsrehm1/fastscratch/COMP702_ep32_inference/runs/7dsq_ep32_relaxed_100_9827080/repeat_14/predictions/7dsq_A_model_1_relaxed.pdb
+Residue rows: 464
+Chains: ['A']
+Saved: /users/sgsrehm1/fastscratch/COMP702_ep32_bri/invariants/7dsq_ep32_relaxed_100/repeat_014.csv
+[Fri 17 Jul 22:04:41 BST 2026] 7dsq: repeat 15/100
+Input: /users/sgsrehm1/fastscratch/COMP702_ep32_inference/runs/7dsq_ep32_relaxed_100_9827080/repeat_15/predictions/7dsq_A_model_1_relaxed.pdb
+Residue rows: 464
+Chains: ['A']
+Saved: /users/sgsrehm1/fastscratch/COMP702_ep32_bri/invariants/7dsq_ep32_relaxed_100/repeat_015.csv
+[Fri 17 Jul 22:04:44 BST 2026] 7dsq: repeat 16/100
+Input: /users/sgsrehm1/fastscratch/COMP702_ep32_inference/runs/7dsq_ep32_relaxed_100_9827080/repeat_16/predictions/7dsq_A_model_1_relaxed.pdb
+Residue rows: 464
+Chains: ['A']
+Saved: /users/sgsrehm1/fastscratch/COMP702_ep32_bri/invariants/7dsq_ep32_relaxed_100/repeat_016.csv
+[Fri 17 Jul 22:04:46 BST 2026] 7dsq: repeat 17/100
+Input: /users/sgsrehm1/fastscratch/COMP702_ep32_inference/runs/7dsq_ep32_relaxed_100_9827080/repeat_17/predictions/7dsq_A_model_1_relaxed.pdb
+Residue rows: 464
+Chains: ['A']
+Saved: /users/sgsrehm1/fastscratch/COMP702_ep32_bri/invariants/7dsq_ep32_relaxed_100/repeat_017.csv
+[Fri 17 Jul 22:04:49 BST 2026] 7dsq: repeat 18/100
+Input: /users/sgsrehm1/fastscratch/COMP702_ep32_inference/runs/7dsq_ep32_relaxed_100_9827080/repeat_18/predictions/7dsq_A_model_1_relaxed.pdb
+Residue rows: 464
+Chains: ['A']
+Saved: /users/sgsrehm1/fastscratch/COMP702_ep32_bri/invariants/7dsq_ep32_relaxed_100/repeat_018.csv
+[Fri 17 Jul 22:04:51 BST 2026] 7dsq: repeat 19/100
+Input: /users/sgsrehm1/fastscratch/COMP702_ep32_inference/runs/7dsq_ep32_relaxed_100_9827080/repeat_19/predictions/7dsq_A_model_1_relaxed.pdb
+Residue rows: 464
+Chains: ['A']
+Saved: /users/sgsrehm1/fastscratch/COMP702_ep32_bri/invariants/7dsq_ep32_relaxed_100/repeat_019.csv
+[Fri 17 Jul 22:04:54 BST 2026] 7dsq: repeat 20/100
+Input: /users/sgsrehm1/fastscratch/COMP702_ep32_inference/runs/7dsq_ep32_relaxed_100_9827080/repeat_20/predictions/7dsq_A_model_1_relaxed.pdb
+Residue rows: 464
+Chains: ['A']
+Saved: /users/sgsrehm1/fastscratch/COMP702_ep32_bri/invariants/7dsq_ep32_relaxed_100/repeat_020.csv
+[Fri 17 Jul 22:04:56 BST 2026] 7dsq: repeat 21/100
+Input: /users/sgsrehm1/fastscratch/COMP702_ep32_inference/runs/7dsq_ep32_relaxed_100_9827080/repeat_21/predictions/7dsq_A_model_1_relaxed.pdb
+Residue rows: 464
+Chains: ['A']
+Saved: /users/sgsrehm1/fastscratch/COMP702_ep32_bri/invariants/7dsq_ep32_relaxed_100/repeat_021.csv
+[Fri 17 Jul 22:04:59 BST 2026] 7dsq: repeat 22/100
+Input: /users/sgsrehm1/fastscratch/COMP702_ep32_inference/runs/7dsq_ep32_relaxed_100_9827080/repeat_22/predictions/7dsq_A_model_1_relaxed.pdb
+Residue rows: 464
+Chains: ['A']
+Saved: /users/sgsrehm1/fastscratch/COMP702_ep32_bri/invariants/7dsq_ep32_relaxed_100/repeat_022.csv
+[Fri 17 Jul 22:05:01 BST 2026] 7dsq: repeat 23/100
+Input: /users/sgsrehm1/fastscratch/COMP702_ep32_inference/runs/7dsq_ep32_relaxed_100_9827080/repeat_23/predictions/7dsq_A_model_1_relaxed.pdb
+Residue rows: 464
+Chains: ['A']
+Saved: /users/sgsrehm1/fastscratch/COMP702_ep32_bri/invariants/7dsq_ep32_relaxed_100/repeat_023.csv
+[Fri 17 Jul 22:05:04 BST 2026] 7dsq: repeat 24/100
+Input: /users/sgsrehm1/fastscratch/COMP702_ep32_inference/runs/7dsq_ep32_relaxed_100_9827080/repeat_24/predictions/7dsq_A_model_1_relaxed.pdb
+Residue rows: 464
+Chains: ['A']
+Saved: /users/sgsrehm1/fastscratch/COMP702_ep32_bri/invariants/7dsq_ep32_relaxed_100/repeat_024.csv
+[Fri 17 Jul 22:05:07 BST 2026] 7dsq: repeat 25/100
+Input: /users/sgsrehm1/fastscratch/COMP702_ep32_inference/runs/7dsq_ep32_relaxed_100_9827080/repeat_25/predictions/7dsq_A_model_1_relaxed.pdb
+Residue rows: 464
+Chains: ['A']
+Saved: /users/sgsrehm1/fastscratch/COMP702_ep32_bri/invariants/7dsq_ep32_relaxed_100/repeat_025.csv
+[Fri 17 Jul 22:05:09 BST 2026] 7dsq: repeat 26/100
+Input: /users/sgsrehm1/fastscratch/COMP702_ep32_inference/runs/7dsq_ep32_relaxed_100_9827080/repeat_26/predictions/7dsq_A_model_1_relaxed.pdb
+Residue rows: 464
+Chains: ['A']
+Saved: /users/sgsrehm1/fastscratch/COMP702_ep32_bri/invariants/7dsq_ep32_relaxed_100/repeat_026.csv
+[Fri 17 Jul 22:05:12 BST 2026] 7dsq: repeat 27/100
+Input: /users/sgsrehm1/fastscratch/COMP702_ep32_inference/runs/7dsq_ep32_relaxed_100_9827080/repeat_27/predictions/7dsq_A_model_1_relaxed.pdb
+Residue rows: 464
+Chains: ['A']
+Saved: /users/sgsrehm1/fastscratch/COMP702_ep32_bri/invariants/7dsq_ep32_relaxed_100/repeat_027.csv
+[Fri 17 Jul 22:05:14 BST 2026] 7dsq: repeat 28/100
+Input: /users/sgsrehm1/fastscratch/COMP702_ep32_inference/runs/7dsq_ep32_relaxed_100_9827080/repeat_28/predictions/7dsq_A_model_1_relaxed.pdb
+Residue rows: 464
+Chains: ['A']
+Saved: /users/sgsrehm1/fastscratch/COMP702_ep32_bri/invariants/7dsq_ep32_relaxed_100/repeat_028.csv
+[Fri 17 Jul 22:05:17 BST 2026] 7dsq: repeat 29/100
+Input: /users/sgsrehm1/fastscratch/COMP702_ep32_inference/runs/7dsq_ep32_relaxed_100_9827080/repeat_29/predictions/7dsq_A_model_1_relaxed.pdb
+Residue rows: 464
+Chains: ['A']
+Saved: /users/sgsrehm1/fastscratch/COMP702_ep32_bri/invariants/7dsq_ep32_relaxed_100/repeat_029.csv
+[Fri 17 Jul 22:05:19 BST 2026] 7dsq: repeat 30/100
+Input: /users/sgsrehm1/fastscratch/COMP702_ep32_inference/runs/7dsq_ep32_relaxed_100_9827080/repeat_30/predictions/7dsq_A_model_1_relaxed.pdb
+Residue rows: 464
+Chains: ['A']
+Saved: /users/sgsrehm1/fastscratch/COMP702_ep32_bri/invariants/7dsq_ep32_relaxed_100/repeat_030.csv
+[Fri 17 Jul 22:05:22 BST 2026] 7dsq: repeat 31/100
+Input: /users/sgsrehm1/fastscratch/COMP702_ep32_inference/runs/7dsq_ep32_relaxed_100_9827080/repeat_31/predictions/7dsq_A_model_1_relaxed.pdb
+Residue rows: 464
+Chains: ['A']
+Saved: /users/sgsrehm1/fastscratch/COMP702_ep32_bri/invariants/7dsq_ep32_relaxed_100/repeat_031.csv
+[Fri 17 Jul 22:05:24 BST 2026] 7dsq: repeat 32/100
+Input: /users/sgsrehm1/fastscratch/COMP702_ep32_inference/runs/7dsq_ep32_relaxed_100_9827080/repeat_32/predictions/7dsq_A_model_1_relaxed.pdb
+Residue rows: 464
+Chains: ['A']
+Saved: /users/sgsrehm1/fastscratch/COMP702_ep32_bri/invariants/7dsq_ep32_relaxed_100/repeat_032.csv
+[Fri 17 Jul 22:05:27 BST 2026] 7dsq: repeat 33/100
+Input: /users/sgsrehm1/fastscratch/COMP702_ep32_inference/runs/7dsq_ep32_relaxed_100_9827080/repeat_33/predictions/7dsq_A_model_1_relaxed.pdb
+Residue rows: 464
+Chains: ['A']
+Saved: /users/sgsrehm1/fastscratch/COMP702_ep32_bri/invariants/7dsq_ep32_relaxed_100/repeat_033.csv
+[Fri 17 Jul 22:05:30 BST 2026] 7dsq: repeat 34/100
+Input: /users/sgsrehm1/fastscratch/COMP702_ep32_inference/runs/7dsq_ep32_relaxed_100_9827080/repeat_34/predictions/7dsq_A_model_1_relaxed.pdb
+Residue rows: 464
+Chains: ['A']
+Saved: /users/sgsrehm1/fastscratch/COMP702_ep32_bri/invariants/7dsq_ep32_relaxed_100/repeat_034.csv
+[Fri 17 Jul 22:05:32 BST 2026] 7dsq: repeat 35/100
+Input: /users/sgsrehm1/fastscratch/COMP702_ep32_inference/runs/7dsq_ep32_relaxed_100_9827080/repeat_35/predictions/7dsq_A_model_1_relaxed.pdb
+Residue rows: 464
+Chains: ['A']
+Saved: /users/sgsrehm1/fastscratch/COMP702_ep32_bri/invariants/7dsq_ep32_relaxed_100/repeat_035.csv
+[Fri 17 Jul 22:05:35 BST 2026] 7dsq: repeat 36/100
+Input: /users/sgsrehm1/fastscratch/COMP702_ep32_inference/runs/7dsq_ep32_relaxed_100_9827080/repeat_36/predictions/7dsq_A_model_1_relaxed.pdb
+Residue rows: 464
+Chains: ['A']
+Saved: /users/sgsrehm1/fastscratch/COMP702_ep32_bri/invariants/7dsq_ep32_relaxed_100/repeat_036.csv
+[Fri 17 Jul 22:05:37 BST 2026] 7dsq: repeat 37/100
+Input: /users/sgsrehm1/fastscratch/COMP702_ep32_inference/runs/7dsq_ep32_relaxed_100_9827080/repeat_37/predictions/7dsq_A_model_1_relaxed.pdb
+Residue rows: 464
+Chains: ['A']
+Saved: /users/sgsrehm1/fastscratch/COMP702_ep32_bri/invariants/7dsq_ep32_relaxed_100/repeat_037.csv
+[Fri 17 Jul 22:05:40 BST 2026] 7dsq: repeat 38/100
+Input: /users/sgsrehm1/fastscratch/COMP702_ep32_inference/runs/7dsq_ep32_relaxed_100_9827080/repeat_38/predictions/7dsq_A_model_1_relaxed.pdb
+Residue rows: 464
+Chains: ['A']
+Saved: /users/sgsrehm1/fastscratch/COMP702_ep32_bri/invariants/7dsq_ep32_relaxed_100/repeat_038.csv
+[Fri 17 Jul 22:05:42 BST 2026] 7dsq: repeat 39/100
+Input: /users/sgsrehm1/fastscratch/COMP702_ep32_inference/runs/7dsq_ep32_relaxed_100_9827080/repeat_39/predictions/7dsq_A_model_1_relaxed.pdb
+Residue rows: 464
+Chains: ['A']
+Saved: /users/sgsrehm1/fastscratch/COMP702_ep32_bri/invariants/7dsq_ep32_relaxed_100/repeat_039.csv
+[Fri 17 Jul 22:05:45 BST 2026] 7dsq: repeat 40/100
+Input: /users/sgsrehm1/fastscratch/COMP702_ep32_inference/runs/7dsq_ep32_relaxed_100_9827080/repeat_40/predictions/7dsq_A_model_1_relaxed.pdb
+Residue rows: 464
+Chains: ['A']
+Saved: /users/sgsrehm1/fastscratch/COMP702_ep32_bri/invariants/7dsq_ep32_relaxed_100/repeat_040.csv
+[Fri 17 Jul 22:05:48 BST 2026] 7dsq: repeat 41/100
+Input: /users/sgsrehm1/fastscratch/COMP702_ep32_inference/runs/7dsq_ep32_relaxed_100_9827080/repeat_41/predictions/7dsq_A_model_1_relaxed.pdb
+Residue rows: 464
+Chains: ['A']
+Saved: /users/sgsrehm1/fastscratch/COMP702_ep32_bri/invariants/7dsq_ep32_relaxed_100/repeat_041.csv
+[Fri 17 Jul 22:05:50 BST 2026] 7dsq: repeat 42/100
+Input: /users/sgsrehm1/fastscratch/COMP702_ep32_inference/runs/7dsq_ep32_relaxed_100_9827080/repeat_42/predictions/7dsq_A_model_1_relaxed.pdb
+Residue rows: 464
+Chains: ['A']
+Saved: /users/sgsrehm1/fastscratch/COMP702_ep32_bri/invariants/7dsq_ep32_relaxed_100/repeat_042.csv
+[Fri 17 Jul 22:05:53 BST 2026] 7dsq: repeat 43/100
+Input: /users/sgsrehm1/fastscratch/COMP702_ep32_inference/runs/7dsq_ep32_relaxed_100_9827080/repeat_43/predictions/7dsq_A_model_1_relaxed.pdb
+Residue rows: 464
+Chains: ['A']
+Saved: /users/sgsrehm1/fastscratch/COMP702_ep32_bri/invariants/7dsq_ep32_relaxed_100/repeat_043.csv
+[Fri 17 Jul 22:05:55 BST 2026] 7dsq: repeat 44/100
+Input: /users/sgsrehm1/fastscratch/COMP702_ep32_inference/runs/7dsq_ep32_relaxed_100_9827080/repeat_44/predictions/7dsq_A_model_1_relaxed.pdb
+Residue rows: 464
+Chains: ['A']
+Saved: /users/sgsrehm1/fastscratch/COMP702_ep32_bri/invariants/7dsq_ep32_relaxed_100/repeat_044.csv
+[Fri 17 Jul 22:05:58 BST 2026] 7dsq: repeat 45/100
+Input: /users/sgsrehm1/fastscratch/COMP702_ep32_inference/runs/7dsq_ep32_relaxed_100_9827080/repeat_45/predictions/7dsq_A_model_1_relaxed.pdb
+Residue rows: 464
+Chains: ['A']
+Saved: /users/sgsrehm1/fastscratch/COMP702_ep32_bri/invariants/7dsq_ep32_relaxed_100/repeat_045.csv
+[Fri 17 Jul 22:06:00 BST 2026] 7dsq: repeat 46/100
+Input: /users/sgsrehm1/fastscratch/COMP702_ep32_inference/runs/7dsq_ep32_relaxed_100_9827080/repeat_46/predictions/7dsq_A_model_1_relaxed.pdb
+Residue rows: 464
+Chains: ['A']
+Saved: /users/sgsrehm1/fastscratch/COMP702_ep32_bri/invariants/7dsq_ep32_relaxed_100/repeat_046.csv
+[Fri 17 Jul 22:06:03 BST 2026] 7dsq: repeat 47/100
+Input: /users/sgsrehm1/fastscratch/COMP702_ep32_inference/runs/7dsq_ep32_relaxed_100_9827080/repeat_47/predictions/7dsq_A_model_1_relaxed.pdb
+Residue rows: 464
+Chains: ['A']
+Saved: /users/sgsrehm1/fastscratch/COMP702_ep32_bri/invariants/7dsq_ep32_relaxed_100/repeat_047.csv
+[Fri 17 Jul 22:06:05 BST 2026] 7dsq: repeat 48/100
+Input: /users/sgsrehm1/fastscratch/COMP702_ep32_inference/runs/7dsq_ep32_relaxed_100_9827080/repeat_48/predictions/7dsq_A_model_1_relaxed.pdb
+Residue rows: 464
+Chains: ['A']
+Saved: /users/sgsrehm1/fastscratch/COMP702_ep32_bri/invariants/7dsq_ep32_relaxed_100/repeat_048.csv
+[Fri 17 Jul 22:06:08 BST 2026] 7dsq: repeat 49/100
+Input: /users/sgsrehm1/fastscratch/COMP702_ep32_inference/runs/7dsq_ep32_relaxed_100_9827080/repeat_49/predictions/7dsq_A_model_1_relaxed.pdb
+Residue rows: 464
+Chains: ['A']
+Saved: /users/sgsrehm1/fastscratch/COMP702_ep32_bri/invariants/7dsq_ep32_relaxed_100/repeat_049.csv
+[Fri 17 Jul 22:06:10 BST 2026] 7dsq: repeat 50/100
+Input: /users/sgsrehm1/fastscratch/COMP702_ep32_inference/runs/7dsq_ep32_relaxed_100_9827080/repeat_50/predictions/7dsq_A_model_1_relaxed.pdb
+Residue rows: 464
+Chains: ['A']
+Saved: /users/sgsrehm1/fastscratch/COMP702_ep32_bri/invariants/7dsq_ep32_relaxed_100/repeat_050.csv
+[Fri 17 Jul 22:06:13 BST 2026] 7dsq: repeat 51/100
+Input: /users/sgsrehm1/fastscratch/COMP702_ep32_inference/runs/7dsq_ep32_relaxed_100_9827080/repeat_51/predictions/7dsq_A_model_1_relaxed.pdb
+Residue rows: 464
+Chains: ['A']
+Saved: /users/sgsrehm1/fastscratch/COMP702_ep32_bri/invariants/7dsq_ep32_relaxed_100/repeat_051.csv
+[Fri 17 Jul 22:06:15 BST 2026] 7dsq: repeat 52/100
+Input: /users/sgsrehm1/fastscratch/COMP702_ep32_inference/runs/7dsq_ep32_relaxed_100_9827080/repeat_52/predictions/7dsq_A_model_1_relaxed.pdb
+Residue rows: 464
+Chains: ['A']
+Saved: /users/sgsrehm1/fastscratch/COMP702_ep32_bri/invariants/7dsq_ep32_relaxed_100/repeat_052.csv
+[Fri 17 Jul 22:06:18 BST 2026] 7dsq: repeat 53/100
+Input: /users/sgsrehm1/fastscratch/COMP702_ep32_inference/runs/7dsq_ep32_relaxed_100_9827080/repeat_53/predictions/7dsq_A_model_1_relaxed.pdb
+Residue rows: 464
+Chains: ['A']
+Saved: /users/sgsrehm1/fastscratch/COMP702_ep32_bri/invariants/7dsq_ep32_relaxed_100/repeat_053.csv
+[Fri 17 Jul 22:06:21 BST 2026] 7dsq: repeat 54/100
+Input: /users/sgsrehm1/fastscratch/COMP702_ep32_inference/runs/7dsq_ep32_relaxed_100_9827080/repeat_54/predictions/7dsq_A_model_1_relaxed.pdb
+Residue rows: 464
+Chains: ['A']
+Saved: /users/sgsrehm1/fastscratch/COMP702_ep32_bri/invariants/7dsq_ep32_relaxed_100/repeat_054.csv
+[Fri 17 Jul 22:06:23 BST 2026] 7dsq: repeat 55/100
+Input: /users/sgsrehm1/fastscratch/COMP702_ep32_inference/runs/7dsq_ep32_relaxed_100_9827080/repeat_55/predictions/7dsq_A_model_1_relaxed.pdb
+Residue rows: 464
+Chains: ['A']
+Saved: /users/sgsrehm1/fastscratch/COMP702_ep32_bri/invariants/7dsq_ep32_relaxed_100/repeat_055.csv
+[Fri 17 Jul 22:06:26 BST 2026] 7dsq: repeat 56/100
+Input: /users/sgsrehm1/fastscratch/COMP702_ep32_inference/runs/7dsq_ep32_relaxed_100_9827080/repeat_56/predictions/7dsq_A_model_1_relaxed.pdb
+Residue rows: 464
+Chains: ['A']
+Saved: /users/sgsrehm1/fastscratch/COMP702_ep32_bri/invariants/7dsq_ep32_relaxed_100/repeat_056.csv
+[Fri 17 Jul 22:06:28 BST 2026] 7dsq: repeat 57/100
+Input: /users/sgsrehm1/fastscratch/COMP702_ep32_inference/runs/7dsq_ep32_relaxed_100_9827080/repeat_57/predictions/7dsq_A_model_1_relaxed.pdb
+Residue rows: 464
+Chains: ['A']
+Saved: /users/sgsrehm1/fastscratch/COMP702_ep32_bri/invariants/7dsq_ep32_relaxed_100/repeat_057.csv
+[Fri 17 Jul 22:06:31 BST 2026] 7dsq: repeat 58/100
+Input: /users/sgsrehm1/fastscratch/COMP702_ep32_inference/runs/7dsq_ep32_relaxed_100_9827080/repeat_58/predictions/7dsq_A_model_1_relaxed.pdb
+Residue rows: 464
+Chains: ['A']
+Saved: /users/sgsrehm1/fastscratch/COMP702_ep32_bri/invariants/7dsq_ep32_relaxed_100/repeat_058.csv
+[Fri 17 Jul 22:06:33 BST 2026] 7dsq: repeat 59/100
+Input: /users/sgsrehm1/fastscratch/COMP702_ep32_inference/runs/7dsq_ep32_relaxed_100_9827080/repeat_59/predictions/7dsq_A_model_1_relaxed.pdb
+Residue rows: 464
+Chains: ['A']
+Saved: /users/sgsrehm1/fastscratch/COMP702_ep32_bri/invariants/7dsq_ep32_relaxed_100/repeat_059.csv
+[Fri 17 Jul 22:06:36 BST 2026] 7dsq: repeat 60/100
+Input: /users/sgsrehm1/fastscratch/COMP702_ep32_inference/runs/7dsq_ep32_relaxed_100_9827080/repeat_60/predictions/7dsq_A_model_1_relaxed.pdb
+Residue rows: 464
+Chains: ['A']
+Saved: /users/sgsrehm1/fastscratch/COMP702_ep32_bri/invariants/7dsq_ep32_relaxed_100/repeat_060.csv
+[Fri 17 Jul 22:06:38 BST 2026] 7dsq: repeat 61/100
+Input: /users/sgsrehm1/fastscratch/COMP702_ep32_inference/runs/7dsq_ep32_relaxed_100_9827080/repeat_61/predictions/7dsq_A_model_1_relaxed.pdb
+Residue rows: 464
+Chains: ['A']
+Saved: /users/sgsrehm1/fastscratch/COMP702_ep32_bri/invariants/7dsq_ep32_relaxed_100/repeat_061.csv
+[Fri 17 Jul 22:06:41 BST 2026] 7dsq: repeat 62/100
+Input: /users/sgsrehm1/fastscratch/COMP702_ep32_inference/runs/7dsq_ep32_relaxed_100_9827080/repeat_62/predictions/7dsq_A_model_1_relaxed.pdb
+Residue rows: 464
+Chains: ['A']
+Saved: /users/sgsrehm1/fastscratch/COMP702_ep32_bri/invariants/7dsq_ep32_relaxed_100/repeat_062.csv
+[Fri 17 Jul 22:06:43 BST 2026] 7dsq: repeat 63/100
+Input: /users/sgsrehm1/fastscratch/COMP702_ep32_inference/runs/7dsq_ep32_relaxed_100_9827080/repeat_63/predictions/7dsq_A_model_1_relaxed.pdb
+Residue rows: 464
+Chains: ['A']
+Saved: /users/sgsrehm1/fastscratch/COMP702_ep32_bri/invariants/7dsq_ep32_relaxed_100/repeat_063.csv
+[Fri 17 Jul 22:06:46 BST 2026] 7dsq: repeat 64/100
+Input: /users/sgsrehm1/fastscratch/COMP702_ep32_inference/runs/7dsq_ep32_relaxed_100_9827080/repeat_64/predictions/7dsq_A_model_1_relaxed.pdb
+Residue rows: 464
+Chains: ['A']
+Saved: /users/sgsrehm1/fastscratch/COMP702_ep32_bri/invariants/7dsq_ep32_relaxed_100/repeat_064.csv
+[Fri 17 Jul 22:06:49 BST 2026] 7dsq: repeat 65/100
+Input: /users/sgsrehm1/fastscratch/COMP702_ep32_inference/runs/7dsq_ep32_relaxed_100_9827080/repeat_65/predictions/7dsq_A_model_1_relaxed.pdb
+Residue rows: 464
+Chains: ['A']
+Saved: /users/sgsrehm1/fastscratch/COMP702_ep32_bri/invariants/7dsq_ep32_relaxed_100/repeat_065.csv
+[Fri 17 Jul 22:06:51 BST 2026] 7dsq: repeat 66/100
+Input: /users/sgsrehm1/fastscratch/COMP702_ep32_inference/runs/7dsq_ep32_relaxed_100_9827080/repeat_66/predictions/7dsq_A_model_1_relaxed.pdb
+Residue rows: 464
+Chains: ['A']
+Saved: /users/sgsrehm1/fastscratch/COMP702_ep32_bri/invariants/7dsq_ep32_relaxed_100/repeat_066.csv
+[Fri 17 Jul 22:06:54 BST 2026] 7dsq: repeat 67/100
+Input: /users/sgsrehm1/fastscratch/COMP702_ep32_inference/runs/7dsq_ep32_relaxed_100_9827080/repeat_67/predictions/7dsq_A_model_1_relaxed.pdb
+Residue rows: 464
+Chains: ['A']
+Saved: /users/sgsrehm1/fastscratch/COMP702_ep32_bri/invariants/7dsq_ep32_relaxed_100/repeat_067.csv
+[Fri 17 Jul 22:06:56 BST 2026] 7dsq: repeat 68/100
+Input: /users/sgsrehm1/fastscratch/COMP702_ep32_inference/runs/7dsq_ep32_relaxed_100_9827080/repeat_68/predictions/7dsq_A_model_1_relaxed.pdb
+Residue rows: 464
+Chains: ['A']
+Saved: /users/sgsrehm1/fastscratch/COMP702_ep32_bri/invariants/7dsq_ep32_relaxed_100/repeat_068.csv
+[Fri 17 Jul 22:06:59 BST 2026] 7dsq: repeat 69/100
+Input: /users/sgsrehm1/fastscratch/COMP702_ep32_inference/runs/7dsq_ep32_relaxed_100_9827080/repeat_69/predictions/7dsq_A_model_1_relaxed.pdb
+Residue rows: 464
+Chains: ['A']
+Saved: /users/sgsrehm1/fastscratch/COMP702_ep32_bri/invariants/7dsq_ep32_relaxed_100/repeat_069.csv
+[Fri 17 Jul 22:07:02 BST 2026] 7dsq: repeat 70/100
+Input: /users/sgsrehm1/fastscratch/COMP702_ep32_inference/runs/7dsq_ep32_relaxed_100_9827080/repeat_70/predictions/7dsq_A_model_1_relaxed.pdb
+Residue rows: 464
+Chains: ['A']
+Saved: /users/sgsrehm1/fastscratch/COMP702_ep32_bri/invariants/7dsq_ep32_relaxed_100/repeat_070.csv
+[Fri 17 Jul 22:07:04 BST 2026] 7dsq: repeat 71/100
+Input: /users/sgsrehm1/fastscratch/COMP702_ep32_inference/runs/7dsq_ep32_relaxed_100_9827080/repeat_71/predictions/7dsq_A_model_1_relaxed.pdb
+Residue rows: 464
+Chains: ['A']
+Saved: /users/sgsrehm1/fastscratch/COMP702_ep32_bri/invariants/7dsq_ep32_relaxed_100/repeat_071.csv
+[Fri 17 Jul 22:07:07 BST 2026] 7dsq: repeat 72/100
+Input: /users/sgsrehm1/fastscratch/COMP702_ep32_inference/runs/7dsq_ep32_relaxed_100_9827080/repeat_72/predictions/7dsq_A_model_1_relaxed.pdb
+Residue rows: 464
+Chains: ['A']
+Saved: /users/sgsrehm1/fastscratch/COMP702_ep32_bri/invariants/7dsq_ep32_relaxed_100/repeat_072.csv
+[Fri 17 Jul 22:07:09 BST 2026] 7dsq: repeat 73/100
+Input: /users/sgsrehm1/fastscratch/COMP702_ep32_inference/runs/7dsq_ep32_relaxed_100_9827080/repeat_73/predictions/7dsq_A_model_1_relaxed.pdb
+Residue rows: 464
+Chains: ['A']
+Saved: /users/sgsrehm1/fastscratch/COMP702_ep32_bri/invariants/7dsq_ep32_relaxed_100/repeat_073.csv
+[Fri 17 Jul 22:07:12 BST 2026] 7dsq: repeat 74/100
+Input: /users/sgsrehm1/fastscratch/COMP702_ep32_inference/runs/7dsq_ep32_relaxed_100_9827080/repeat_74/predictions/7dsq_A_model_1_relaxed.pdb
+Residue rows: 464
+Chains: ['A']
+Saved: /users/sgsrehm1/fastscratch/COMP702_ep32_bri/invariants/7dsq_ep32_relaxed_100/repeat_074.csv
+[Fri 17 Jul 22:07:15 BST 2026] 7dsq: repeat 75/100
+Input: /users/sgsrehm1/fastscratch/COMP702_ep32_inference/runs/7dsq_ep32_relaxed_100_9827080/repeat_75/predictions/7dsq_A_model_1_relaxed.pdb
+Residue rows: 464
+Chains: ['A']
+Saved: /users/sgsrehm1/fastscratch/COMP702_ep32_bri/invariants/7dsq_ep32_relaxed_100/repeat_075.csv
+[Fri 17 Jul 22:07:17 BST 2026] 7dsq: repeat 76/100
+Input: /users/sgsrehm1/fastscratch/COMP702_ep32_inference/runs/7dsq_ep32_relaxed_100_9827080/repeat_76/predictions/7dsq_A_model_1_relaxed.pdb
+Residue rows: 464
+Chains: ['A']
+Saved: /users/sgsrehm1/fastscratch/COMP702_ep32_bri/invariants/7dsq_ep32_relaxed_100/repeat_076.csv
+[Fri 17 Jul 22:07:20 BST 2026] 7dsq: repeat 77/100
+Input: /users/sgsrehm1/fastscratch/COMP702_ep32_inference/runs/7dsq_ep32_relaxed_100_9827080/repeat_77/predictions/7dsq_A_model_1_relaxed.pdb
+Residue rows: 464
+Chains: ['A']
+Saved: /users/sgsrehm1/fastscratch/COMP702_ep32_bri/invariants/7dsq_ep32_relaxed_100/repeat_077.csv
+[Fri 17 Jul 22:07:22 BST 2026] 7dsq: repeat 78/100
+Input: /users/sgsrehm1/fastscratch/COMP702_ep32_inference/runs/7dsq_ep32_relaxed_100_9827080/repeat_78/predictions/7dsq_A_model_1_relaxed.pdb
+Residue rows: 464
+Chains: ['A']
+Saved: /users/sgsrehm1/fastscratch/COMP702_ep32_bri/invariants/7dsq_ep32_relaxed_100/repeat_078.csv
+[Fri 17 Jul 22:07:25 BST 2026] 7dsq: repeat 79/100
+Input: /users/sgsrehm1/fastscratch/COMP702_ep32_inference/runs/7dsq_ep32_relaxed_100_9827080/repeat_79/predictions/7dsq_A_model_1_relaxed.pdb
+Residue rows: 464
+Chains: ['A']
+Saved: /users/sgsrehm1/fastscratch/COMP702_ep32_bri/invariants/7dsq_ep32_relaxed_100/repeat_079.csv
+[Fri 17 Jul 22:07:28 BST 2026] 7dsq: repeat 80/100
+Input: /users/sgsrehm1/fastscratch/COMP702_ep32_inference/runs/7dsq_ep32_relaxed_100_9827080/repeat_80/predictions/7dsq_A_model_1_relaxed.pdb
+Residue rows: 464
+Chains: ['A']
+Saved: /users/sgsrehm1/fastscratch/COMP702_ep32_bri/invariants/7dsq_ep32_relaxed_100/repeat_080.csv
+[Fri 17 Jul 22:07:31 BST 2026] 7dsq: repeat 81/100
+Input: /users/sgsrehm1/fastscratch/COMP702_ep32_inference/runs/7dsq_ep32_relaxed_100_9827080/repeat_81/predictions/7dsq_A_model_1_relaxed.pdb
+Residue rows: 464
+Chains: ['A']
+Saved: /users/sgsrehm1/fastscratch/COMP702_ep32_bri/invariants/7dsq_ep32_relaxed_100/repeat_081.csv
+[Fri 17 Jul 22:07:33 BST 2026] 7dsq: repeat 82/100
+Input: /users/sgsrehm1/fastscratch/COMP702_ep32_inference/runs/7dsq_ep32_relaxed_100_9827080/repeat_82/predictions/7dsq_A_model_1_relaxed.pdb
+Residue rows: 464
+Chains: ['A']
+Saved: /users/sgsrehm1/fastscratch/COMP702_ep32_bri/invariants/7dsq_ep32_relaxed_100/repeat_082.csv
+[Fri 17 Jul 22:07:36 BST 2026] 7dsq: repeat 83/100
+Input: /users/sgsrehm1/fastscratch/COMP702_ep32_inference/runs/7dsq_ep32_relaxed_100_9827080/repeat_83/predictions/7dsq_A_model_1_relaxed.pdb
+Residue rows: 464
+Chains: ['A']
+Saved: /users/sgsrehm1/fastscratch/COMP702_ep32_bri/invariants/7dsq_ep32_relaxed_100/repeat_083.csv
+[Fri 17 Jul 22:07:38 BST 2026] 7dsq: repeat 84/100
+Input: /users/sgsrehm1/fastscratch/COMP702_ep32_inference/runs/7dsq_ep32_relaxed_100_9827080/repeat_84/predictions/7dsq_A_model_1_relaxed.pdb
+Residue rows: 464
+Chains: ['A']
+Saved: /users/sgsrehm1/fastscratch/COMP702_ep32_bri/invariants/7dsq_ep32_relaxed_100/repeat_084.csv
+[Fri 17 Jul 22:07:41 BST 2026] 7dsq: repeat 85/100
+Input: /users/sgsrehm1/fastscratch/COMP702_ep32_inference/runs/7dsq_ep32_relaxed_100_9827080/repeat_85/predictions/7dsq_A_model_1_relaxed.pdb
+Residue rows: 464
+Chains: ['A']
+Saved: /users/sgsrehm1/fastscratch/COMP702_ep32_bri/invariants/7dsq_ep32_relaxed_100/repeat_085.csv
+[Fri 17 Jul 22:07:44 BST 2026] 7dsq: repeat 86/100
+Input: /users/sgsrehm1/fastscratch/COMP702_ep32_inference/runs/7dsq_ep32_relaxed_100_9827080/repeat_86/predictions/7dsq_A_model_1_relaxed.pdb
+Residue rows: 464
+Chains: ['A']
+Saved: /users/sgsrehm1/fastscratch/COMP702_ep32_bri/invariants/7dsq_ep32_relaxed_100/repeat_086.csv
+[Fri 17 Jul 22:07:46 BST 2026] 7dsq: repeat 87/100
+Input: /users/sgsrehm1/fastscratch/COMP702_ep32_inference/runs/7dsq_ep32_relaxed_100_9827080/repeat_87/predictions/7dsq_A_model_1_relaxed.pdb
+Residue rows: 464
+Chains: ['A']
+Saved: /users/sgsrehm1/fastscratch/COMP702_ep32_bri/invariants/7dsq_ep32_relaxed_100/repeat_087.csv
+[Fri 17 Jul 22:07:49 BST 2026] 7dsq: repeat 88/100
+Input: /users/sgsrehm1/fastscratch/COMP702_ep32_inference/runs/7dsq_ep32_relaxed_100_9827080/repeat_88/predictions/7dsq_A_model_1_relaxed.pdb
+Residue rows: 464
+Chains: ['A']
+Saved: /users/sgsrehm1/fastscratch/COMP702_ep32_bri/invariants/7dsq_ep32_relaxed_100/repeat_088.csv
+[Fri 17 Jul 22:07:52 BST 2026] 7dsq: repeat 89/100
+Input: /users/sgsrehm1/fastscratch/COMP702_ep32_inference/runs/7dsq_ep32_relaxed_100_9827080/repeat_89/predictions/7dsq_A_model_1_relaxed.pdb
+Residue rows: 464
+Chains: ['A']
+Saved: /users/sgsrehm1/fastscratch/COMP702_ep32_bri/invariants/7dsq_ep32_relaxed_100/repeat_089.csv
+[Fri 17 Jul 22:07:54 BST 2026] 7dsq: repeat 90/100
+Input: /users/sgsrehm1/fastscratch/COMP702_ep32_inference/runs/7dsq_ep32_relaxed_100_9827080/repeat_90/predictions/7dsq_A_model_1_relaxed.pdb
+Residue rows: 464
+Chains: ['A']
+Saved: /users/sgsrehm1/fastscratch/COMP702_ep32_bri/invariants/7dsq_ep32_relaxed_100/repeat_090.csv
+[Fri 17 Jul 22:07:57 BST 2026] 7dsq: repeat 91/100
+Input: /users/sgsrehm1/fastscratch/COMP702_ep32_inference/runs/7dsq_ep32_relaxed_100_9827080/repeat_91/predictions/7dsq_A_model_1_relaxed.pdb
+Residue rows: 464
+Chains: ['A']
+Saved: /users/sgsrehm1/fastscratch/COMP702_ep32_bri/invariants/7dsq_ep32_relaxed_100/repeat_091.csv
+[Fri 17 Jul 22:07:59 BST 2026] 7dsq: repeat 92/100
+Input: /users/sgsrehm1/fastscratch/COMP702_ep32_inference/runs/7dsq_ep32_relaxed_100_9827080/repeat_92/predictions/7dsq_A_model_1_relaxed.pdb
+Residue rows: 464
+Chains: ['A']
+Saved: /users/sgsrehm1/fastscratch/COMP702_ep32_bri/invariants/7dsq_ep32_relaxed_100/repeat_092.csv
+[Fri 17 Jul 22:08:02 BST 2026] 7dsq: repeat 93/100
+Input: /users/sgsrehm1/fastscratch/COMP702_ep32_inference/runs/7dsq_ep32_relaxed_100_9827080/repeat_93/predictions/7dsq_A_model_1_relaxed.pdb
+Residue rows: 464
+Chains: ['A']
+Saved: /users/sgsrehm1/fastscratch/COMP702_ep32_bri/invariants/7dsq_ep32_relaxed_100/repeat_093.csv
+[Fri 17 Jul 22:08:05 BST 2026] 7dsq: repeat 94/100
+Input: /users/sgsrehm1/fastscratch/COMP702_ep32_inference/runs/7dsq_ep32_relaxed_100_9827080/repeat_94/predictions/7dsq_A_model_1_relaxed.pdb
+Residue rows: 464
+Chains: ['A']
+Saved: /users/sgsrehm1/fastscratch/COMP702_ep32_bri/invariants/7dsq_ep32_relaxed_100/repeat_094.csv
+[Fri 17 Jul 22:08:07 BST 2026] 7dsq: repeat 95/100
+Input: /users/sgsrehm1/fastscratch/COMP702_ep32_inference/runs/7dsq_ep32_relaxed_100_9827080/repeat_95/predictions/7dsq_A_model_1_relaxed.pdb
+Residue rows: 464
+Chains: ['A']
+Saved: /users/sgsrehm1/fastscratch/COMP702_ep32_bri/invariants/7dsq_ep32_relaxed_100/repeat_095.csv
+[Fri 17 Jul 22:08:10 BST 2026] 7dsq: repeat 96/100
+Input: /users/sgsrehm1/fastscratch/COMP702_ep32_inference/runs/7dsq_ep32_relaxed_100_9827080/repeat_96/predictions/7dsq_A_model_1_relaxed.pdb
+Residue rows: 464
+Chains: ['A']
+Saved: /users/sgsrehm1/fastscratch/COMP702_ep32_bri/invariants/7dsq_ep32_relaxed_100/repeat_096.csv
+[Fri 17 Jul 22:08:12 BST 2026] 7dsq: repeat 97/100
+Input: /users/sgsrehm1/fastscratch/COMP702_ep32_inference/runs/7dsq_ep32_relaxed_100_9827080/repeat_97/predictions/7dsq_A_model_1_relaxed.pdb
+Residue rows: 464
+Chains: ['A']
+Saved: /users/sgsrehm1/fastscratch/COMP702_ep32_bri/invariants/7dsq_ep32_relaxed_100/repeat_097.csv
+[Fri 17 Jul 22:08:15 BST 2026] 7dsq: repeat 98/100
+Input: /users/sgsrehm1/fastscratch/COMP702_ep32_inference/runs/7dsq_ep32_relaxed_100_9827080/repeat_98/predictions/7dsq_A_model_1_relaxed.pdb
+Residue rows: 464
+Chains: ['A']
+Saved: /users/sgsrehm1/fastscratch/COMP702_ep32_bri/invariants/7dsq_ep32_relaxed_100/repeat_098.csv
+[Fri 17 Jul 22:08:17 BST 2026] 7dsq: repeat 99/100
+Input: /users/sgsrehm1/fastscratch/COMP702_ep32_inference/runs/7dsq_ep32_relaxed_100_9827080/repeat_99/predictions/7dsq_A_model_1_relaxed.pdb
+Residue rows: 464
+Chains: ['A']
+Saved: /users/sgsrehm1/fastscratch/COMP702_ep32_bri/invariants/7dsq_ep32_relaxed_100/repeat_099.csv
+[Fri 17 Jul 22:08:20 BST 2026] 7dsq: repeat 100/100
+Input: /users/sgsrehm1/fastscratch/COMP702_ep32_inference/runs/7dsq_ep32_relaxed_100_9827080/repeat_100/predictions/7dsq_A_model_1_relaxed.pdb
+Residue rows: 464
+Chains: ['A']
+Saved: /users/sgsrehm1/fastscratch/COMP702_ep32_bri/invariants/7dsq_ep32_relaxed_100/repeat_100.csv
+Prediction CSVs: 100
+Reference CSVs:  1
+[Fri 17 Jul 22:08:22 BST 2026] Completed successfully

@@ -1,0 +1,4 @@
+Traceback (most recent call last):
+  File "/users/sgsrehm1/fastscratch/COMP702_ep32_bri/analysis/analyze_ep32_invariant_ensemble.py", line 10, in <module>
+    import matplotlib
+ModuleNotFoundError: No module named 'matplotlib'

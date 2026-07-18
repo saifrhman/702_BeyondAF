@@ -1,0 +1,118 @@
+===== Input checks =====
+OpenFold script: /users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/openfold/run_pretrained_openfold.py
+Checkpoint: /users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/checkpoints/run_subset_gpu32_h100_ep33/csv_logs/version_0/checkpoints/32-330000.ckpt
+FASTA: /users/sgsrehm1/scratch/openfold_inference/fasta_dir/7dsq.fasta
+Alignment directory: /users/sgsrehm1/scratch/openfold_inference/alignments_cf/7dsq_A
+Template directory: /users/sgsrehm1/scratch/openfold_inference/template_mmcifs_4bp8_7dsq/mmcif_files
+==============================================
+Target:               7dsq_A
+Run root:             /users/sgsrehm1/fastscratch/COMP702_ep32_inference/runs/7dsq_ep32_relaxed_100_9827080
+Alignment files:      4
+Template structures:  224
+Repeats:              100
+Seeds:                1001 to 1100
+==============================================
+[Fri 17 Jul 14:06:15 BST 2026] Repeat 1/100, seed 1001
+[Fri 17 Jul 14:07:04 BST 2026] Repeat 2/100, seed 1002
+[Fri 17 Jul 14:08:06 BST 2026] Repeat 3/100, seed 1003
+[Fri 17 Jul 14:08:55 BST 2026] Repeat 4/100, seed 1004
+[Fri 17 Jul 14:09:47 BST 2026] Repeat 5/100, seed 1005
+[Fri 17 Jul 14:10:34 BST 2026] Repeat 6/100, seed 1006
+[Fri 17 Jul 14:11:27 BST 2026] Repeat 7/100, seed 1007
+[Fri 17 Jul 14:12:15 BST 2026] Repeat 8/100, seed 1008
+[Fri 17 Jul 14:13:16 BST 2026] Repeat 9/100, seed 1009
+[Fri 17 Jul 14:14:06 BST 2026] Repeat 10/100, seed 1010
+[Fri 17 Jul 14:14:53 BST 2026] Repeat 11/100, seed 1011
+[Fri 17 Jul 14:15:41 BST 2026] Repeat 12/100, seed 1012
+[Fri 17 Jul 14:16:29 BST 2026] Repeat 13/100, seed 1013
+[Fri 17 Jul 14:17:18 BST 2026] Repeat 14/100, seed 1014
+[Fri 17 Jul 14:18:23 BST 2026] Repeat 15/100, seed 1015
+[Fri 17 Jul 14:19:11 BST 2026] Repeat 16/100, seed 1016
+[Fri 17 Jul 14:19:59 BST 2026] Repeat 17/100, seed 1017
+[Fri 17 Jul 14:20:46 BST 2026] Repeat 18/100, seed 1018
+[Fri 17 Jul 14:21:34 BST 2026] Repeat 19/100, seed 1019
+[Fri 17 Jul 14:22:23 BST 2026] Repeat 20/100, seed 1020
+[Fri 17 Jul 14:23:21 BST 2026] Repeat 21/100, seed 1021
+[Fri 17 Jul 14:24:08 BST 2026] Repeat 22/100, seed 1022
+[Fri 17 Jul 14:24:55 BST 2026] Repeat 23/100, seed 1023
+[Fri 17 Jul 14:25:43 BST 2026] Repeat 24/100, seed 1024
+[Fri 17 Jul 14:26:30 BST 2026] Repeat 25/100, seed 1025
+[Fri 17 Jul 14:27:20 BST 2026] Repeat 26/100, seed 1026
+[Fri 17 Jul 14:28:17 BST 2026] Repeat 27/100, seed 1027
+[Fri 17 Jul 14:29:09 BST 2026] Repeat 28/100, seed 1028
+[Fri 17 Jul 14:29:56 BST 2026] Repeat 29/100, seed 1029
+[Fri 17 Jul 14:30:44 BST 2026] Repeat 30/100, seed 1030
+[Fri 17 Jul 14:31:31 BST 2026] Repeat 31/100, seed 1031
+[Fri 17 Jul 14:32:20 BST 2026] Repeat 32/100, seed 1032
+[Fri 17 Jul 14:33:21 BST 2026] Repeat 33/100, seed 1033
+[Fri 17 Jul 14:34:14 BST 2026] Repeat 34/100, seed 1034
+[Fri 17 Jul 14:35:01 BST 2026] Repeat 35/100, seed 1035
+[Fri 17 Jul 14:35:49 BST 2026] Repeat 36/100, seed 1036
+[Fri 17 Jul 14:36:36 BST 2026] Repeat 37/100, seed 1037
+[Fri 17 Jul 14:37:25 BST 2026] Repeat 38/100, seed 1038
+[Fri 17 Jul 14:38:26 BST 2026] Repeat 39/100, seed 1039
+[Fri 17 Jul 14:39:15 BST 2026] Repeat 40/100, seed 1040
+[Fri 17 Jul 14:40:02 BST 2026] Repeat 41/100, seed 1041
+[Fri 17 Jul 14:40:49 BST 2026] Repeat 42/100, seed 1042
+[Fri 17 Jul 14:41:37 BST 2026] Repeat 43/100, seed 1043
+[Fri 17 Jul 14:42:27 BST 2026] Repeat 44/100, seed 1044
+[Fri 17 Jul 14:43:26 BST 2026] Repeat 45/100, seed 1045
+[Fri 17 Jul 14:44:13 BST 2026] Repeat 46/100, seed 1046
+[Fri 17 Jul 14:45:00 BST 2026] Repeat 47/100, seed 1047
+[Fri 17 Jul 14:45:48 BST 2026] Repeat 48/100, seed 1048
+[Fri 17 Jul 14:46:35 BST 2026] Repeat 49/100, seed 1049
+[Fri 17 Jul 14:47:25 BST 2026] Repeat 50/100, seed 1050
+[Fri 17 Jul 14:48:22 BST 2026] Repeat 51/100, seed 1051
+[Fri 17 Jul 14:49:14 BST 2026] Repeat 52/100, seed 1052
+[Fri 17 Jul 14:50:02 BST 2026] Repeat 53/100, seed 1053
+[Fri 17 Jul 14:50:49 BST 2026] Repeat 54/100, seed 1054
+[Fri 17 Jul 14:51:36 BST 2026] Repeat 55/100, seed 1055
+[Fri 17 Jul 14:52:25 BST 2026] Repeat 56/100, seed 1056
+[Fri 17 Jul 14:53:29 BST 2026] Repeat 57/100, seed 1057
+[Fri 17 Jul 14:54:17 BST 2026] Repeat 58/100, seed 1058
+[Fri 17 Jul 14:55:04 BST 2026] Repeat 59/100, seed 1059
+[Fri 17 Jul 14:55:57 BST 2026] Repeat 60/100, seed 1060
+[Fri 17 Jul 14:56:45 BST 2026] Repeat 61/100, seed 1061
+[Fri 17 Jul 14:57:38 BST 2026] Repeat 62/100, seed 1062
+[Fri 17 Jul 14:58:33 BST 2026] Repeat 63/100, seed 1063
+[Fri 17 Jul 14:59:21 BST 2026] Repeat 64/100, seed 1064
+[Fri 17 Jul 15:00:08 BST 2026] Repeat 65/100, seed 1065
+[Fri 17 Jul 15:00:56 BST 2026] Repeat 66/100, seed 1066
+[Fri 17 Jul 15:01:43 BST 2026] Repeat 67/100, seed 1067
+[Fri 17 Jul 15:02:32 BST 2026] Repeat 68/100, seed 1068
+[Fri 17 Jul 15:03:26 BST 2026] Repeat 69/100, seed 1069
+[Fri 17 Jul 15:04:15 BST 2026] Repeat 70/100, seed 1070
+[Fri 17 Jul 15:05:02 BST 2026] Repeat 71/100, seed 1071
+[Fri 17 Jul 15:05:50 BST 2026] Repeat 72/100, seed 1072
+[Fri 17 Jul 15:06:37 BST 2026] Repeat 73/100, seed 1073
+[Fri 17 Jul 15:07:27 BST 2026] Repeat 74/100, seed 1074
+[Fri 17 Jul 15:08:24 BST 2026] Repeat 75/100, seed 1075
+[Fri 17 Jul 15:09:13 BST 2026] Repeat 76/100, seed 1076
+[Fri 17 Jul 15:10:01 BST 2026] Repeat 77/100, seed 1077
+[Fri 17 Jul 15:10:49 BST 2026] Repeat 78/100, seed 1078
+[Fri 17 Jul 15:13:14 BST 2026] Repeat 79/100, seed 1079
+[Fri 17 Jul 15:14:06 BST 2026] Repeat 80/100, seed 1080
+[Fri 17 Jul 15:14:53 BST 2026] Repeat 81/100, seed 1081
+[Fri 17 Jul 15:15:41 BST 2026] Repeat 82/100, seed 1082
+[Fri 17 Jul 15:16:29 BST 2026] Repeat 83/100, seed 1083
+[Fri 17 Jul 15:17:17 BST 2026] Repeat 84/100, seed 1084
+[Fri 17 Jul 15:18:16 BST 2026] Repeat 85/100, seed 1085
+[Fri 17 Jul 15:19:05 BST 2026] Repeat 86/100, seed 1086
+[Fri 17 Jul 15:19:57 BST 2026] Repeat 87/100, seed 1087
+[Fri 17 Jul 15:20:45 BST 2026] Repeat 88/100, seed 1088
+[Fri 17 Jul 15:21:33 BST 2026] Repeat 89/100, seed 1089
+[Fri 17 Jul 15:22:21 BST 2026] Repeat 90/100, seed 1090
+[Fri 17 Jul 15:23:15 BST 2026] Repeat 91/100, seed 1091
+[Fri 17 Jul 15:24:10 BST 2026] Repeat 92/100, seed 1092
+[Fri 17 Jul 15:24:58 BST 2026] Repeat 93/100, seed 1093
+[Fri 17 Jul 15:25:45 BST 2026] Repeat 94/100, seed 1094
+[Fri 17 Jul 15:26:40 BST 2026] Repeat 95/100, seed 1095
+[Fri 17 Jul 15:27:28 BST 2026] Repeat 96/100, seed 1096
+[Fri 17 Jul 15:28:26 BST 2026] Repeat 97/100, seed 1097
+[Fri 17 Jul 15:29:14 BST 2026] Repeat 98/100, seed 1098
+[Fri 17 Jul 15:30:01 BST 2026] Repeat 99/100, seed 1099
+[Fri 17 Jul 15:30:48 BST 2026] Repeat 100/100, seed 1100
+Unrelaxed PDBs: 100
+Relaxed PDBs:   100
+Total PDBs:     200
+[Fri 17 Jul 15:31:36 BST 2026] Completed successfully

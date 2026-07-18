@@ -1,0 +1,48 @@
+===== Runtime environment =====
+Host: node007.barkla2.liv.alces.network
+Python executable: /users/sgsrehm1/fastscratch/envs/bri_env_1.2.2/bin/python
+Python 3.10.20
+
+===== Dependency check =====
+Python: /users/sgsrehm1/fastscratch/envs/bri_env_1.2.2/bin/python
+Matplotlib: 3.7.2
+NumPy: 1.26.4
+Pandas: 2.0.3
+Dependencies: OK
+
+===== Starting invariant analysis =====
+Target: 7DSQ-B
+Prediction CSVs: 100
+Mapped residues used: 464
+Output directory: /mnt/fastscratch/users/sgsrehm1/COMP702_ep32_bri/analysis/7dsq_B
+
+target group   feature  mapped_residues       mae      rmse  max_absolute_error
+7DSQ-B   BRI     x(AN)              464  0.009356  0.011854            0.047000
+7DSQ-B   BRI     x(AC)              464  0.037651  0.054433            0.251000
+7DSQ-B   BRI     y(AC)              464  0.017241  0.023078            0.095500
+7DSQ-B   BRI      x(N)              464  0.209221  0.389684            2.079000
+7DSQ-B   BRI      y(N)              464  0.097312  0.176460            1.050000
+7DSQ-B   BRI      z(N)              464  0.309378  0.475446            2.223500
+7DSQ-B   BRI      x(A)              464  0.105907  0.146013            0.781500
+7DSQ-B   BRI      y(A)              464  0.045584  0.084921            1.141500
+7DSQ-B   BRI      z(A)              464  0.127171  0.170726            1.069000
+7DSQ-B   BRI      x(C)              464  0.246495  0.426834            2.544500
+7DSQ-B   BRI      y(C)              464  0.174081  0.252879            1.325000
+7DSQ-B   BRI      z(C)              464  0.172921  0.345782            2.357000
+7DSQ-B   LAI length(N)              463  0.006247  0.008744            0.042500
+7DSQ-B   LAI length(A)              464  0.009362  0.011866            0.047000
+7DSQ-B   LAI length(C)              464  0.009578  0.011879            0.033000
+7DSQ-B   LAI  angle(N)              463  2.467883  2.933606           11.190000
+7DSQ-B   LAI  angle(A)              464  1.509537  2.179415            9.870000
+7DSQ-B   LAI  angle(C)              463  1.238002  1.620431            7.360000
+7DSQ-B   BTI   tau(NA)              463 18.793159 32.917307          175.720252
+7DSQ-B   BTI   tau(AC)              463 22.035609 38.460483          178.237313
+7DSQ-B   BTI   tau(CN)              463  6.145884  9.206088           76.833959
+
+Saved outputs:
+/mnt/fastscratch/users/sgsrehm1/COMP702_ep32_bri/analysis/7dsq_B/BRI_comparison.png
+/mnt/fastscratch/users/sgsrehm1/COMP702_ep32_bri/analysis/7dsq_B/BTI_comparison.png
+/mnt/fastscratch/users/sgsrehm1/COMP702_ep32_bri/analysis/7dsq_B/LAI_comparison.png
+/mnt/fastscratch/users/sgsrehm1/COMP702_ep32_bri/analysis/7dsq_B/analysis_manifest.txt
+/mnt/fastscratch/users/sgsrehm1/COMP702_ep32_bri/analysis/7dsq_B/feature_error_summary.csv
+/mnt/fastscratch/users/sgsrehm1/COMP702_ep32_bri/analysis/7dsq_B/per_residue_invariant_summary.csv

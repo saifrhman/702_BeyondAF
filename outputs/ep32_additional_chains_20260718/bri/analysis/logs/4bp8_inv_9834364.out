@@ -1,0 +1,48 @@
+===== Runtime environment =====
+Host: node007.barkla2.liv.alces.network
+Python executable: /users/sgsrehm1/fastscratch/envs/bri_env_1.2.2/bin/python
+Python 3.10.20
+
+===== Dependency check =====
+Python: /users/sgsrehm1/fastscratch/envs/bri_env_1.2.2/bin/python
+Matplotlib: 3.7.2
+NumPy: 1.26.4
+Pandas: 2.0.3
+Dependencies: OK
+
+===== Starting invariant analysis =====
+Target: 4BP8-A
+Prediction CSVs: 100
+Mapped residues used: 695
+Output directory: /mnt/fastscratch/users/sgsrehm1/COMP702_ep32_bri/analysis/4bp8_A
+
+target group   feature  mapped_residues       mae      rmse  max_absolute_error
+4BP8-A   BRI     x(AN)              694  0.013185  0.016587            0.055000
+4BP8-A   BRI     x(AC)              694  0.054409  0.069498            0.311000
+4BP8-A   BRI     y(AC)              694  0.021226  0.028313            0.148500
+4BP8-A   BRI      x(N)              695  0.308447  0.571732            2.974000
+4BP8-A   BRI      y(N)              695  0.178136  0.395754            3.400500
+4BP8-A   BRI      z(N)              695  0.337012  0.524190            1.975500
+4BP8-A   BRI      x(A)              694  0.137677  0.190300            0.910000
+4BP8-A   BRI      y(A)              694  0.085388  0.200904            2.122000
+4BP8-A   BRI      z(A)              694  0.172637  0.262001            1.615000
+4BP8-A   BRI      x(C)              694  0.299785  0.475475            2.662000
+4BP8-A   BRI      y(C)              694  0.242079  0.347247            1.931500
+4BP8-A   BRI      z(C)              694  0.368738  0.630917            2.846500
+4BP8-A   LAI length(N)              694  0.065843  0.385229            3.131500
+4BP8-A   LAI length(A)              694  0.013180  0.016573            0.054500
+4BP8-A   LAI length(C)              694  0.013683  0.017212            0.057000
+4BP8-A   LAI  angle(N)              693  3.148983  4.644769           32.945000
+4BP8-A   LAI  angle(A)              694  2.139452  2.736610           12.470000
+4BP8-A   LAI  angle(C)              694  2.035108  4.401564           46.070000
+4BP8-A   BTI   tau(NA)              693 23.013539 37.092204          179.935113
+4BP8-A   BTI   tau(AC)              694 26.256140 44.278914          174.503428
+4BP8-A   BTI   tau(CN)              693 11.360490 24.902289          175.571095
+
+Saved outputs:
+/mnt/fastscratch/users/sgsrehm1/COMP702_ep32_bri/analysis/4bp8_A/BRI_comparison.png
+/mnt/fastscratch/users/sgsrehm1/COMP702_ep32_bri/analysis/4bp8_A/BTI_comparison.png
+/mnt/fastscratch/users/sgsrehm1/COMP702_ep32_bri/analysis/4bp8_A/LAI_comparison.png
+/mnt/fastscratch/users/sgsrehm1/COMP702_ep32_bri/analysis/4bp8_A/analysis_manifest.txt
+/mnt/fastscratch/users/sgsrehm1/COMP702_ep32_bri/analysis/4bp8_A/feature_error_summary.csv
+/mnt/fastscratch/users/sgsrehm1/COMP702_ep32_bri/analysis/4bp8_A/per_residue_invariant_summary.csv

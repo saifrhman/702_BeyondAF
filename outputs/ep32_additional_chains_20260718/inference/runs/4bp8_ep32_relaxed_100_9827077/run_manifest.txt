@@ -1,0 +1,19 @@
+Target: 4bp8_A
+Model: retrained OpenFold epoch 32
+Checkpoint: /users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/checkpoints/run_subset_gpu32_h100_ep33/csv_logs/version_0/checkpoints/32-330000.ckpt
+Run label: relaxed_100
+Run root: /users/sgsrehm1/fastscratch/COMP702_ep32_inference/runs/4bp8_ep32_relaxed_100_9827077
+Source FASTA: /users/sgsrehm1/scratch/openfold_inference/fasta_dir/4bp8.fasta
+Target alignment directory: /users/sgsrehm1/scratch/openfold_inference/alignments_cf/4bp8_A
+Alignment file count: 4
+Template mmCIF directory: /users/sgsrehm1/scratch/openfold_inference/template_mmcifs_4bp8_7dsq/mmcif_files
+Template mmCIF count: 224
+Repeat count: 100
+Seed base: 1000
+Seed formula: seed base + repeat number
+Slurm job ID: 9827077
+Started: Fri 17 Jul 13:36:18 BST 2026
+Finished: Fri 17 Jul 19:36:05 BST 2026
+Unrelaxed PDB count: 100
+Relaxed PDB count: 100
+Total PDB count: 200

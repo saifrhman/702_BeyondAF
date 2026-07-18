@@ -1,0 +1,19 @@
+===== Input checks =====
+OpenFold script: /users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/openfold/run_pretrained_openfold.py
+Checkpoint: /users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/checkpoints/run_subset_gpu32_h100_ep33/csv_logs/version_0/checkpoints/32-330000.ckpt
+FASTA: /users/sgsrehm1/scratch/openfold_inference/fasta_dir/4bp8.fasta
+Alignment directory: /users/sgsrehm1/scratch/openfold_inference/alignments_cf/4bp8_A
+Template directory: /users/sgsrehm1/scratch/openfold_inference/template_mmcifs_4bp8_7dsq/mmcif_files
+==============================================
+Target:               4bp8_A
+Run root:             /users/sgsrehm1/fastscratch/COMP702_ep32_inference/runs/4bp8_ep32_smoke_9826959
+Alignment files:      4
+Template structures:  224
+Repeats:              1
+Seeds:                1001 to 1001
+==============================================
+[Fri 17 Jul 13:25:52 BST 2026] Repeat 1/1, seed 1001
+Unrelaxed PDBs: 1
+Relaxed PDBs:   1
+Total PDBs:     2
+[Fri 17 Jul 13:27:52 BST 2026] Completed successfully

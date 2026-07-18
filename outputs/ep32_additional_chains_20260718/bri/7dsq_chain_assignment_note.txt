@@ -1,0 +1,16 @@
+7DSQ target-chain assignment
+
+The inherited FASTA file is named 7dsq.fasta and has the header 7dsq_A.
+However, its 464-residue sequence matches experimental PDB entry 7DSQ
+chain B exactly and does not match chain A.
+
+The OpenFold predictions and precomputed alignments stored under the
+historical label 7dsq_A therefore correspond biologically to 7DSQ chain B.
+
+For all experimental comparisons:
+- use 7dsq_B_experimental.pdb
+- use 7dsq_B_experimental.csv
+- do not use 7dsq_A_experimental.csv
+
+The predictions do not require rerunning because their sequence matches
+chain B with 100% identity and coverage.

@@ -1,0 +1,43 @@
+COMP702 epoch-32 invariant ensemble analysis
+
+4BP8-A
+-------
+Predictions analysed: 100 relaxed structures
+Sequence-matched residues used: 695
+Experimental reference: 4BP8 chain A
+Outputs:
+- BRI_comparison.png
+- LAI_comparison.png
+- BTI_comparison.png
+- feature_error_summary.csv
+- per_residue_invariant_summary.csv
+
+7DSQ-B
+-------
+Predictions analysed: 100 relaxed structures
+Sequence-matched residues used: 464
+Experimental reference: 7DSQ chain B
+
+Important data audit finding:
+The inherited FASTA header identifies the target as 7dsq_A, but the
+464-residue sequence matches experimental 7DSQ chain B with 100% sequence
+identity and 100% coverage. It does not match chain A. The historical
+prediction filenames therefore retain the inherited 7dsq_A label, but
+experimental comparisons must use chain B.
+
+Outputs:
+- BRI_comparison.png
+- LAI_comparison.png
+- BTI_comparison.png
+- feature_error_summary.csv
+- per_residue_invariant_summary.csv
+
+Notes
+-----
+All invariant calculations used backbone-rigid-invariant 1.2.2.2.
+
+Boundary or locally undefined invariant values produce NaNs for a small
+number of residues. These were excluded from feature-level error metrics.
+
+BTI torsion comparisons use signed circular angular differences to handle
+the -180/180 degree wraparound correctly.
