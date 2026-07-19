@@ -1,0 +1,367 @@
+
+========================================================================
+CELL 36 - markdown
+========================================================================
+## 9. Building the Alignment Subset Database
+
+========================================================================
+CELL 37 - markdown
+========================================================================
+### 9.1 Recreate the Alignment Database Directory
+
+========================================================================
+CELL 38 - code
+========================================================================
+rm -rf /users/sgmwu14/localscratch/alignment_subset/alignment_dbs
+mkdir -p /users/sgmwu14/localscratch/alignment_subset/alignment_dbs
+
+========================================================================
+CELL 39 - markdown
+========================================================================
+### 9.2 Create a Sharded Alignment Database
+
+========================================================================
+CELL 40 - code
+========================================================================
+python /users/sgmwu14/openfold/scripts/alignment_db_scripts/create_alignment_db_sharded.py \
+  /users/sgmwu14/localscratch/alignment_subset/alignments \
+  /users/sgmwu14/localscratch/alignment_subset/alignment_dbs \
+  alignment_db \
+  --n_shards 1 \
+  --duplicate_chains_file /users/sgmwu14/localscratch/pdb_data/duplicate_pdb_chains.txt
+
+========================================================================
+CELL 41 - markdown
+========================================================================
+## 10. Generating FASTA and Cluster Files
+
+========================================================================
+CELL 42 - markdown
+========================================================================
+### 10.1 Generate FASTA from Alignment Database
+
+========================================================================
+CELL 43 - code
+========================================================================
+python /users/sgmwu14/openfold/scripts/alignment_data_to_fasta.py \
+  /users/sgmwu14/localscratch/alignment_subset/all-seqs.fasta \
+  --alignment_db_index /users/sgmwu14/localscratch/alignment_subset/alignment_dbs/alignment_db.index
+
+========================================================================
+CELL 44 - markdown
+========================================================================
+### 10.2 Generate 40% Sequence-Identity Clusters
+
+========================================================================
+CELL 45 - code
+========================================================================
+python /users/sgmwu14/openfold/scripts/fasta_to_clusterfile.py \
+  /users/sgmwu14/localscratch/alignment_subset/all-seqs.fasta \
+  /users/sgmwu14/localscratch/alignment_subset/all-seqs_clusters-40.txt \
+  /mnt/data2/users/sgmwu14/tools/miniforge3/envs/openfold_env/bin/mmseqs \
+  --seq-id 0.4
+
+========================================================================
+CELL 46 - markdown
+========================================================================
+## 11. Downloading and Generating Cache Files
+
+========================================================================
+CELL 47 - markdown
+========================================================================
+### 11.1 Download Precomputed Caches
+
+========================================================================
+CELL 50 - code
+========================================================================
+python /users/sgmwu14/openfold/scripts/generate_mmcif_cache.py \
+  /users/sgmwu14/localscratch/pdb_data/mmcif/mmcif_files \
+  /users/sgmwu14/localscratch/pdb_data/data_caches_subset/mmcif_cache.json \
+  --no_workers 16
+
+========================================================================
+CELL 51 - markdown
+========================================================================
+### 11.3 Generate Chain Data Cache Manually
+
+========================================================================
+CELL 52 - code
+========================================================================
+python /users/sgmwu14/openfold/scripts/generate_chain_data_cache.py \
+  /users/sgmwu14/localscratch/pdb_data/mmcif/mmcif_files \
+  /users/sgmwu14/localscratch/pdb_data/data_caches_subset/chain_data_cache.json \
+  --cluster_file /users/sgmwu14/localscratch/alignment_subset/all-seqs_clusters-40.txt \
+  --no_workers 16
+
+========================================================================
+CELL 53 - markdown
+========================================================================
+These cache files are used for sample filtering and also provide template metadata and training-time dataset access support.
+
+========================================================================
+CELL 54 - markdown
+========================================================================
+## 12. Compression, Transfer, and Extraction
+
+========================================================================
+CELL 61 - markdown
+========================================================================
+### 12.4 Transfer Using tar.gz through /tmp
+
+========================================================================
+CELL 62 - code
+========================================================================
+cp /users/sgmwu14/scratch/openfold_subset_data.tar.gz /tmp/
+cd /tmp
+tar -xzf openfold_subset_data.tar.gz -C /users/sgmwu14/localscratch
+
+========================================================================
+CELL 63 - markdown
+========================================================================
+## 13. Key Paths Used in the Project
+
+| Purpose | Path |
+|---|---|
+| OpenFold source code | `/users/sgmwu14/openfold` |
+| FASTA input for inference | `/users/sgmwu14/scratch/openfold_inference/fasta_dir` |
+| Template mmCIF for inference | `/users/sgmwu14/localscratch/pdb_data_full/mmcif_files` |
+| MSA / alignments for inference | `/users/sgmwu14/localscratch/alignment_subset/alignments` |
+| AlphaFold parameters | `/users/sgmwu14/openfold/openfold/resources/params` |
+| OpenFold official parameters | `/users/sgmwu14/openfold/openfold/resources/openfold_params` |
+| Example custom checkpoint | `/users/sgmwu14/scratch/openfold_runs/run_subset_gpu32_h100_ep15/csv_logs/version_0/checkpoints/9-100000.ckpt` |
+| AlphaFold inference output | `/users/sgmwu14/scratch/openfold_inference/alphafold_output` |
+| OpenFold inference output | `/users/sgmwu14/scratch/openfold_inference/openfold_output` |
+| Custom model output | `/users/sgmwu14/scratch/openfold_inference/your_model_output` |
+
+========================================================================
+CELL 64 - markdown
+========================================================================
+## 14. Training Pipeline
+
+========================================================================
+CELL 65 - markdown
+========================================================================
+### 14.1 Main Input Paths
+
+========================================================================
+CELL 66 - code
+========================================================================
+DATA_DIR=/users/sgmwu14/localscratch
+PDB_FULL=$DATA_DIR/pdb_data_full
+
+MMCIF_DIR=$PDB_FULL/mmcif_files
+CHAIN_CACHE=$PDB_FULL/chain_data_cache.json
+MMCIF_CACHE=$PDB_FULL/mmcif_cache.json
+OBSOLETE=$PDB_FULL/obsolete.dat
+
+ALIGN_DB_DIR=$DATA_DIR/alignment_subset/alignment_dbs
+ALIGN_INDEX=$ALIGN_DB_DIR/alignment_db.index
+
+========================================================================
+CELL 67 - markdown
+========================================================================
+### 14.2 Resume Training Script Example
+
+========================================================================
+CELL 68 - code
+========================================================================
+#!/bin/bash -l
+#SBATCH -J of_subset_h100_resume
+#SBATCH -p gpu-h100
+#SBATCH -N 1
+#SBATCH -w gpu32
+#SBATCH --gres=gpu:h100:1
+#SBATCH --cpus-per-task=16
+#SBATCH --mem=200G
+#SBATCH --time=3-00:00:00
+#SBATCH --output=/users/%u/fastscratch/of_subset_h100_%j.log
+#SBATCH --error=/users/%u/fastscratch/of_subset_h100_%j.err
+
+set -euo pipefail
+
+set +u
+source /mnt/data2/users/sgmwu14/tools/miniforge3/etc/profile.d/conda.sh
+conda activate openfold_env
+set -u
+
+export TRITON_CACHE_DIR=/users/sgmwu14/fastscratch/triton_cache
+mkdir -p "$TRITON_CACHE_DIR"
+
+export PYTHONPATH=/users/sgmwu14/openfold:$PYTHONPATH
+export OMP_NUM_THREADS=${SLURM_CPUS_PER_TASK}
+export MKL_NUM_THREADS=${SLURM_CPUS_PER_TASK}
+
+DATA_DIR=/users/sgmwu14/localscratch
+PDB_FULL=$DATA_DIR/pdb_data_full
+
+OUT_DIR=/users/sgmwu14/scratch/openfold_runs/run_subset_gpu32_h100_ep33
+mkdir -p "$OUT_DIR"
+
+CKPT_PATH=/users/sgmwu14/scratch/openfold_runs/run_subset_gpu32_h100_ep27/csv_logs/version_0/checkpoints/26-270000.ckpt
+
+MMCIF_DIR=$PDB_FULL/mmcif_files
+CHAIN_CACHE=$PDB_FULL/chain_data_cache.json
+MMCIF_CACHE=$PDB_FULL/mmcif_cache.json
+OBSOLETE=$PDB_FULL/obsolete.dat
+
+ALIGN_DB_DIR=$DATA_DIR/alignment_subset/alignment_dbs
+ALIGN_INDEX=$ALIGN_DB_DIR/alignment_db.index
+
+EXTRA_OBSOLETE=()
+if [ -f "$OBSOLETE" ]; then
+  EXTRA_OBSOLETE+=( --obsolete_pdbs_file_path "$OBSOLETE" )
+fi
+
+export TORCH_CUDA_ARCH_LIST="9.0"
+
+python -u /users/sgmwu14/openfold/train_openfold.py \
+  "$MMCIF_DIR" \
+  "$ALIGN_DB_DIR" \
+  "$MMCIF_DIR" \
+  "$OUT_DIR" \
+  2021-10-10 \
+  --alignment_index_path "$ALIGN_INDEX" \
+  --train_chain_data_cache_path "$CHAIN_CACHE" \
+  --template_release_dates_cache_path "$MMCIF_CACHE" \
+  --config_preset initial_training \
+  --seed 42 \
+  --num_nodes 1 \
+  --gpus 1 \
+  --precision bf16 \
+  --max_epochs 33 \
+  --log_every_n_steps 25 \
+  --checkpoint_every_epoch \
+  --resume_from_ckpt "$CKPT_PATH" \
+  "${EXTRA_OBSOLETE[@]}"
+
+========================================================================
+CELL 69 - markdown
+========================================================================
+### 14.3 Submitting Training Jobs
+
+========================================================================
+CELL 70 - code
+========================================================================
+cd /users/sgmwu14/scratch
+sbatch openfold_subset_gpu13.sbatch
+sbatch openfold_subset_gpu15.sbatch
+
+========================================================================
+CELL 82 - markdown
+========================================================================
+## 19. Inference Pipeline
+
+Three-model inference was run with AlphaFold parameters, the official OpenFold checkpoint, and a custom-trained checkpoint.
+
+========================================================================
+CELL 83 - markdown
+========================================================================
+### 19.1 Earlier Inference Script Example
+
+========================================================================
+CELL 84 - code
+========================================================================
+#!/bin/bash -l
+#SBATCH -J of_infer_10gs
+#SBATCH -p gpu-h100
+#SBATCH -N 1
+#SBATCH -w gpu32
+#SBATCH --gres=gpu:h100:1
+#SBATCH --cpus-per-task=16
+#SBATCH --mem=120G
+#SBATCH --time=1-00:00:00
+#SBATCH --output=/users/%u/fastscratch/of_infer_10gs_%j.log
+#SBATCH --error=/users/%u/fastscratch/of_infer_10gs_%j.err
+
+set -euo pipefail
+
+set +u
+source /mnt/data2/users/sgmwu14/tools/miniforge3/etc/profile.d/conda.sh
+conda activate openfold_env
+set -u
+
+export PYTHONPATH=/users/sgmwu14/openfold:$PYTHONPATH
+export OMP_NUM_THREADS=${SLURM_CPUS_PER_TASK}
+export MKL_NUM_THREADS=${SLURM_CPUS_PER_TASK}
+export TORCH_CUDA_ARCH_LIST="9.0"
+
+INPUT_FASTA_DIR=/users/sgmwu14/scratch/openfold_inference/fasta_dir
+TEMPLATE_MMCIF_DIR=/users/sgmwu14/localscratch/pdb_data_full/mmcif_files
+PRECOMPUTED_ALIGNMENTS=/users/sgmwu14/localscratch/alignment_subset/alignments
+
+AF_OUT=/users/sgmwu14/scratch/openfold_inference/alphafold_output
+OF_OUT=/users/sgmwu14/scratch/openfold_inference/openfold_output
+YOUR_OUT=/users/sgmwu14/scratch/openfold_inference/your_model_output
+
+mkdir -p "$AF_OUT" "$OF_OUT" "$YOUR_OUT"
+
+python3 /users/sgmwu14/openfold/run_pretrained_openfold.py \
+  "$INPUT_FASTA_DIR" \
+  "$TEMPLATE_MMCIF_DIR" \
+  --output_dir "$AF_OUT" \
+  --use_precomputed_alignments "$PRECOMPUTED_ALIGNMENTS" \
+  --config_preset model_1 \
+  --jax_param_path /users/sgmwu14/openfold/openfold/resources/params \
+  --model_device cuda:0
+
+python3 /users/sgmwu14/openfold/run_pretrained_openfold.py \
+  "$INPUT_FASTA_DIR" \
+  "$TEMPLATE_MMCIF_DIR" \
+  --output_dir "$OF_OUT" \
+  --use_precomputed_alignments "$PRECOMPUTED_ALIGNMENTS" \
+  --config_preset model_1 \
+  --openfold_checkpoint_path /users/sgmwu14/openfold/openfold/resources/openfold_params/finetuning_2.pt \
+  --model_device cuda:0
+
+python3 /users/sgmwu14/openfold/run_pretrained_openfold.py \
+  "$INPUT_FASTA_DIR" \
+  "$TEMPLATE_MMCIF_DIR" \
+  --output_dir "$YOUR_OUT" \
+  --use_precomputed_alignments "$PRECOMPUTED_ALIGNMENTS" \
+  --config_preset model_1 \
+  --openfold_checkpoint_path /users/sgmwu14/scratch/openfold_runs/run_subset_gpu32_h100_ep15/csv_logs/version_0/checkpoints/9-100000.ckpt \
+  --model_device cuda:0
+
+========================================================================
+CELL 85 - markdown
+========================================================================
+## 20. Relaxation Pipeline
+
+### 20.1 Default Behaviour
+
+By default, `run_pretrained_openfold.py` performs one relaxation step after inference.
+
+### 20.2 Skip Default Relaxation
+
+Use:
+
+```bash
+--skip_relaxation
+```
+
+This option is useful when only the raw network output is required, or when relaxation is to be controlled manually.
+
+### 20.3 Repeated Relaxation
+
+Repeated relaxation runs were tested on the same unrelaxed structure.
+
+**Important finding:** relaxation is deterministic for the same input structure.
+
+Therefore, repeating relaxation multiple times on the same unrelaxed file generally produces identical outputs unless explicit perturbations are introduced beforehand.
+
+========================================================================
+CELL 86 - markdown
+========================================================================
+## 21. Result Organisation
+
+To avoid mixing experiments, outputs were stored in separate directories.
+
+- `/users/sgmwu14/scratch/openfold_inference/alphafold_output`
+- `/users/sgmwu14/scratch/openfold_inference/openfold_output`
+- `/users/sgmwu14/scratch/openfold_inference/your_model_output`
+
+Later experiments used more explicit run-specific directories, for example:
+
+- `/users/sgmwu14/scratch/openfold_inference_ep33_rerun1`
+
+Repeated relaxation outputs were also separated by model.

@@ -1,0 +1,6 @@
+All rows:                       707,292
+Unique chain keys, all models: 461,595
+Model 1 rows:                  461,581
+Model 1 unique chain keys:     461,578
+Duplicate model 1 rows:       3
+Unique PDB entries, model 1: 104,586

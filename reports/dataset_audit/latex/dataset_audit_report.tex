@@ -1,0 +1,531 @@
+\documentclass[11pt,a4paper]{article}
+
+\usepackage[margin=1in]{geometry}
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{longtable}
+\usepackage{enumitem}
+\usepackage{hyperref}
+\usepackage{parskip}
+
+\hypersetup{
+    colorlinks=true,
+    linkcolor=black,
+    urlcolor=blue
+}
+
+\title{\textbf{Dataset Audit Report}\\
+COMP702: Beyond AlphaFold}
+\author{Saif Ur Rehman}
+\date{\today}
+
+\begin{document}
+
+\maketitle
+
+\section{Purpose of the audit}
+
+This report summarises my audit of the datasets and data-processing steps used in the inherited OpenFold retraining workflow.
+
+The main purpose of the audit was to answer the following questions:
+
+\begin{enumerate}[leftmargin=*]
+    \item How does the OpenFold data compare with the PDB707K data used in the previous project?
+    \item What data was used as input to the OpenFold retraining pipeline?
+    \item Can the original dataset-selection procedure be reproduced from the material that was transferred to me?
+\end{enumerate}
+
+The audit is based on the project files that were transferred to me and that I later centralised under the \texttt{COMP702\_BeyondAF} project directory. These include the PDB707K dataset, OpenFold scripts, training scripts, notebooks, checkpoints, and Git history.
+
+Some inherited scripts contain paths under \texttt{/users/sgmwu14/...}. I do not have access to that account. I have therefore treated these paths only as historical information showing where data was originally stored. All conclusions in this report are based on files that are currently available in my own project storage.
+
+\section{Summary of the main findings}
+
+The main findings of the audit are:
+
+\begin{itemize}[leftmargin=*]
+    \item The preserved checked PDB707K dataset contains \textbf{707,292 rows}.
+    
+    \item The inherited BRI notebook shows that the original PDB707K dataset contained \textbf{707,410 rows}. The difference is explained by a correction step in which 236 rows were removed and 118 corrected or reconstructed rows were added back:
+    \[
+        707{,}410 - 236 + 118 = 707{,}292.
+    \]
+    
+    \item After filtering the checked PDB707K dataset to \texttt{model\_id = 1} and removing duplicate normalised chain identifiers, the reproducible dataset contains \textbf{461,578 unique chains}.
+    
+    \item The previous project reports \textbf{130,413 processed OpenFold alignment identifiers}, with a reported intersection of \textbf{65,656 chains} with PDB707K.
+    
+    \item The reported PDB707K-side counts are arithmetically consistent:
+    \[
+        707{,}410 - 65{,}656 = 641{,}754.
+    \]
+    
+    \item The reported OpenFold-side counts are not consistent with a simple set subtraction:
+    \[
+        130{,}413 - 65{,}656 = 64{,}757,
+    \]
+    while the previous project reports \textbf{67,181 OpenFold-only chains}. This leaves a difference of \textbf{2,424 chains}.
+    
+    \item The downstream OpenFold retraining pipeline can be reconstructed from the inherited scripts and notebooks.
+    
+    \item The exact upstream step that created the training alignment subset cannot be reproduced because the original chain lists, matching script, and alignment subset were not included in the material transferred to me.
+\end{itemize}
+
+\section{Audit of the PDB707K dataset}
+
+\subsection{Preserved dataset}
+
+The PDB707K dataset currently preserved in the project is:
+
+\begin{center}
+\texttt{checked\_PDB707K\_cleaned\_chains\_sequences\_19Feb2025.csv}
+\end{center}
+
+I verified the file directly.
+
+\begin{table}[h]
+\centering
+\begin{tabular}{lr}
+\toprule
+\textbf{Item} & \textbf{Count} \\
+\midrule
+Total physical lines & 707,293 \\
+Header lines & 1 \\
+Data rows & 707,292 \\
+\bottomrule
+\end{tabular}
+\caption{Verified size of the preserved PDB707K dataset.}
+\end{table}
+
+The dataset contains the following fields:
+
+\begin{center}
+\small
+\texttt{pdb\_id, entity\_id, model\_id, chain\_id, start\_residue, chain\_length,}\\
+\texttt{auth\_chain\_length, auth\_chain\_id, auth\_seq\_id\_start,}\\
+\texttt{auth\_seq\_id\_end, seq}
+\end{center}
+
+\subsection{Why the preserved dataset contains 707,292 rows}
+
+An initial difference was found between the dataset size reported in the previous project and the file currently preserved:
+
+\begin{table}[h]
+\centering
+\begin{tabular}{lr}
+\toprule
+\textbf{Dataset} & \textbf{Rows} \\
+\midrule
+Original PDB707K dataset reported in the previous work & 707,410 \\
+Current checked PDB707K dataset & 707,292 \\
+Net difference & 118 \\
+\bottomrule
+\end{tabular}
+\caption{Difference between the original and checked PDB707K datasets.}
+\end{table}
+
+I was able to trace this difference using the preserved BRI showcase notebook.
+
+The notebook shows that the original file
+
+\begin{center}
+\texttt{PDB707K\_cleaned\_chains\_sequences\_19Feb2025.csv}
+\end{center}
+
+contained 707,410 rows.
+
+The following transformation was then applied:
+
+\begin{enumerate}[leftmargin=*]
+    \item The original dataset contained 707,410 rows.
+    
+    \item A set of rows associated with a file named
+    \texttt{duplicated\_PDB707K\_cleaned\_chains\_sequences\_19Feb2025.csv}
+    was removed.
+    
+    \item After this step, 707,174 rows remained.
+    
+    \item A corrected dataframe was created by matching the duplicated/problematic data with a file called \texttt{af\_clean.csv}.
+    
+    \item The matching was performed using:
+    \begin{itemize}
+        \item \texttt{pdb\_id}
+        \item \texttt{model\_id}
+        \item \texttt{chain\_id}
+        \item \texttt{chain\_length}
+    \end{itemize}
+    
+    \item This produced 118 corrected or reconstructed rows.
+    
+    \item The corrected rows were added back to the dataset, producing the final checked dataset with 707,292 rows.
+\end{enumerate}
+
+Therefore, the transformation was:
+
+\[
+707{,}410 - 236 + 118 = 707{,}292.
+\]
+
+This explains the previously observed difference of 118 rows.
+
+The intermediate files \texttt{af\_clean.csv},
+\texttt{duplicated\_PDB707K\_cleaned\_chains\_sequences\_19Feb2025.csv},
+and
+\texttt{checked\_duplicated\_PDB707K\_cleaned\_chains\_sequences\_19Feb2025.csv}
+are not present in the transferred material.
+
+Therefore, I can reconstruct the numerical transformation from the notebook code and its saved outputs, but I cannot currently list the exact identities of all 236 removed rows and the 118 replacement rows.
+
+\subsection{Preparation of the model-1 chain dataset}
+
+The preserved preparation script filters the checked PDB707K dataset to:
+
+\begin{center}
+\texttt{model\_id = 1}
+\end{center}
+
+It then normalises chain identifiers using the format:
+
+\begin{center}
+\texttt{lowercase\_pdb\_id + "\_" + uppercase\_chain\_id}
+\end{center}
+
+For example, a PDB chain could be represented as:
+
+\begin{center}
+\texttt{2olo\_A}
+\end{center}
+
+Duplicate normalised chain identifiers are then removed.
+
+I reproduced these counts directly from the preserved CSV:
+
+\begin{table}[h]
+\centering
+\begin{tabular}{lr}
+\toprule
+\textbf{Processing stage} & \textbf{Count} \\
+\midrule
+Checked PDB707K rows & 707,292 \\
+Rows with \texttt{model\_id = 1} & 461,581 \\
+Unique normalised model-1 chain IDs & 461,578 \\
+Duplicate model-1 chain-key rows & 3 \\
+Unique PDB entries represented & 104,586 \\
+\bottomrule
+\end{tabular}
+\caption{Verified PDB707K model-1 processing counts.}
+\end{table}
+
+The reproducible PDB707K starting set for the next stage of the project therefore contains:
+
+\begin{center}
+\textbf{461,578 unique model-1 chains.}
+\end{center}
+
+\section{Comparison between PDB707K and OpenFold data}
+
+\subsection{Counts reported in the previous project}
+
+The previous work reports the following dataset counts:
+
+\begin{table}[h]
+\centering
+\begin{tabular}{lr}
+\toprule
+\textbf{Category} & \textbf{Reported count} \\
+\midrule
+Processed OpenFold alignment identifiers & 130,413 \\
+PDB707K/OpenFold intersection & 65,656 \\
+PDB707K-only chains & 641,754 \\
+OpenFold-only chains & 67,181 \\
+\bottomrule
+\end{tabular}
+\caption{Dataset counts reported in the inherited project documentation.}
+\end{table}
+
+The comparison is described as using normalised PDB chain identifiers and using \texttt{model\_id = 1} for PDB707K.
+
+The PDB707K-side arithmetic is consistent:
+
+\[
+707{,}410 - 65{,}656 = 641{,}754.
+\]
+
+This exactly matches the reported PDB707K-only count.
+
+However, the OpenFold-side arithmetic is not consistent with a simple set subtraction:
+
+\[
+130{,}413 - 65{,}656 = 64{,}757.
+\]
+
+The reported OpenFold-only count is 67,181, which is 2,424 higher:
+
+\[
+67{,}181 - 64{,}757 = 2{,}424.
+\]
+
+This means that the four reported values cannot all come from a simple comparison of two unique sets.
+
+Possible explanations include:
+
+\begin{itemize}[leftmargin=*]
+    \item different stages of data processing being counted;
+    \item duplicate identifiers;
+    \item OpenFold duplicate-chain handling;
+    \item additional filtering;
+    \item differences in chain-ID normalisation;
+    \item or a reporting discrepancy.
+\end{itemize}
+
+I cannot currently determine the exact reason because the original OpenFold identifier list and the original comparison script were not included in the transferred material.
+
+\subsection{Missing chain-level provenance}
+
+The following original artefacts were not found in the transferred project material:
+
+\begin{itemize}[leftmargin=*]
+    \item the list of 130,413 processed OpenFold identifiers;
+    \item the exact list of 65,656 intersection chains;
+    \item the exact list represented by the reported 67,181 OpenFold-only count;
+    \item the script used to compare the OpenFold identifiers with PDB707K;
+    \item the original \texttt{alignment\_subset/alignments} directory;
+    \item the original \texttt{lists/} directory used when packaging the training subset.
+\end{itemize}
+
+I also searched the available Git history and the centralised backup branch. I did not find an older or deleted copy of the missing matching script or chain lists.
+
+Therefore, the PDB707K side of the comparison is reproducible, but the exact OpenFold/PDB707K comparison cannot currently be reproduced chain-by-chain.
+
+\section{What entered the OpenFold retraining pipeline}
+
+\subsection{Inputs identified from the inherited training scripts}
+
+The H100 training script associated with the inherited retraining run uses the following inputs:
+
+\begin{table}[h]
+\centering
+\begin{tabular}{>{\raggedright\arraybackslash}p{0.35\textwidth}
+                >{\raggedright\arraybackslash}p{0.55\textwidth}}
+\toprule
+\textbf{Input} & \textbf{Purpose} \\
+\midrule
+\texttt{pdb\_data/mmcif/mmcif\_files} &
+Structural mmCIF files used as structural training data. \\
+
+\texttt{alignment\_subset/alignment\_dbs} &
+Precomputed alignment database for the selected subset. \\
+
+\texttt{alignment\_db.index} &
+Index used to locate alignment data for individual chains. \\
+
+\texttt{chain\_data\_cache.json} &
+Chain-level metadata used by the OpenFold training pipeline. \\
+
+\texttt{mmcif\_cache.json} &
+mmCIF and template metadata. \\
+\bottomrule
+\end{tabular}
+\caption{Main inputs to the inherited OpenFold retraining pipeline.}
+\end{table}
+
+The identified H100 training configuration used:
+
+\begin{itemize}[leftmargin=*]
+    \item OpenFold configuration: \texttt{initial\_training}
+    \item Maximum template date: \texttt{2021-10-10}
+    \item Random seed: \texttt{42}
+    \item Precision: \texttt{bf16-mixed}
+    \item Hardware: one H100 GPU in the identified training script
+\end{itemize}
+
+The output path was associated with the run:
+
+\begin{center}
+\texttt{run\_subset\_gpu32\_h100}
+\end{center}
+
+which corresponds to the checkpoint material inherited from the previous work.
+
+\subsection{Reconstructed downstream data flow}
+
+The inherited OpenFold notebook shows that the workflow starts with an already-created directory:
+
+\begin{center}
+\texttt{alignment\_subset/alignments}
+\end{center}
+
+The following downstream processing can be reconstructed:
+
+\begin{center}
+\begin{minipage}{0.85\textwidth}
+\centering
+\texttt{alignment\_subset/alignments}
+
+$\downarrow$
+
+\texttt{create\_alignment\_db\_sharded.py}
+
+$\downarrow$
+
+\texttt{alignment\_db.index}
+
+$\downarrow$
+
+\texttt{alignment\_data\_to\_fasta.py}
+
+$\downarrow$
+
+\texttt{all-seqs.fasta}
+
+$\downarrow$
+
+MMseqs clustering at 40\% sequence identity
+
+$\downarrow$
+
+\texttt{all-seqs\_clusters-40.txt}
+
+$\downarrow$
+
+\texttt{generate\_chain\_data\_cache.py}
+
+$\downarrow$
+
+OpenFold training cache
+
+$\downarrow$
+
+OpenFold retraining
+\end{minipage}
+\end{center}
+
+The 40\% sequence clustering therefore happens \textbf{after} the alignment subset has already been selected.
+
+It does not explain how the original \texttt{alignment\_subset/alignments} directory was created.
+
+\subsection{The missing upstream selection step}
+
+The inherited scripts and notebook consistently use an already-existing:
+
+\begin{center}
+\texttt{alignment\_subset/alignments}
+\end{center}
+
+I did not find a preserved script that creates this directory by comparing the full OpenFold alignment data with PDB707K.
+
+A packaging script shows that the historical workflow packaged three main directories:
+
+\begin{itemize}[leftmargin=*]
+    \item \texttt{alignment\_subset}
+    \item \texttt{lists}
+    \item \texttt{pdb\_data}
+\end{itemize}
+
+This strongly suggests that chain-selection lists existed at that stage of the original workflow.
+
+However, neither the original \texttt{alignment\_subset}, the \texttt{lists} directory, nor the packaged subset archive is available in the material transferred to me.
+
+Therefore, the downstream retraining process is well documented, but the exact upstream procedure that selected the chains for retraining is not fully reproducible.
+
+\section{OpenFold duplicate-chain handling}
+
+Another relevant part of the audit was understanding how OpenFold handles redundant chains.
+
+OpenFold uses a file called:
+
+\begin{center}
+\texttt{duplicate\_pdb\_chains.txt}
+\end{center}
+
+The OpenFold documentation describes this file as grouping PDB chains that are sequence-identical.
+
+I also checked the inherited OpenFold source code in:
+
+\begin{center}
+\texttt{create\_alignment\_db\_sharded.py}
+\end{center}
+
+For each duplicate group, OpenFold:
+
+\begin{enumerate}[leftmargin=*]
+    \item searches the group for the first chain that already has alignment data;
+    \item uses that chain as the alignment representative;
+    \item maps the remaining chain identifiers in the group to the same alignment database entry.
+\end{enumerate}
+
+Therefore, the duplicate chain identifiers are not necessarily removed entirely. Instead, sequence-identical chains can point to the same stored alignment data.
+
+This is important for the next stage of the project because it gives a useful comparison with geometric de-duplication.
+
+The two approaches are different:
+
+\begin{table}[h]
+\centering
+\begin{tabular}{>{\raggedright\arraybackslash}p{0.30\textwidth}
+                >{\raggedright\arraybackslash}p{0.60\textwidth}}
+\toprule
+\textbf{Method} & \textbf{Type of redundancy} \\
+\midrule
+OpenFold duplicate handling &
+Sequence-identical PDB chains that can share the same underlying alignment data. \\
+
+Proposed BRI de-duplication &
+Geometrically similar or near-identical chains identified using BRI invariants and $L_{\infty}$ distances. \\
+\bottomrule
+\end{tabular}
+\caption{Difference between OpenFold redundancy handling and the planned geometric de-duplication.}
+\end{table}
+
+The OpenFold duplicate mapping can therefore be used later as a sequence-based reference when comparing it with BRI-based geometric near-duplicates.
+
+\section{Reproducibility assessment}
+
+Based on the audit, the following parts are reproducible or can be reconstructed from the material currently available:
+
+\begin{itemize}[leftmargin=*]
+    \item the current checked PDB707K dataset;
+    \item the PDB707K row count;
+    \item the transformation from 707,410 original rows to 707,292 checked rows;
+    \item the \texttt{model\_id = 1} filtering;
+    \item chain-ID normalisation;
+    \item the final 461,578 unique model-1 chain identifiers;
+    \item the downstream OpenFold alignment-database construction;
+    \item FASTA generation;
+    \item 40\% sequence clustering;
+    \item training-cache generation;
+    \item the main inputs to the OpenFold retraining pipeline;
+    \item the main training configuration;
+    \item OpenFold's handling of sequence-identical duplicate chains.
+\end{itemize}
+
+The following parts cannot currently be reproduced exactly:
+
+\begin{itemize}[leftmargin=*]
+    \item the original list of 130,413 OpenFold identifiers;
+    \item the exact 65,656-chain PDB707K/OpenFold intersection;
+    \item the exact OpenFold-only set reported as 67,181 chains;
+    \item the original OpenFold/PDB707K matching script;
+    \item the exact chain membership of the original training alignment subset;
+    \item the original chain-selection lists.
+\end{itemize}
+
+This means that the \textbf{downstream retraining pipeline is substantially reconstructable}, but the \textbf{exact upstream chain-selection procedure is not fully reproducible from the transferred files}.
+
+\section{Conclusion}
+
+The dataset audit has clarified both the PDB707K data and the OpenFold retraining workflow.
+
+The preserved PDB707K dataset contains 707,292 rows. I was able to trace this back to the original 707,410-row dataset and explain the difference as a correction procedure in which 236 rows were removed and 118 corrected rows were added back.
+
+After applying \texttt{model\_id = 1} filtering and normalising chain identifiers, the reproducible PDB707K dataset contains 461,578 unique chains.
+
+The previous project reports that 130,413 processed OpenFold identifiers were compared with PDB707K, producing an intersection of 65,656 chains. The PDB707K-side counts are consistent, but the reported OpenFold-only count differs from the value expected from a simple set subtraction by 2,424 chains. The exact reason cannot currently be resolved because the original chain lists and matching script were not included in the transferred material.
+
+The main inputs to the OpenFold retraining pipeline have been identified, and the downstream pipeline from the selected alignment subset to OpenFold training can be reconstructed. However, the exact step used to create the original alignment subset is not preserved.
+
+For the next stage of the project, I will therefore use the preserved and reproducible set of 461,578 unique model-1 PDB707K chains as the starting point for the new geometric de-duplication workflow. This new dataset construction will be kept separate from the historical subset-selection process.
+
+The next planned step is to compute BRI-based geometric similarity and $L_{\infty}$ distances between chains, identify geometric near-duplicates, and then compare these groups with the redundancy represented by OpenFold's sequence-identical duplicate-chain handling.
+
+\end{document}

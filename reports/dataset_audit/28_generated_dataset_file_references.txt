@@ -1,0 +1,30 @@
+backup-full-comp702-20260716:code/COMP390_code/all_sbatch/make_testset_caches.sbatch:23:CLUSTER_FILE=/users/sgmwu14/localscratch/alignment_testset/all-seqs_clusters-40.txt
+backup-full-comp702-20260716:code/COMP390_code/all_sbatch/pack_openfold_testset.sbatch:20:# 你 testset 的根目录（你已经用它生成了 all-seqs.fasta）
+backup-full-comp702-20260716:code/COMP390_code/docs/OpenFold_Documentation_Notebook.ipynb:390:    "aws s3 cp s3://openfold/duplicate_pdb_chains.txt . --no-sign-request\n",
+backup-full-comp702-20260716:code/COMP390_code/docs/OpenFold_Documentation_Notebook.ipynb:401:    "- `duplicate_pdb_chains.txt` maps duplicate chains to representative chains."
+backup-full-comp702-20260716:code/COMP390_code/docs/OpenFold_Documentation_Notebook.ipynb:485:    "  /users/sgmwu14/localscratch/alignment_subset/alignments \\\n",
+backup-full-comp702-20260716:code/COMP390_code/docs/OpenFold_Documentation_Notebook.ipynb:489:    "  --duplicate_chains_file /users/sgmwu14/localscratch/pdb_data/duplicate_pdb_chains.txt"
+backup-full-comp702-20260716:code/COMP390_code/docs/OpenFold_Documentation_Notebook.ipynb:516:    "  /users/sgmwu14/localscratch/alignment_subset/all-seqs.fasta \\\n",
+backup-full-comp702-20260716:code/COMP390_code/docs/OpenFold_Documentation_Notebook.ipynb:536:    "  /users/sgmwu14/localscratch/alignment_subset/all-seqs.fasta \\\n",
+backup-full-comp702-20260716:code/COMP390_code/docs/OpenFold_Documentation_Notebook.ipynb:537:    "  /users/sgmwu14/localscratch/alignment_subset/all-seqs_clusters-40.txt \\\n",
+backup-full-comp702-20260716:code/COMP390_code/docs/OpenFold_Documentation_Notebook.ipynb:612:    "  --cluster_file /users/sgmwu14/localscratch/alignment_subset/all-seqs_clusters-40.txt \\\n",
+backup-full-comp702-20260716:code/COMP390_code/docs/OpenFold_Documentation_Notebook.ipynb:722:    "| MSA / alignments for inference | `/users/sgmwu14/localscratch/alignment_subset/alignments` |\n",
+backup-full-comp702-20260716:code/COMP390_code/docs/OpenFold_Documentation_Notebook.ipynb:1100:    "PRECOMPUTED_ALIGNMENTS=/users/sgmwu14/localscratch/alignment_subset/alignments\n",
+backup-full-comp702-20260716:code/COMP390_code/openfold/docs/source/Aux_seq_files.md:63:  ├── duplicate_pdb_chains.txt
+backup-full-comp702-20260716:code/COMP390_code/openfold/docs/source/Aux_seq_files.md:196:```duplicate_pdb_chains.txt
+backup-full-comp702-20260716:code/COMP390_code/openfold/docs/source/OpenFold_Training_Setup.md:19:aws s3 cp s3://openfold/duplicate_pdb_chains.txt . --no-sign-request
+backup-full-comp702-20260716:code/COMP390_code/openfold/docs/source/OpenFold_Training_Setup.md:44:    --duplicate_chains_file pdb_data/duplicate_pdb_chains.txt
+backup-full-comp702-20260716:code/COMP390_code/openfold/docs/source/OpenFold_Training_Setup.md:66:    pdb_data/duplicate_pdb_chains.txt
+backup-full-comp702-20260716:code/COMP390_code/openfold/docs/source/OpenFold_Training_Setup.md:83:    alignment_data/all-seqs.fasta \
+backup-full-comp702-20260716:code/COMP390_code/openfold/docs/source/OpenFold_Training_Setup.md:90:    alignment_data/all-seqs.fasta \
+backup-full-comp702-20260716:code/COMP390_code/openfold/docs/source/OpenFold_Training_Setup.md:98:    alignment_data/all-seqs.fasta \
+backup-full-comp702-20260716:code/COMP390_code/openfold/docs/source/OpenFold_Training_Setup.md:99:    alignment_data/all-seqs_clusters-40.txt \
+backup-full-comp702-20260716:code/COMP390_code/openfold/docs/source/OpenFold_Training_Setup.md:129:    --cluster_file alignment_data/all-seqs_clusters-40.txt \
+backup-full-comp702-20260716:code/COMP390_code/openfold/docs/source/Training_OpenFold.md:28:	   ├── duplicate_pdb_chains.txt 
+backup-full-comp702-20260716:code/COMP390_code/openfold/docs/source/Training_OpenFold.md:30:	   		├── duplicate_pdb_chains.txt 
+backup-full-comp702-20260716:code/COMP390_code/openfold/docs/source/Training_OpenFold.md:78:  ├── duplicate_pdb_chains.txt
+backup-full-comp702-20260716:code/COMP390_code/task_scripts_original_backups/Task_01_DataPrep_sbatch/make_testset_caches.sbatch.orig_minhao_paths:23:CLUSTER_FILE=/users/sgmwu14/localscratch/alignment_testset/all-seqs_clusters-40.txt
+backup-full-comp702-20260716:code/COMP390_code/task_scripts_original_backups/Task_04_Packing_sbatch/pack_openfold_testset.sbatch:20:# 你 testset 的根目录（你已经用它生成了 all-seqs.fasta）
+backup-full-comp702-20260716:config/comp702_paths.sh:56:export TESTSET_CLUSTER_FILE="${TESTSET_CLUSTER_FILE:-$ALIGNMENT_TESTSET_ROOT/all-seqs_clusters-40.txt}"
+backup-full-comp702-20260716:outputs/audits/all_sbatch_hardcoded_paths_audit.txt:319:/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/all_sbatch/make_testset_caches.sbatch:23:CLUSTER_FILE=/users/sgmwu14/localscratch/alignment_testset/all-seqs_clusters-40.txt
+backup-full-comp702-20260716:outputs/audits/task_scripts_hardcoded_paths_audit.txt:71:/users/sgsrehm1/COMP702_BeyondAF/code/COMP390_code/task_scripts/Task_01_DataPrep_sbatch/make_testset_caches.sbatch:23:CLUSTER_FILE=/users/sgmwu14/localscratch/alignment_testset/all-seqs_clusters-40.txt

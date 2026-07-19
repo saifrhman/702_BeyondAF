@@ -1,0 +1,67 @@
+backup-full-comp702-20260716:code/COMP390_code/all_sbatch/extract_alignment_gpu32.sbatch:17:SRC=/users/sgmwu14/scratch/alignment_data_node037_20260210_083640.tar.zst
+backup-full-comp702-20260716:code/COMP390_code/all_sbatch/extract_alignment_gpu32.sbatch:18:DEST_DIR=/users/sgmwu14/localscratch/alignment_openfold_full_20260210
+backup-full-comp702-20260716:code/COMP390_code/all_sbatch/extract_alignment_gpu32.sbatch:28:tar --use-compress-program=unzstd -xvf alignment_data_node037_20260210_083640.tar.zst
+backup-full-comp702-20260716:code/COMP390_code/all_sbatch/openfold_gpu32_h100.sbatch:36:ALIGN_DB_DIR=$DATA_DIR/alignment_subset/alignment_dbs
+backup-full-comp702-20260716:code/COMP390_code/all_sbatch/openfold_gpu32_h100.sbatch:37:ALIGN_INDEX=$ALIGN_DB_DIR/alignment_db.index
+backup-full-comp702-20260716:code/COMP390_code/all_sbatch/openfold_subset_gpu.sbatch:33:ALIGN_DB_DIR=$DATA_DIR/alignment_subset/alignment_dbs
+backup-full-comp702-20260716:code/COMP390_code/all_sbatch/openfold_subset_gpu.sbatch:34:ALIGN_INDEX=$ALIGN_DB_DIR/alignment_db.index
+backup-full-comp702-20260716:code/COMP390_code/all_sbatch/openfold_subset_gpu13.sbatch:28:ALIGN_DB_DIR=$DATA_DIR/alignment_subset/alignment_dbs
+backup-full-comp702-20260716:code/COMP390_code/all_sbatch/openfold_subset_gpu13.sbatch:29:ALIGN_INDEX=$ALIGN_DB_DIR/alignment_db.index
+backup-full-comp702-20260716:code/COMP390_code/all_sbatch/openfold_subset_gpu15.sbatch:28:ALIGN_DB_DIR=$DATA_DIR/alignment_subset/alignment_dbs
+backup-full-comp702-20260716:code/COMP390_code/all_sbatch/openfold_subset_gpu15.sbatch:29:ALIGN_INDEX=$ALIGN_DB_DIR/alignment_db.index
+backup-full-comp702-20260716:code/COMP390_code/all_sbatch/openfold_subset_gpu32_v2.sbatch:39:ALIGN_DB_DIR=$DATA_DIR/alignment_subset/alignment_dbs
+backup-full-comp702-20260716:code/COMP390_code/all_sbatch/openfold_subset_gpu32_v2.sbatch:40:ALIGN_INDEX=$ALIGN_DB_DIR/alignment_db.index
+backup-full-comp702-20260716:code/COMP390_code/all_sbatch/openfold_subset_gpu32_v3.sbatch:45:ALIGN_DB_DIR=$DATA_DIR/alignment_subset/alignment_dbs
+backup-full-comp702-20260716:code/COMP390_code/all_sbatch/openfold_subset_gpu32_v3.sbatch:46:ALIGN_INDEX=$ALIGN_DB_DIR/alignment_db.index
+backup-full-comp702-20260716:code/COMP390_code/all_sbatch/openfold_subset_gpu32_v4.sbatch:45:ALIGN_DB_DIR=$DATA_DIR/alignment_subset/alignment_dbs
+backup-full-comp702-20260716:code/COMP390_code/all_sbatch/openfold_subset_gpu32_v4.sbatch:46:ALIGN_INDEX=$ALIGN_DB_DIR/alignment_db.index
+backup-full-comp702-20260716:code/COMP390_code/all_sbatch/openfold_subset_pack_and_train.sbatch:79:ALIGN_DB_DIR=$DATA_ROOT/alignment_subset/alignment_dbs
+backup-full-comp702-20260716:code/COMP390_code/all_sbatch/openfold_subset_pack_and_train.sbatch:80:ALIGN_INDEX=$ALIGN_DB_DIR/alignment_db.index
+backup-full-comp702-20260716:code/COMP390_code/all_sbatch/pack_node037.sbatch:23:  tar -C "$SRC" -cf - pdb_data alignment_subset | pigz -p 16 > "$TAR"
+backup-full-comp702-20260716:code/COMP390_code/all_sbatch/pack_node037.sbatch:25:  tar -C "$SRC" -czf "$TAR" pdb_data alignment_subset
+backup-full-comp702-20260716:code/COMP390_code/all_sbatch/pack_openfold_subset_to_scratch.sbatch:25:echo "Packing: alignment_subset + lists + pdb_data"
+backup-full-comp702-20260716:code/COMP390_code/all_sbatch/pack_openfold_subset_to_scratch.sbatch:32:  tar -C "$SRC" -cf - alignment_subset lists pdb_data | pigz -p 16 > "$TAR"
+backup-full-comp702-20260716:code/COMP390_code/all_sbatch/pack_openfold_subset_to_scratch.sbatch:35:  tar -C "$SRC" -czf "$TAR" alignment_subset lists pdb_data
+backup-full-comp702-20260716:code/COMP390_code/all_sbatch/pack_roda_node037.sbatch:19:ARCHIVE="alignment_data_node037_$(date +%Y%m%d_%H%M%S).tar.zst"
+backup-full-comp702-20260716:code/COMP390_code/all_sbatch/run_4bp8_100pred_ep32_gpu32.sbatch:25:ALIGN_DIR="/users/sgmwu14/localscratch/alignment_openfold_full_20260210/alignment_data/alignments"
+backup-full-comp702-20260716:code/COMP390_code/task_scripts/Task_02_Training_sbatch/openfold_subset_pack_and_train.sbatch:70:ALIGN_DB_DIR="$DATA_ROOT/alignment_subset/alignment_dbs"
+backup-full-comp702-20260716:code/COMP390_code/task_scripts/Task_02_Training_sbatch/openfold_subset_pack_and_train.sbatch:71:ALIGN_INDEX="$ALIGN_DB_DIR/alignment_db.index"
+backup-full-comp702-20260716:code/COMP390_code/task_scripts/Task_04_Packing_sbatch/pack_node037.sbatch:29:for item in pdb_data alignment_subset; do
+backup-full-comp702-20260716:code/COMP390_code/task_scripts/Task_04_Packing_sbatch/pack_openfold_subset_to_scratch.sbatch:31:for item in alignment_subset lists pdb_data; do
+backup-full-comp702-20260716:code/COMP390_code/task_scripts_original_backups/Task_01_DataPrep_sbatch/extract_alignment_gpu32.sbatch.orig_minhao_paths:17:SRC=/users/sgmwu14/scratch/alignment_data_node037_20260210_083640.tar.zst
+backup-full-comp702-20260716:code/COMP390_code/task_scripts_original_backups/Task_01_DataPrep_sbatch/extract_alignment_gpu32.sbatch.orig_minhao_paths:18:DEST_DIR=/users/sgmwu14/localscratch/alignment_openfold_full_20260210
+backup-full-comp702-20260716:code/COMP390_code/task_scripts_original_backups/Task_01_DataPrep_sbatch/extract_alignment_gpu32.sbatch.orig_minhao_paths:28:tar --use-compress-program=unzstd -xvf alignment_data_node037_20260210_083640.tar.zst
+backup-full-comp702-20260716:code/COMP390_code/task_scripts_original_backups/Task_01_DataPrep_sbatch/openfold_subset_gpu.sbatch.orig_minhao_paths:33:ALIGN_DB_DIR=$DATA_DIR/alignment_subset/alignment_dbs
+backup-full-comp702-20260716:code/COMP390_code/task_scripts_original_backups/Task_01_DataPrep_sbatch/openfold_subset_gpu.sbatch.orig_minhao_paths:34:ALIGN_INDEX=$ALIGN_DB_DIR/alignment_db.index
+backup-full-comp702-20260716:code/COMP390_code/task_scripts_original_backups/Task_01_DataPrep_sbatch/openfold_subset_gpu13.sbatch.orig_minhao_paths:28:ALIGN_DB_DIR=$DATA_DIR/alignment_subset/alignment_dbs
+backup-full-comp702-20260716:code/COMP390_code/task_scripts_original_backups/Task_01_DataPrep_sbatch/openfold_subset_gpu13.sbatch.orig_minhao_paths:29:ALIGN_INDEX=$ALIGN_DB_DIR/alignment_db.index
+backup-full-comp702-20260716:code/COMP390_code/task_scripts_original_backups/Task_01_DataPrep_sbatch/openfold_subset_gpu15.sbatch.orig_minhao_paths:28:ALIGN_DB_DIR=$DATA_DIR/alignment_subset/alignment_dbs
+backup-full-comp702-20260716:code/COMP390_code/task_scripts_original_backups/Task_01_DataPrep_sbatch/openfold_subset_gpu15.sbatch.orig_minhao_paths:29:ALIGN_INDEX=$ALIGN_DB_DIR/alignment_db.index
+backup-full-comp702-20260716:code/COMP390_code/task_scripts_original_backups/Task_01_DataPrep_sbatch/openfold_subset_gpu32.sbatch.orig_minhao_paths:32:ALIGN_DB_DIR=$DATA_DIR/alignment_subset/alignment_dbs
+backup-full-comp702-20260716:code/COMP390_code/task_scripts_original_backups/Task_01_DataPrep_sbatch/openfold_subset_gpu32.sbatch.orig_minhao_paths:33:ALIGN_INDEX=$ALIGN_DB_DIR/alignment_db.index
+backup-full-comp702-20260716:code/COMP390_code/task_scripts_original_backups/Task_01_DataPrep_sbatch/openfold_subset_gpu32_v2.sbatch.orig_minhao_paths:39:ALIGN_DB_DIR=$DATA_DIR/alignment_subset/alignment_dbs
+backup-full-comp702-20260716:code/COMP390_code/task_scripts_original_backups/Task_01_DataPrep_sbatch/openfold_subset_gpu32_v2.sbatch.orig_minhao_paths:40:ALIGN_INDEX=$ALIGN_DB_DIR/alignment_db.index
+backup-full-comp702-20260716:code/COMP390_code/task_scripts_original_backups/Task_01_DataPrep_sbatch/openfold_subset_gpu32_v3.sbatch.orig_minhao_paths:45:ALIGN_DB_DIR=$DATA_DIR/alignment_subset/alignment_dbs
+backup-full-comp702-20260716:code/COMP390_code/task_scripts_original_backups/Task_01_DataPrep_sbatch/openfold_subset_gpu32_v3.sbatch.orig_minhao_paths:46:ALIGN_INDEX=$ALIGN_DB_DIR/alignment_db.index
+backup-full-comp702-20260716:code/COMP390_code/task_scripts_original_backups/Task_01_DataPrep_sbatch/openfold_subset_gpu32_v4.sbatch.orig_minhao_paths:45:ALIGN_DB_DIR=$DATA_DIR/alignment_subset/alignment_dbs
+backup-full-comp702-20260716:code/COMP390_code/task_scripts_original_backups/Task_01_DataPrep_sbatch/openfold_subset_gpu32_v4.sbatch.orig_minhao_paths:46:ALIGN_INDEX=$ALIGN_DB_DIR/alignment_db.index
+backup-full-comp702-20260716:code/COMP390_code/task_scripts_original_backups/Task_02_Training_sbatch/openfold_gpu32_h100.sbatch.orig_minhao_paths:36:ALIGN_DB_DIR=$DATA_DIR/alignment_subset/alignment_dbs
+backup-full-comp702-20260716:code/COMP390_code/task_scripts_original_backups/Task_02_Training_sbatch/openfold_gpu32_h100.sbatch.orig_minhao_paths:37:ALIGN_INDEX=$ALIGN_DB_DIR/alignment_db.index
+backup-full-comp702-20260716:code/COMP390_code/task_scripts_original_backups/Task_02_Training_sbatch/openfold_subset_pack_and_train.sbatch.orig_minhao_paths:79:ALIGN_DB_DIR=$DATA_ROOT/alignment_subset/alignment_dbs
+backup-full-comp702-20260716:code/COMP390_code/task_scripts_original_backups/Task_02_Training_sbatch/openfold_subset_pack_and_train.sbatch.orig_minhao_paths:80:ALIGN_INDEX=$ALIGN_DB_DIR/alignment_db.index
+backup-full-comp702-20260716:code/COMP390_code/task_scripts_original_backups/Task_03_Inference_sbatch/run_4bp8_100pred_ep32_gpu32.sbatch.orig_minhao_paths:25:ALIGN_DIR="/users/sgmwu14/localscratch/alignment_openfold_full_20260210/alignment_data/alignments"
+backup-full-comp702-20260716:code/COMP390_code/task_scripts_original_backups/Task_04_Packing_sbatch/pack_node037.sbatch:23:  tar -C "$SRC" -cf - pdb_data alignment_subset | pigz -p 16 > "$TAR"
+backup-full-comp702-20260716:code/COMP390_code/task_scripts_original_backups/Task_04_Packing_sbatch/pack_node037.sbatch:25:  tar -C "$SRC" -czf "$TAR" pdb_data alignment_subset
+backup-full-comp702-20260716:code/COMP390_code/task_scripts_original_backups/Task_04_Packing_sbatch/pack_openfold_subset_to_scratch.sbatch:25:echo "Packing: alignment_subset + lists + pdb_data"
+backup-full-comp702-20260716:code/COMP390_code/task_scripts_original_backups/Task_04_Packing_sbatch/pack_openfold_subset_to_scratch.sbatch:32:  tar -C "$SRC" -cf - alignment_subset lists pdb_data | pigz -p 16 > "$TAR"
+backup-full-comp702-20260716:code/COMP390_code/task_scripts_original_backups/Task_04_Packing_sbatch/pack_openfold_subset_to_scratch.sbatch:35:  tar -C "$SRC" -czf "$TAR" alignment_subset lists pdb_data
+backup-full-comp702-20260716:code/COMP390_code/task_scripts_original_backups/Task_04_Packing_sbatch/pack_roda_node037.sbatch:19:ARCHIVE="alignment_data_node037_$(date +%Y%m%d_%H%M%S).tar.zst"
+backup-full-comp702-20260716:scripts/01_prepare_pdb707k.py:4:INPUT_CSV = Path.home() / "COMP702_BeyondAF/data/checked_PDB707K_cleaned_chains_sequences_19Feb2025.csv"
+backup-full-comp702-20260716:scripts/01_prepare_pdb707k.py:5:OUTPUT_CSV = Path.home() / "COMP702_BeyondAF/outputs/pdb707k_model1_chain_keys.csv"
+backup-full-comp702-20260716:scripts/01_prepare_pdb707k.py:18:    if "model_id" in df.columns:
+backup-full-comp702-20260716:scripts/01_prepare_pdb707k.py:19:        df = df[df["model_id"] == 1].copy()
+backup-full-comp702-20260716:scripts/01_prepare_pdb707k.py:21:    df["chain_key"] = [
+backup-full-comp702-20260716:scripts/01_prepare_pdb707k.py:27:        "chain_key",
+backup-full-comp702-20260716:scripts/01_prepare_pdb707k.py:30:        "model_id",
+backup-full-comp702-20260716:scripts/01_prepare_pdb707k.py:36:    df = df[keep_cols].drop_duplicates("chain_key")
+backup-full-comp702-20260716:scripts/analyze_peak_valley_invariants.py:16:    "model_id",

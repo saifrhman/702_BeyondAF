@@ -1,0 +1,21 @@
+=== MINHAO PATH ACCESS ===
+
+/users/sgmwu14
+drwx------ 17 sgmwu14 clusterusers 4096 Jun  4 15:20 /users/sgmwu14
+
+/users/sgmwu14/localscratch
+ls: cannot access '/users/sgmwu14/localscratch': Permission denied
+
+/users/sgmwu14/localscratch/alignment_subset
+ls: cannot access '/users/sgmwu14/localscratch/alignment_subset': Permission denied
+
+/users/sgmwu14/localscratch/alignment_subset/alignment_dbs
+ls: cannot access '/users/sgmwu14/localscratch/alignment_subset/alignment_dbs': Permission denied
+
+/users/sgmwu14/localscratch/pdb_data
+ls: cannot access '/users/sgmwu14/localscratch/pdb_data': Permission denied
+
+/users/sgmwu14/localscratch/pdb_data_full
+ls: cannot access '/users/sgmwu14/localscratch/pdb_data_full': Permission denied
+
+=== LOCAL DATA DIRECTORIES OR LINKS ===

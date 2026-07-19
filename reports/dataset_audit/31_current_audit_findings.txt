@@ -1,0 +1,188 @@
+Dataset audit findings - current working summary
+
+1. Preserved PDB707K dataset
+- File:
+  /users/sgsrehm1/COMP702_BeyondAF/data/checked_PDB707K_cleaned_chains_sequences_19Feb2025.csv
+- Actual row count: 707,292
+- Reported in Minhao's dissertation: 707,410
+- Difference: 118 rows
+
+2. PDB707K model-1 filtering
+- model_id = 1 rows: 461,581
+- Unique model-1 chain keys: 461,578
+- Duplicate model-1 chain-key rows: 3
+- Unique PDB entries represented: 104,586
+
+3. OpenFold dataset counts reported by Minhao
+- Processed OpenFold alignment identifiers: 130,413
+- Reported PDB707K/OpenFold intersection: 65,656
+- Reported PDB707K-only chains: 641,754
+- Reported OpenFold-only chains: 67,181
+
+4. Unresolved OpenFold-only count discrepancy
+- 130,413 - 65,656 = 64,757
+- This does not equal the reported OpenFold-only count of 67,181.
+- Therefore the published counts cannot currently be explained by a simple
+  unique-set subtraction.
+- Additional filtering, duplicate handling, identifier transformation, or
+  a reporting discrepancy may be involved.
+
+5. Chain identifier handling
+- Minhao's comparison used normalised chain identifiers and model_id = 1.
+- The preserved preparation script normalises chains to the form:
+  lowercase_pdb_UPPERCASE_chain
+- The exact original matching script has not yet been located.
+
+6. Missing provenance required for exact reproduction
+The following artefacts have not yet been found in the centralised project:
+- original 130,413 OpenFold chain identifier list
+- exact 65,656 matched/intersection chain list
+- original matching/filtering script that produced the intersection
+- original alignment_subset/alignments directory used for retraining
+
+7. OpenFold retraining pipeline
+The available notebook documents downstream processing after
+alignment_subset/alignments already exists.
+
+The documented flow is approximately:
+
+alignment_subset/alignments
+-> create_alignment_db_sharded.py
+-> alignment_db.index
+-> alignment_data_to_fasta.py
+-> all-seqs.fasta
+-> MMseqs clustering at 40 percent sequence identity
+-> all-seqs_clusters-40.txt
+-> generate_chain_data_cache.py
+-> OpenFold training
+
+The currently available notebook does not yet explain how
+alignment_subset/alignments itself was selected from the full OpenFold
+alignment data.
+
+8. Structural and alignment inputs referenced by the retraining scripts
+Structural data:
+- pdb_data_full/mmcif_files
+- pdb_data_full/chain_data_cache.json
+- pdb_data_full/mmcif_cache.json
+- pdb_data_full/obsolete.dat
+
+Alignment data:
+- alignment_subset/alignments
+- alignment_subset/alignment_dbs/alignment_db.index
+
+9. Training configuration identified from inherited scripts
+- OpenFold initial_training configuration
+- max_template_date: 2021-10-10
+- random seed: 42
+- precision: bf16
+- H100 GPUs
+- resumed/checkpointed around epoch 32 using:
+  32-330000.ckpt
+
+10. Current audit conclusion
+The downstream OpenFold retraining pipeline can largely be reconstructed
+from the available scripts and notebook.
+
+However, the upstream dataset-selection step that produced the reported
+65,656-chain subset cannot yet be independently reproduced because the
+original chain lists and matching script have not been located.
+
+The main remaining dataset-audit task is therefore to determine, if
+possible, exactly how the 130,413 processed OpenFold identifiers were
+compared with PDB707K and how the final retraining subset was selected.
+
+11. Explicit PDB707K row-count verification
+- Total physical lines in preserved CSV: 707,293
+- Header lines: 1
+- Data rows: 707,292
+- Therefore 707,292 is the confirmed data-row count, not a line-count artefact.
+- Difference from the reported 707,410 rows: 118.
+
+12. Verified PDB707K model-1 processing
+Direct computation from the preserved PDB707K CSV confirms:
+- All data rows: 707,292
+- model_id = 1 rows: 461,581
+- Unique normalised model-1 chain keys: 461,578
+- Duplicate model-1 chain-key rows: 3
+- Unique PDB entries represented among model-1 rows: 104,586
+
+The chain-key normalisation used is:
+lowercase PDB ID + "_" + uppercase chain ID.
+
+Therefore, the 118-row net difference between the original 707,410-row
+dataset and the preserved 707,292-row checked dataset predates the model_id
+filtering and chain-key de-duplication performed by the current preparation
+script. Its origin is reconstructed in Finding 15: 236 rows were removed
+from the original dataset and 118 corrected/reconstructed rows were added
+back, giving 707,410 - 236 + 118 = 707,292.
+
+13. Scope of accessible inherited material
+The original Minhao account paths referenced by inherited scripts are not
+accessible from the current account.
+
+All available project material supplied by Minhao was copied into Saif's
+own storage and subsequently centralised under COMP702_BeyondAF.
+
+Therefore, references to /users/sgmwu14/... are treated only as historical
+provenance describing where data originally existed. They are not currently
+accessible data sources.
+
+The dataset audit must therefore determine what can be reconstructed from:
+- the files actually transferred from Minhao,
+- the centralised COMP702_BeyondAF repository,
+- inherited scripts and notebooks,
+- preserved outputs and checkpoints,
+- and any dataset files present in Saif's storage.
+
+Any original dataset lists or intermediate files that were not transferred
+cannot be independently inspected and must be documented as missing
+provenance rather than assumed to still be recoverable from Minhao's account.
+
+14. OpenFold handling of duplicate PDB chains
+The OpenFold resource duplicate_pdb_chains.txt groups sequence-identical
+PDB chains. The inherited OpenFold code in create_alignment_db_sharded.py
+shows that, for each duplicate group, OpenFold searches for the first chain
+that already has alignment data in the alignment database index and uses it
+as the alignment representative.
+
+All other chain identifiers in that duplicate group are then mapped to the
+same underlying alignment database index entry as the representative.
+
+Therefore, these duplicate chain IDs are not necessarily removed from the
+index. Rather, they share a single underlying alignment-data representation,
+reducing redundant alignment storage.
+
+This provides a sequence-identity-based redundancy baseline that can later
+be compared with BRI-based geometric near-duplicate groups. It should not
+be described as geometric de-duplication.
+
+15. Explanation of the 707,410 versus 707,292 PDB707K discrepancy
+The preserved BRI showcase notebook contains the workflow that produced
+checked_PDB707K_cleaned_chains_sequences_19Feb2025.csv.
+
+Notebook outputs show:
+- Original PDB707K_cleaned_chains_sequences_19Feb2025.csv: 707,410 rows.
+- After combining with the dataset named
+  duplicated_PDB707K_cleaned_chains_sequences_19Feb2025.csv and applying
+  drop_duplicates(keep=False): 707,174 rows.
+- This corresponds to a reduction of 236 rows.
+- A corrected/reconstructed dataframe called output was then appended.
+- The final checked dataset contained 707,292 rows.
+- Therefore output contained 118 rows, because 707,292 - 707,174 = 118.
+
+The net transformation was therefore:
+707,410 - 236 + 118 = 707,292.
+
+This explains the previously observed 118-row difference between the
+707,410 rows reported for the original PDB707K dataset and the preserved
+707,292-row checked dataset.
+
+The replacement dataframe was constructed by inner-merging
+af_clean.csv with duplicated_PDB707K_cleaned_chains_sequences_19Feb2025.csv
+on pdb_id, model_id, chain_id, and chain_length.
+
+The available notebook evidence establishes the row-count transformation,
+although the exact biological/data-quality reason each of the 236 original
+rows was placed in the duplicated/problematic subset still needs to be
+determined separately.

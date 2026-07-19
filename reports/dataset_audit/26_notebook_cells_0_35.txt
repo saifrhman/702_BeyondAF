@@ -1,0 +1,307 @@
+
+========================================================================
+CELL 0 - markdown
+========================================================================
+# OpenFold Documentation
+## Training, Inference, Dataset Preparation, and HPC Workflow
+
+This notebook reorganises the OpenFold project documentation into a Jupyter Notebook format. It combines explanations, terminal commands, Slurm scripts, and pipeline notes in one place for easier reading and reuse.
+
+========================================================================
+CELL 1 - markdown
+========================================================================
+## 1. Project Overview
+
+This project uses OpenFold to study, reproduce, and extend AlphaFold-style protein structure prediction on the Barkla2 HPC cluster.  
+The workflow spans dataset preparation, model training, checkpoint resume, inference, relaxation, and structure comparison.
+
+The work is divided into two major parts:
+
+1. **Training pipeline**
+   - preparing OpenFold-compatible PDB training data
+   - downloading and organising alignments and structures
+   - building alignment databases and caches
+   - training a custom OpenFold model
+   - resuming training from checkpoints
+
+2. **Inference and evaluation pipeline**
+   - preparing custom FASTA, mmCIF, and MSA inputs
+   - running inference with three model settings
+   - comparing predicted structures with ground-truth structures
+   - analysing training and relaxation behaviour
+
+The three model configurations used for comparison are:
+
+1. AlphaFold parameter model  
+2. Official OpenFold model  
+3. My own trained OpenFold model
+
+========================================================================
+CELL 2 - markdown
+========================================================================
+## 2. Setting Up OpenFold
+
+This section summarises the installation and environment setup procedure used to prepare OpenFold and its dependencies before running training and inference.
+
+### 2.1 Pre-requisites
+
+- CUDA 12 and PyTorch 2 are required for the supported OpenFold build described here.
+- All main package dependencies are listed in the OpenFold `environment.yml` file.
+- At the time of writing, only Linux systems are officially supported.
+
+========================================================================
+CELL 3 - markdown
+========================================================================
+### 2.2 Installation Procedure
+
+1. Clone the OpenFold repository.  
+2. Create a conda or mamba environment from `environment.yml`.  
+3. Activate the environment.  
+4. Run the setup script to install third-party dependencies and configure kernels.  
+5. Set the library path variables so the conda environment libraries are visible.  
+6. Download model parameters.  
+7. Run unit tests to verify the installation.
+
+========================================================================
+CELL 4 - code
+========================================================================
+git clone https://github.com/aqlaboratory/openfold.git
+cd openfold
+
+mamba env create -n openfold_env -f environment.yml
+conda activate openfold_env
+
+scripts/install_third_party_dependencies.sh
+
+export LIBRARY_PATH=$CONDA_PREFIX/lib:$LIBRARY_PATH
+export LD_LIBRARY_PATH=$CONDA_PREFIX/lib:$LD_LIBRARY_PATH
+
+========================================================================
+CELL 5 - markdown
+========================================================================
+Model parameter downloads used in the official setup guide include the following.
+
+========================================================================
+CELL 6 - code
+========================================================================
+./scripts/download_alphafold_params.sh
+./scripts/download_openfold_params.sh
+./scripts/download_openfold_soloseq_params.sh
+
+========================================================================
+CELL 7 - markdown
+========================================================================
+To verify the installation, unit tests can be run after the OpenFold and AlphaFold parameters have been downloaded into `openfold/resources` or linked there.
+
+========================================================================
+CELL 8 - code
+========================================================================
+scripts/run_unit_tests.sh
+scripts/run_unit_tests.sh -v tests.test_model
+
+========================================================================
+CELL 9 - markdown
+========================================================================
+### 2.3 Optional Environment-Specific Modifications
+
+- MPI support can be added with `pip install mpi4py`
+- cuEquivariance can be installed with CUDA-specific pip packages
+- If AWS access is unavailable, OpenFold parameters can also be downloaded from HuggingFace or Google Drive
+- A Dockerfile is available for container-based deployment
+
+========================================================================
+CELL 10 - markdown
+========================================================================
+## 3. Computational Environment
+
+The project was conducted on the Barkla2 HPC cluster at the University of Liverpool.
+
+### 3.1 Environment Summary
+
+- **Cluster:** Barkla2  
+- **Login host:** `barklalogin1.liv.ac.uk`  
+- **Main storage used:** `fastscratch` for logs and high-I/O output, `scratch` for project outputs, and `localscratch` for node-local dataset preparation and training input  
+- **Environment manager:** Conda / Miniforge  
+- **Conda environment:** `openfold_env`  
+- **OpenFold source directory:** `/users/sgmwu14/openfold`
+
+========================================================================
+CELL 11 - markdown
+========================================================================
+### 3.2 Login and Environment Activation
+
+========================================================================
+CELL 12 - code
+========================================================================
+ssh sgmwu14@barklalogin1.liv.ac.uk
+source /mnt/data2/users/sgmwu14/tools/miniforge3/etc/profile.d/conda.sh
+conda activate openfold_env
+
+========================================================================
+CELL 13 - markdown
+========================================================================
+### 3.3 Useful Environment Variables
+
+========================================================================
+CELL 14 - code
+========================================================================
+export PYTHONPATH=/users/sgmwu14/openfold:$PYTHONPATH
+export OMP_NUM_THREADS=${SLURM_CPUS_PER_TASK}
+export MKL_NUM_THREADS=${SLURM_CPUS_PER_TASK}
+export TRITON_CACHE_DIR=/users/sgmwu14/fastscratch/triton_cache
+mkdir -p "$TRITON_CACHE_DIR"
+
+========================================================================
+CELL 15 - markdown
+========================================================================
+These settings ensure that OpenFold can be imported correctly, control CPU thread usage during training and inference, and prevent Triton cache files from being written to slower network storage.
+
+========================================================================
+CELL 16 - markdown
+========================================================================
+## 4. Interactive Node Usage
+
+Interactive sessions were used to inspect large downloads, unpack large archives, debug OpenFold commands, and test the environment before submitting full Slurm jobs.
+
+========================================================================
+CELL 17 - markdown
+========================================================================
+### 4.1 Long Partition Interactive Nodes
+
+========================================================================
+CELL 18 - code
+========================================================================
+srun -p long -N 1 -n 1 -w node037 --pty bash -l
+srun -p long -N 1 -w node038 --pty bash -l
+
+========================================================================
+CELL 19 - markdown
+========================================================================
+### 4.2 GPU Interactive Node
+
+========================================================================
+CELL 20 - code
+========================================================================
+srun -p gpu-h100 -N 1 -w gpu32 \
+  --gres=gpu:h100:1 \
+  --cpus-per-task=16 \
+  --mem=200G \
+  --pty bash -l
+
+========================================================================
+CELL 21 - markdown
+========================================================================
+## 5. OpenFold Training Dataset Preparation
+
+To train OpenFold on PDB-based protein structure data, the following components are required:
+
+1. MSA / alignment data  
+2. mmCIF structure files  
+3. duplicate chain mapping  
+4. cluster files  
+5. training caches  
+
+These data follow an OpenFold / OpenProteinSet-style training setup.
+
+========================================================================
+CELL 22 - markdown
+========================================================================
+## 6. Downloading OpenFold Data from RODA
+
+### 6.1 Downloading MSA Alignment Data
+
+========================================================================
+CELL 23 - code
+========================================================================
+mkdir -p alignment_data/alignment_dir_roda
+
+aws s3 cp s3://openfold/pdb/ \
+    alignment_data/alignment_dir_roda/ \
+    --recursive \
+    --no-sign-request
+
+========================================================================
+CELL 24 - markdown
+========================================================================
+Because the dataset is large, downloads were run as Slurm jobs rather than directly on the login node.
+
+========================================================================
+CELL 25 - markdown
+========================================================================
+### 6.2 Example Batch Job Submission for Downloading
+
+========================================================================
+CELL 26 - code
+========================================================================
+cd /users/sgmwu14/localscratch
+conda activate openfold_env
+ls download_openfold_pdb_roda.sbatch
+sbatch --nodelist=node038 download_openfold_pdb_roda.sbatch
+
+========================================================================
+CELL 27 - markdown
+========================================================================
+### 6.3 Monitoring Downloads
+
+========================================================================
+CELL 28 - code
+========================================================================
+watch -n 30 '
+echo "=== $(date) ===";
+du -sh /users/$USER/localscratch/alignment_data/alignment_dir_roda 2>/dev/null || echo "dir not ready";
+echo "Files:";
+find /users/$USER/localscratch/alignment_data/alignment_dir_roda -type f 2>/dev/null | wc -l
+'
+
+========================================================================
+CELL 29 - markdown
+========================================================================
+In practice, monitoring very large directories occasionally caused cluster-side issues, so manual checks using `du`, `find`, and `wc -l` were also used.
+
+========================================================================
+CELL 30 - markdown
+========================================================================
+## 7. Downloading mmCIF Structures and Duplicate Chain Mapping
+
+========================================================================
+CELL 31 - code
+========================================================================
+mkdir pdb_data
+
+aws s3 cp s3://openfold/pdb_mmcif.zip pdb_data/ --no-sign-request
+aws s3 cp s3://openfold/duplicate_pdb_chains.txt . --no-sign-request
+
+unzip pdb_data/pdb_mmcif.zip -d pdb_data
+
+========================================================================
+CELL 32 - markdown
+========================================================================
+- `pdb_mmcif.zip` contains experimental structure files.  
+- `duplicate_pdb_chains.txt` maps duplicate chains to representative chains.
+
+========================================================================
+CELL 33 - markdown
+========================================================================
+## 8. Flattening the Alignment Directory Structure
+
+========================================================================
+CELL 34 - code
+========================================================================
+bash $OF_DIR/scripts/flatten_roda.sh \
+    alignment_data/alignment_dir_roda \
+    alignment_data/
+
+rm -r alignment_data/alignment_dir_roda
+
+========================================================================
+CELL 35 - markdown
+========================================================================
+Expected structure after flattening:
+
+```text
+alignment_data/
+└── alignments/
+    ├── 1abc_A/
+    ├── 2xyz_B/
+    └── ...
+```
