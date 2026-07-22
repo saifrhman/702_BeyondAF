@@ -94,6 +94,11 @@ def main() -> None:
         action="store_true",
         help="Include sequence mismatches from the alignment mapping.",
     )
+    parser.add_argument(
+        "--require-local-continuity",
+        action="store_true",
+        help="Exclude residues immediately adjacent to alignment gaps.",
+    )
     args = parser.parse_args()
 
     prediction_dir = Path(args.prediction_dir).expanduser().resolve()
@@ -115,6 +120,23 @@ def main() -> None:
 
     reference = pd.read_csv(reference_path)
     mapping = pd.read_csv(mapping_path)
+
+    if args.require_local_continuity:
+        prediction_positions = mapping["prediction_position"].astype(int)
+        reference_positions = mapping["reference_position"].astype(int)
+
+        previous_is_contiguous = (
+            prediction_positions.diff().eq(1)
+            & reference_positions.diff().eq(1)
+        )
+        next_is_contiguous = (
+            prediction_positions.diff(-1).eq(-1)
+            & reference_positions.diff(-1).eq(-1)
+        )
+
+        mapping = mapping[
+            previous_is_contiguous & next_is_contiguous
+        ].copy()
 
     if not args.include_mismatches:
         mapping = mapping[
@@ -311,6 +333,12 @@ def main() -> None:
                             "prediction_p05": lower[index],
                             "prediction_p95": upper[index],
                             "difference": difference[index],
+                            "difference_p05": (
+                                lower[index] - reference_values[index]
+                            ),
+                            "difference_p95": (
+                                upper[index] - reference_values[index]
+                            ),
                             "resultant_length": np.nan,
                         }
                     )
@@ -367,6 +395,12 @@ def main() -> None:
                 predicted_angle = wrap_degrees(
                     reference_values + centre
                 )
+                predicted_lower = wrap_degrees(
+                    reference_values + lower
+                )
+                predicted_upper = wrap_degrees(
+                    reference_values + upper
+                )
 
                 for index in range(len(mapping)):
                     per_residue_rows.append(
@@ -383,9 +417,11 @@ def main() -> None:
                             ),
                             "reference_value": reference_values[index],
                             "prediction_centre": predicted_angle[index],
-                            "prediction_p05": lower[index],
-                            "prediction_p95": upper[index],
+                            "prediction_p05": predicted_lower[index],
+                            "prediction_p95": predicted_upper[index],
                             "difference": difference[index],
+                            "difference_p05": lower[index],
+                            "difference_p95": upper[index],
                             "resultant_length": resultant_length[index],
                         }
                     )
@@ -465,6 +501,10 @@ def main() -> None:
                 (
                     "Sequence mismatches included: "
                     f"{args.include_mismatches}"
+                ),
+                (
+                    "Local alignment continuity required: "
+                    f"{args.require_local_continuity}"
                 ),
                 (
                     "BTI treatment: signed circular differences "

@@ -1,43 +1,72 @@
-COMP702 epoch-32 invariant ensemble analysis
+COMP702 epoch-32 invariant analysis
 
 4BP8-A
 -------
-Predictions analysed: 100 relaxed structures
-Sequence-matched residues used: 695
-Experimental reference: 4BP8 chain A
-Outputs:
+Predictions analysed: 100 relaxed structures.
+
+ensemble_consistency/
+- BRI_comparison.png
+- LAI_comparison.png
+- BTI_comparison.png
+
+These plots were generated with pdb_assess plot using the same BRI 1.2.2
+workflow used for the 2OLO analysis. They show consistency across the
+prediction ensemble.
+
+experimental_comparison/
 - BRI_comparison.png
 - LAI_comparison.png
 - BTI_comparison.png
 - feature_error_summary.csv
 - per_residue_invariant_summary.csv
+- analysis_manifest.txt
+
+Experimental reference: 4BP8 chain A.
+Theparison/
+- BRI_comparison.png
+- LAI_comparison.png
+- BTI_comparison.png
+- feature_error_summary.csv sequence alignment contains gaps and one sequence mismatch. Experimental
+invariant error calculations therefore use only locally continuous,
+sequence-matched residues. 661 residue pairs are retained.
+
 
 7DSQ-B
 -------
-Predictions analysed: 100 relaxed structures
-Sequence-matched residues used: 464
-Experimental reference: 7DSQ chain B
+Predictions analysed: 100 relaxed structures.
 
-Important data audit finding:
-The inherited FASTA header identifies the target as 7dsq_A, but the
-464-residue sequence matches experimental 7DSQ chain B with 100% sequence
-identity and 100% coverage. It does not match chain A. The historical
-prediction filenames therefore retain the inherited 7dsq_A label, but
-experimental comparisons must use chain B.
+ensemble_consistency/
+- BRI_comparison.png
+- LAI_comparison.png
+- BTI_comparison.png
 
-Outputs:
+These plots were generated with pdb_assess plot using the same BRI 1.2.2
+workflow used for the 2OLO analysis. They show consistency across the
+prediction ensemble.
+
+experimental_comparison/
 - BRI_comparison.png
 - LAI_comparison.png
 - BTI_comparison.png
 - feature_error_summary.csv
 - per_residue_invariant_summary.csv
+- analysis_manifest.txt
+
+Experimental reference: 7DSQ chain B.
+The inherited target was labelled 7dsq_A, but its 464-residue sequence
+matches experimental 7DSQ chain B with 100% identity and coverage.
+All 464 mapped residues are therefore used.
+
 
 Notes
 -----
 All invariant calculations used backbone-rigid-invariant 1.2.2.2.
 
-Boundary or locally undefined invariant values produce NaNs for a small
-number of residues. These were excluded from feature-level error metrics.
+Experimental BRI and LAI comparisons use the prediction ensemble median,
+with the 5th-95th percentile interval.
 
-BTI torsion comparisons use signed circular angular differences to handle
-the -180/180 degree wraparound correctly.
+BTI experimental comparisons use signed circular angular differences so
+that the -180/180 degree boundary is handled correctly.
+
+Boundary or otherwise undefined invariant values may produce NaNs. These
+are excluded from feature-level error metrics.

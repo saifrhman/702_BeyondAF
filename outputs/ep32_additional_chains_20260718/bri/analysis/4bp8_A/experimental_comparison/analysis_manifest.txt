@@ -1,0 +1,9 @@
+Target: 4BP8-A
+Prediction directory: /mnt/fastscratch/users/sgsrehm1/COMP702_ep32_bri/invariants/4bp8_ep32_relaxed_100
+Experimental reference: /mnt/fastscratch/users/sgsrehm1/COMP702_ep32_bri/invariants/experimental_references/4bp8_A_experimental.csv
+Alignment mapping: /mnt/fastscratch/users/sgsrehm1/COMP702_ep32_bri/alignment/4bp8_prediction_to_experimental_mapping.csv
+Prediction CSV count: 100
+Mapped residue count used: 661
+Sequence mismatches included: False
+Local alignment continuity required: True
+BTI treatment: signed circular differences relative to experimental angles
