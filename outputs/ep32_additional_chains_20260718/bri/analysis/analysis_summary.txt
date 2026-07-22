@@ -22,11 +22,7 @@ experimental_comparison/
 - analysis_manifest.txt
 
 Experimental reference: 4BP8 chain A.
-Theparison/
-- BRI_comparison.png
-- LAI_comparison.png
-- BTI_comparison.png
-- feature_error_summary.csv sequence alignment contains gaps and one sequence mismatch. Experimental
+The sequence alignment contains gaps and one sequence mismatch. Experimental
 invariant error calculations therefore use only locally continuous,
 sequence-matched residues. 661 residue pairs are retained.
 
