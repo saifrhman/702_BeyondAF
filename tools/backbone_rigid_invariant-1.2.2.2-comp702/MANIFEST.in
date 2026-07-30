@@ -1,0 +1,3 @@
+include *.md *.txt *.yaml *.yml LICENSE
+recursive-include src/bri
+prune examples

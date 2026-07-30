@@ -1,0 +1,3 @@
+[console_scripts]
+bri = bri.main:main
+pdb_assess = bri.pdb_assess:cli
