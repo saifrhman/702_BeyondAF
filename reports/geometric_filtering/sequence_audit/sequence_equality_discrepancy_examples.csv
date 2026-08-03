@@ -1,0 +1,9 @@
+chain_length,pdb_id1,model_id1,chain_id1,start_residue1,pdb_id2,model_id2,chain_id2,start_residue2,L_inf_invariant,bri_seq_diff,dataset_seq_diff,bri_seq_equal,dataset_seq_equal,sequence_audit1,sequence_audit2
+31,7Q4M,1,E,12,8BFZ,1,A,12,0.51,1,0,False,True,sequence_match,minor_substitution
+31,7Q4M,1,B,12,8BFZ,1,A,12,0.565,1,0,False,True,sequence_match,minor_substitution
+31,7Q4M,1,H,12,8BFZ,1,A,12,0.565,1,0,False,True,sequence_match,minor_substitution
+31,7Q4M,1,D,12,8BFZ,1,A,12,0.564,1,0,False,True,sequence_match,minor_substitution
+31,7Q4M,1,F,12,8BFZ,1,A,12,0.574,1,0,False,True,sequence_match,minor_substitution
+31,7Q4M,1,I,12,8BFZ,1,A,12,0.631,1,0,False,True,sequence_match,minor_substitution
+31,7Q4M,1,G,12,8BFZ,1,A,12,0.6179999999999999,1,0,False,True,sequence_match,minor_substitution
+31,7Q4M,1,J,12,8BFZ,1,A,12,0.565,1,0,False,True,sequence_match,minor_substitution
