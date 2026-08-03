@@ -1,0 +1,13 @@
+pdb_id,model_id,chain_id,start_residue,chain_length,omission_class,missing_invariant_residues,sample_basis
+1E7J,1,A,1,74,missing_local_mmcif,,missing mmCIF; PDB has 1 omitted chains
+8D35,1,A,5,298,missing_local_mmcif,,missing mmCIF; PDB has 2 omitted chains
+8T8O,1,A,1,47,missing_local_mmcif,,missing mmCIF; PDB has 204 omitted chains
+1AAM,1,A,1,396,bri_residue_count_mismatch,1,residue mismatch; deficit 1
+7CLR,1,FA,22,211,bri_residue_count_mismatch,11,residue mismatch; deficit 11
+8RX0,1,H,1,176,bri_residue_count_mismatch,105,residue mismatch; deficit 105
+5CGH,1,CA,4,1,bri_invariant_not_generated,,invariant not generated; chain length 1
+7T3M,1,G,1,110,bri_invariant_not_generated,,invariant not generated; chain length 110
+5U8X,1,C,27,500,bri_invariant_not_generated,,invariant not generated; chain length 500
+8RX0,1,B,1,104,ambiguous_duplicate_chain_key,,ambiguous duplicate chain key; include all cases
+8RX0,1,F,1,77,ambiguous_duplicate_chain_key,,ambiguous duplicate chain key; include all cases
+8RX0,1,I,1,111,ambiguous_duplicate_chain_key,,ambiguous duplicate chain key; include all cases

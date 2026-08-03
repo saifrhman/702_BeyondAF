@@ -1,0 +1,6 @@
+pdb_id,chain_id,coordinate_residue_count,record_categories,residue_labels,standard_backbone_atom_rows,standard_backbone_atom_categories
+7XYF,E,106,ATOM:2195,DG:792|DA:525|DT:460|DC:418,0,
+7XYF,F,105,ATOM:2147,DG:638|DC:627|DA:462|DT:420,0,
+7XYG,E,106,ATOM:2194,DG:792|DA:504|DT:480|DC:418,0,
+7XYG,F,105,ATOM:2146,DC:646|DG:638|DA:462|DT:400,0,
+8GWG,I,23,ATOM:480,C:200|U:100|G:92|A:88,0,

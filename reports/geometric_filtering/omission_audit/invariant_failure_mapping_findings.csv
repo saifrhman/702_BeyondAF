@@ -1,0 +1,3 @@
+pdb_id,source_chain_id,source_start_residue,source_chain_length,matched_identifier_type,matched_label_chain_id,matched_auth_chain_id,observed_residue_range,root_cause,finding,suggested_solution
+5CGH,CA,4,1,label_chain_id,CA,c,3-3,source_residue_range_mismatch,"The label chain exists, but its only observed residue is 3; the source interval requests residue 4.",Validate the source start residue against current mmCIF polymer and coordinate numbering before extraction.
+7T3M,G,1,110,author_chain_id,D,G,26-1149,author_label_chain_namespace_mismatch,"The source identifier G is an author-chain ID, while the extractor compares it against label-chain IDs.",Resolve source identifiers through the mmCIF author-to-label chain mapping before selecting coordinates.

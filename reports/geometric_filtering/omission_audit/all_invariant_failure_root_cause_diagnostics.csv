@@ -1,0 +1,28 @@
+pdb_id,model_id,source_chain_id,start_residue,chain_length,label_chain_exists,author_chain_exists,mapped_label_chain_ids,selected_atom_rows,selected_residue_count,selected_min_residue,selected_max_residue,incomplete_backbone_residues,duplicate_backbone_residues,root_error_type,root_error_message,root_cause_class,polymer_type
+6NSR,1,E,114,1,True,True,E,0,0,,,0,0,,,source_residue_range_mismatch,
+7T3M,1,G,1,110,False,True,D,0,0,,,0,0,,,author_label_chain_namespace_mismatch,
+7T3M,1,H,1,110,False,True,E,0,0,,,0,0,,,author_label_chain_namespace_mismatch,
+7T3M,1,I,1,110,False,True,F,0,0,,,0,0,,,author_label_chain_namespace_mismatch,
+6TVW,1,B,7,9,True,False,,146,8,7,14,0,1,ValueError,"Index contains duplicate entries, cannot reshape",duplicate_backbone_atom_records,
+5U8X,1,A,30,497,True,True,A,3990,497,30,526,0,1,ValueError,"Index contains duplicate entries, cannot reshape",duplicate_backbone_atom_records,
+5U8X,1,C,27,500,True,True,C,4018,500,27,526,0,1,ValueError,"Index contains duplicate entries, cannot reshape",duplicate_backbone_atom_records,
+5U8X,1,D,30,497,True,True,D,4000,497,30,526,0,2,ValueError,"Index contains duplicate entries, cannot reshape",duplicate_backbone_atom_records,
+2AAA,1,A,1,476,True,True,A,3692,476,1,476,0,3,ValueError,"Index contains duplicate entries, cannot reshape",duplicate_backbone_atom_records,
+8RXA,1,B,1,92,True,True,B,767,91,2,92,0,2,ValueError,"Index contains duplicate entries, cannot reshape",duplicate_backbone_atom_records,
+7XYG,1,E,13,106,True,True,I,2194,106,13,118,0,0,IndexError,positional indexers are out-of-bounds,non_protein_nucleic_acid_chain,DNA
+7XYG,1,F,13,105,True,True,K,2146,105,13,117,0,0,IndexError,positional indexers are out-of-bounds,non_protein_nucleic_acid_chain,DNA
+7XYG,1,G,29,95,True,True,B,0,0,,,0,0,,,source_residue_range_mismatch,
+7Y6K,1,C,264,212,True,False,,0,0,,,0,0,,,source_residue_range_mismatch,
+2Z1Y,1,B,4,394,True,True,B,3079,394,4,397,0,1,ValueError,"Index contains duplicate entries, cannot reshape",duplicate_backbone_atom_records,
+8GWG,1,I,5,113,True,True,H,480,23,5,27,0,0,IndexError,positional indexers are out-of-bounds,non_protein_nucleic_acid_chain,RNA
+5CGH,1,CA,4,1,True,False,,0,0,,,0,0,,,source_residue_range_mismatch,
+5CGH,1,DA,4,1,True,False,,0,0,,,0,0,,,source_residue_range_mismatch,
+6QNX,1,B,321,74,True,True,B,0,0,,,0,0,,,source_residue_range_mismatch,
+6QNX,1,C,223,9,True,True,C,0,0,,,0,0,,,source_residue_range_mismatch,
+7XYF,1,E,1,106,True,True,I,2195,106,1,106,0,0,IndexError,positional indexers are out-of-bounds,non_protein_nucleic_acid_chain,DNA
+7XYF,1,F,1,105,True,True,K,2147,105,1,105,0,0,IndexError,positional indexers are out-of-bounds,non_protein_nucleic_acid_chain,DNA
+6XND,1,A,3,121,True,True,A,951,121,3,123,0,1,ValueError,"Index contains duplicate entries, cannot reshape",duplicate_backbone_atom_records,
+6XND,1,B,3,121,True,True,B,951,121,3,123,0,1,ValueError,"Index contains duplicate entries, cannot reshape",duplicate_backbone_atom_records,
+6XND,1,C,3,121,True,True,C,951,121,3,123,0,1,ValueError,"Index contains duplicate entries, cannot reshape",duplicate_backbone_atom_records,
+6XND,1,D,3,121,True,True,D,951,121,3,123,0,1,ValueError,"Index contains duplicate entries, cannot reshape",duplicate_backbone_atom_records,
+8G94,1,G,109,27,True,True,G,0,0,,,0,0,,,source_residue_range_mismatch,

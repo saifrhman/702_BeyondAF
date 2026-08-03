@@ -1,0 +1,4 @@
+pdb_id,model_id,chain_id,start_residue,expected_chain_length,coordinate_residue_count,backbone_atom_rows,non_single_backbone_residue_count,outcome,invariant_rows,root_error_type,root_error_message
+5CGH,1,CA,4,1,0,0,0,failure,0,IndexError,positional indexers are out-of-bounds
+7T3M,1,G,1,110,0,0,0,failure,0,IndexError,positional indexers are out-of-bounds
+5U8X,1,C,27,500,500,1503,1,failure,0,ValueError,"Index contains duplicate entries, cannot reshape"

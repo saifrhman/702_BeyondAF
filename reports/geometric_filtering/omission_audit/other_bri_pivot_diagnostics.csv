@@ -1,0 +1,6 @@
+pdb_id,chain_id,source_chain_length,selected_coordinate_residues,feature_rows,unmapped_residue_label_rows,mapped_residue_count,original_residue_labels,pivot_rows,pivot_column_count,pivot_columns
+7XYF,E,106,106,0,0,0,,0,4,model_id|chain_id|residue_id|residue_label
+7XYF,F,105,105,0,0,0,,0,4,model_id|chain_id|residue_id|residue_label
+7XYG,E,106,106,0,0,0,,0,4,model_id|chain_id|residue_id|residue_label
+7XYG,F,105,105,0,0,0,,0,4,model_id|chain_id|residue_id|residue_label
+8GWG,I,113,23,0,0,0,,0,4,model_id|chain_id|residue_id|residue_label

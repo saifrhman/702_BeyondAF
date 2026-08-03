@@ -1,0 +1,11 @@
+pdb_id,model_id,chain_id,start_residue,chain_length,production_status,failure_error,label_chain_exists,auth_chain_ids,full_chain_observed_residue_count,full_chain_min_residue,full_chain_max_residue,selected_residue_count,selected_min_residue,selected_max_residue,missing_expected_residue_count,coordinate_coverage_fraction
+8RX0,1,A,1,160,bri_extraction_failure,"ValueError('Expected 160 invariant residues, got 98')",True,A,98,3,108,98,3,108,62,0.6125
+8RX0,1,B,1,104,omitted_ambiguous_duplicate_key,,True,B,148,8,155,97,8,104,7,0.9327
+8RX0,1,B,8,148,successful_bri_vector,,True,B,148,8,155,148,8,155,0,1.0
+8RX0,1,C,1,97,bri_extraction_failure,"ValueError('Expected 97 invariant residues, got 91')",True,D,91,1,96,91,1,96,6,0.9381
+8RX0,1,F,1,77,omitted_ambiguous_duplicate_key,,True,G,140,1,140,77,1,77,0,1.0
+8RX0,1,F,1,140,successful_bri_vector,,True,G,140,1,140,140,1,140,0,1.0
+8RX0,1,G,1,72,successful_bri_vector,,True,N,72,1,72,72,1,72,0,1.0
+8RX0,1,H,1,176,bri_extraction_failure,"ValueError('Expected 176 invariant residues, got 71')",True,R,71,15,92,71,15,92,105,0.4034
+8RX0,1,I,1,75,successful_bri_vector,,True,U,75,1,75,75,1,75,0,1.0
+8RX0,1,I,1,111,omitted_ambiguous_duplicate_key,,True,U,75,1,75,75,1,75,36,0.6757

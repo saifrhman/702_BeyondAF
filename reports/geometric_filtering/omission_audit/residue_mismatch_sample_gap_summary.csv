@@ -1,0 +1,6 @@
+pdb_id,chain_id,gap_location,gap_start,gap_end,missing_residue_count
+1AAM,A,internal,246,246,1
+7CLR,FA,internal,146,156,11
+8RX0,H,N-terminal,1,14,14
+8RX0,H,internal,48,54,7
+8RX0,H,C-terminal,93,176,84
