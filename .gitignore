@@ -48,3 +48,5 @@ envs/
 *.pyc
 **/.cache/
 **/.pytest_cache/
+
+src/*.egg-info/
