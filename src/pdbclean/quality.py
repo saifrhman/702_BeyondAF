@@ -49,3 +49,70 @@ def evaluate_q001_protein_polymer(
         passed=True,
         reason="allowed_protein_polymer_type",
     )
+
+
+def evaluate_q002_occupancy(
+    chain: ChainObservation,
+    *,
+    minimum_occupancy: float,
+    reject_alternate_locations: bool,
+) -> RuleResult:
+    """Q002: require complete occupancy for all polymer-chain atoms.
+
+    The caller applies this rule after Q001 has established that the
+    observation represents an allowed protein polymer. Missing occupancy
+    is treated as unverifiable and therefore fails the rule.
+    """
+
+    missing_occupancy_count = sum(
+        atom.occupancy is None
+        for atom in chain.atoms
+    )
+
+    if missing_occupancy_count:
+        return RuleResult(
+            rule_id="Q002",
+            passed=False,
+            reason=(
+                "missing_occupancy:"
+                f"{missing_occupancy_count}"
+            ),
+        )
+
+    below_minimum_count = sum(
+        atom.occupancy is not None
+        and atom.occupancy < minimum_occupancy
+        for atom in chain.atoms
+    )
+
+    if below_minimum_count:
+        return RuleResult(
+            rule_id="Q002",
+            passed=False,
+            reason=(
+                "occupancy_below_minimum:"
+                f"{below_minimum_count}"
+            ),
+        )
+
+    if reject_alternate_locations:
+        alternate_location_count = sum(
+            atom.alt_id is not None
+            for atom in chain.atoms
+        )
+
+        if alternate_location_count:
+            return RuleResult(
+                rule_id="Q002",
+                passed=False,
+                reason=(
+                    "alternate_locations_present:"
+                    f"{alternate_location_count}"
+                ),
+            )
+
+    return RuleResult(
+        rule_id="Q002",
+        passed=True,
+        reason="occupancy_and_altloc_requirements_met",
+    )
