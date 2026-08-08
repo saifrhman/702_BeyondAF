@@ -66,3 +66,83 @@ def test_chain_atom_count() -> None:
     )
 
     assert chain.atom_count == 1
+
+import gzip
+
+import pytest
+
+from pdbclean.mmcif_parser import (
+    MMCIFParseError,
+    parse_coordinate_mmcif_bytes,
+)
+
+
+def _gzip_cif(text: str) -> bytes:
+    return gzip.compress(text.encode("utf-8"))
+
+
+def test_parse_coordinate_mmcif_into_chain() -> None:
+    cif = """data_test
+#
+loop_
+_entity_poly.entity_id
+_entity_poly.type
+1 'polypeptide(L)'
+#
+loop_
+_atom_site.pdbx_PDB_model_num
+_atom_site.label_asym_id
+_atom_site.auth_asym_id
+_atom_site.label_entity_id
+_atom_site.label_seq_id
+_atom_site.auth_seq_id
+_atom_site.label_comp_id
+_atom_site.label_atom_id
+_atom_site.label_alt_id
+_atom_site.occupancy
+_atom_site.Cartn_x
+_atom_site.Cartn_y
+_atom_site.Cartn_z
+1 A X 1 1 10 ALA N  . 1.00 0.0 0.0 0.0
+1 A X 1 1 10 ALA CA . 1.00 1.0 0.0 0.0
+1 A X 1 1 10 ALA C  . 1.00 2.0 0.0 0.0
+1 A X 1 2 11 GLY N  . 1.00 3.0 0.0 0.0
+1 A X 1 2 11 GLY CA . 0.50 4.0 0.0 0.0
+1 A X 1 2 11 GLY C  A 1.00 5.0 0.0 0.0
+#
+"""
+
+    chains = parse_coordinate_mmcif_bytes(
+        _gzip_cif(cif),
+        pdb_id="TEST",
+    )
+
+    assert len(chains) == 1
+
+    chain = chains[0]
+
+    assert chain.pdb_id == "test"
+    assert chain.model_id == 1
+    assert chain.label_chain_id == "A"
+    assert chain.auth_chain_id == "X"
+    assert chain.entity_id == "1"
+    assert chain.polymer_type == "polypeptide(L)"
+    assert chain.atom_count == 6
+
+    assert chain.atoms[0].label_seq_id == 1
+    assert chain.atoms[0].residue_name == "ALA"
+    assert chain.atoms[0].atom_name == "N"
+
+    assert chain.atoms[4].occupancy == 0.5
+    assert chain.atoms[5].alt_id == "A"
+
+
+def test_invalid_gzip_is_rejected() -> None:
+    with pytest.raises(
+        MMCIFParseError,
+        match="invalid or truncated gzip stream",
+    ):
+        parse_coordinate_mmcif_bytes(
+            b"not-a-gzip-file",
+            pdb_id="bad1",
+        )
