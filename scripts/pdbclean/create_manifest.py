@@ -15,7 +15,7 @@ import pyarrow.parquet as pq
 from pdbclean.config import load_config
 from pdbclean.manifest import file_sha256, validate_manifest_table
 from pdbclean.schemas import SOURCE_MANIFEST_SCHEMA
-from pdbclean.snapshot import iter_snapshot_objects
+from pdbclean.snapshot import iter_snapshot_objects, resolve_snapshot
 
 
 def parse_args() -> argparse.Namespace:
@@ -44,8 +44,15 @@ def main() -> None:
     snapshot_config = config["snapshot"]
     execution_config = config["execution"]
 
-    snapshot = config["release"]["snapshot"]
-    source_prefix = snapshot_config["source_prefix"]
+    resolved = resolve_snapshot(
+        snapshot_config,
+        timeout_seconds=execution_config[
+            "connection_timeout_seconds"
+        ],
+    )
+
+    snapshot = resolved.snapshot_id
+    source_prefix = resolved.source_prefix
     bucket_url = snapshot_config["bucket_url"]
 
     generated_at = datetime.now(timezone.utc)
@@ -83,8 +90,12 @@ def main() -> None:
     summary = validate_manifest_table(
         table,
         expected_snapshot=snapshot,
-        expected_count=snapshot_config["expected_mmcif_count"],
-        expected_total_bytes=snapshot_config["expected_total_bytes"],
+        expected_count=snapshot_config.get(
+            "expected_mmcif_count"
+        ),
+        expected_total_bytes=snapshot_config.get(
+            "expected_total_bytes"
+        ),
     )
 
     output_dir = Path(args.output_dir)
@@ -111,8 +122,10 @@ def main() -> None:
     parquet_tmp.replace(parquet_path)
 
     result = {
-        "snapshot": snapshot,
+        "snapshot_selection_mode": resolved.selection_mode,
+        "resolved_snapshot": snapshot,
         "source_prefix": source_prefix,
+        "sample_coordinate_mmcif": resolved.sample_mmcif_key,
         "row_count": summary.row_count,
         "total_bytes": summary.total_bytes,
         "unique_pdb_ids": summary.unique_pdb_ids,

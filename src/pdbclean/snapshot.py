@@ -3,11 +3,15 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+import gzip
+import re
 from datetime import datetime, timezone
 from typing import Iterator
-from urllib.parse import urlencode
+from urllib.parse import quote, urlencode
 from urllib.request import urlopen
 from xml.etree import ElementTree as ET
+
+import gemmi
 
 
 S3_NAMESPACE = {"s3": "http://s3.amazonaws.com/doc/2006-03-01/"}
@@ -182,3 +186,410 @@ def iter_snapshot_objects(
 
         if not truncated:
             break
+
+
+@dataclass(frozen=True)
+class ResolvedSnapshot:
+    """A snapshot that has been resolved and verified against S3."""
+
+    selection_mode: str
+    snapshot_id: str
+    layout: str
+    source_prefix: str
+    sample_mmcif_key: str
+
+
+def canonical_mmcif_prefix(snapshot_id: str) -> str:
+    """Return the canonical divided-mmCIF prefix for a snapshot."""
+
+    if (
+        not isinstance(snapshot_id, str)
+        or len(snapshot_id) != 8
+        or not snapshot_id.isdigit()
+    ):
+        raise SnapshotError(
+            f"Invalid snapshot ID {snapshot_id!r}; expected YYYYMMDD"
+        )
+
+    return (
+        f"{snapshot_id}/pub/pdb/data/structures/"
+        "divided/mmCIF/"
+    )
+
+
+def discover_snapshot_ids(
+    *,
+    bucket_url: str,
+    timeout_seconds: int = 60,
+) -> list[str]:
+    """Discover dated top-level prefixes in the snapshot bucket."""
+
+    base_url = bucket_url.rstrip("/") + "/"
+    continuation_token: str | None = None
+    snapshot_ids: set[str] = set()
+
+    while True:
+        params = {
+            "list-type": "2",
+            "delimiter": "/",
+            "max-keys": 1000,
+        }
+
+        if continuation_token is not None:
+            params["continuation-token"] = continuation_token
+
+        url = base_url + "?" + urlencode(params)
+
+        try:
+            with urlopen(url, timeout=timeout_seconds) as response:
+                xml_bytes = response.read()
+        except OSError as exc:
+            raise SnapshotError(
+                f"Failed to discover snapshot prefixes: {exc}"
+            ) from exc
+
+        try:
+            root = ET.fromstring(xml_bytes)
+        except ET.ParseError as exc:
+            raise SnapshotError(
+                f"Invalid S3 XML response: {exc}"
+            ) from exc
+
+        for item in root.findall(
+            "s3:CommonPrefixes",
+            S3_NAMESPACE,
+        ):
+            prefix = item.findtext(
+                "s3:Prefix",
+                namespaces=S3_NAMESPACE,
+            )
+
+            if not prefix:
+                continue
+
+            candidate = prefix.rstrip("/")
+
+            if len(candidate) == 8 and candidate.isdigit():
+                snapshot_ids.add(candidate)
+
+        truncated = (
+            root.findtext(
+                "s3:IsTruncated",
+                default="false",
+                namespaces=S3_NAMESPACE,
+            ).lower()
+            == "true"
+        )
+
+        if not truncated:
+            break
+
+        continuation_token = root.findtext(
+            "s3:NextContinuationToken",
+            namespaces=S3_NAMESPACE,
+        )
+
+        if not continuation_token:
+            raise SnapshotError(
+                "Snapshot-prefix listing was truncated but no "
+                "continuation token was returned"
+            )
+
+    return sorted(snapshot_ids, reverse=True)
+
+
+def find_sample_mmcif(
+    *,
+    bucket_url: str,
+    snapshot_id: str,
+    timeout_seconds: int = 60,
+    max_candidates: int = 20,
+) -> SnapshotObject | None:
+    """Find a genuine coordinate mmCIF in a snapshot.
+
+    Object listing is recursive beneath the canonical divided-mmCIF prefix.
+    Candidate `.cif.gz` files are inspected by content so validation,
+    reflection, and map-coefficient CIF files cannot qualify accidentally.
+    """
+
+    source_prefix = canonical_mmcif_prefix(snapshot_id)
+
+    candidates = iter_snapshot_objects(
+        bucket_url=bucket_url,
+        snapshot=snapshot_id,
+        source_prefix=source_prefix,
+        page_size=1000,
+        timeout_seconds=timeout_seconds,
+    )
+
+    inspected = 0
+
+    for candidate in candidates:
+        if inspected >= max_candidates:
+            break
+
+        inspected += 1
+
+        if object_is_coordinate_mmcif(
+            bucket_url=bucket_url,
+            s3_key=candidate.s3_key,
+            timeout_seconds=timeout_seconds,
+        ):
+            return candidate
+
+    return None
+
+
+def resolve_snapshot(
+    snapshot_config: dict,
+    *,
+    timeout_seconds: int = 60,
+) -> ResolvedSnapshot:
+    """Resolve and verify a fixed or automatically selected snapshot.
+
+    Resolution first checks the standard wwPDB divided-mmCIF archive.
+    If that is absent, the dated snapshot is searched recursively for
+    genuine coordinate mmCIF files.
+
+    This function verifies coordinate availability. Full-snapshot
+    completeness is validated later when the complete manifest is built.
+    """
+
+    mode = snapshot_config.get("mode")
+    bucket_url = snapshot_config.get("bucket_url")
+
+    if not isinstance(bucket_url, str) or not bucket_url:
+        raise SnapshotError(
+            "snapshot.bucket_url must be configured"
+        )
+
+    def resolve_one(
+        snapshot_id: str,
+        selection_mode: str,
+    ) -> ResolvedSnapshot | None:
+        canonical_prefix = canonical_mmcif_prefix(snapshot_id)
+
+        # Fast path: standard wwPDB coordinate archive.
+        sample = find_sample_mmcif(
+            bucket_url=bucket_url,
+            snapshot_id=snapshot_id,
+            timeout_seconds=timeout_seconds,
+        )
+
+        if sample is not None:
+            return ResolvedSnapshot(
+                selection_mode=selection_mode,
+                snapshot_id=snapshot_id,
+                layout="canonical_divided_mmcif",
+                source_prefix=canonical_prefix,
+                sample_mmcif_key=sample.s3_key,
+            )
+
+        # Fallback: recursively inspect the entire dated snapshot.
+        recursive_sample = find_coordinate_mmcif_recursive(
+            bucket_url=bucket_url,
+            snapshot_id=snapshot_id,
+            timeout_seconds=timeout_seconds,
+        )
+
+        if recursive_sample is not None:
+            return ResolvedSnapshot(
+                selection_mode=selection_mode,
+                snapshot_id=snapshot_id,
+                layout="recursive_coordinate_files",
+                source_prefix=f"{snapshot_id}/",
+                sample_mmcif_key=recursive_sample,
+            )
+
+        return None
+
+    if mode == "fixed":
+        snapshot_id = snapshot_config.get("snapshot_id")
+
+        # Also validates YYYYMMDD format.
+        canonical_mmcif_prefix(snapshot_id)
+
+        resolved = resolve_one(
+            snapshot_id,
+            "fixed",
+        )
+
+        if resolved is None:
+            raise SnapshotError(
+                f"Snapshot {snapshot_id} contains no verified "
+                "coordinate mmCIF files"
+            )
+
+        return resolved
+
+    if mode == "latest_complete":
+        snapshot_ids = discover_snapshot_ids(
+            bucket_url=bucket_url,
+            timeout_seconds=timeout_seconds,
+        )
+
+        if not snapshot_ids:
+            raise SnapshotError(
+                "No dated snapshot prefixes were discovered"
+            )
+
+        for snapshot_id in snapshot_ids:
+            resolved = resolve_one(
+                snapshot_id,
+                "latest_complete",
+            )
+
+            if resolved is not None:
+                return resolved
+
+        raise SnapshotError(
+            "Dated prefixes were found, but none contained "
+            "verified coordinate mmCIF files"
+        )
+
+    raise SnapshotError(
+        "snapshot.mode must be 'fixed' or 'latest_complete'"
+    )
+
+
+COORDINATE_FILENAME_PATTERN = re.compile(
+    r"^[a-z0-9]{4}\.cif\.gz$",
+    re.IGNORECASE,
+)
+
+
+def iter_s3_objects_recursive(
+    *,
+    bucket_url: str,
+    prefix: str,
+    timeout_seconds: int = 60,
+    page_size: int = 1000,
+) -> Iterator[tuple[str, int]]:
+    """Recursively yield all S3 objects beneath an arbitrary prefix.
+
+    No delimiter is used, so objects inside any depth of nested
+    pseudo-directories are returned.
+    """
+
+    if not 1 <= page_size <= 1000:
+        raise ValueError("page_size must be between 1 and 1000")
+
+    base_url = bucket_url.rstrip("/") + "/"
+    continuation_token: str | None = None
+
+    while True:
+        params = {
+            "list-type": "2",
+            "prefix": prefix,
+            "max-keys": page_size,
+        }
+
+        if continuation_token is not None:
+            params["continuation-token"] = continuation_token
+
+        url = base_url + "?" + urlencode(params)
+
+        try:
+            with urlopen(url, timeout=timeout_seconds) as response:
+                xml_bytes = response.read()
+        except OSError as exc:
+            raise SnapshotError(
+                f"Failed to recursively list {prefix}: {exc}"
+            ) from exc
+
+        try:
+            root = ET.fromstring(xml_bytes)
+        except ET.ParseError as exc:
+            raise SnapshotError(
+                f"Invalid S3 XML response: {exc}"
+            ) from exc
+
+        for item in root.findall("s3:Contents", S3_NAMESPACE):
+            key = item.findtext(
+                "s3:Key",
+                namespaces=S3_NAMESPACE,
+            )
+            size_text = item.findtext(
+                "s3:Size",
+                namespaces=S3_NAMESPACE,
+            )
+
+            if key is None or size_text is None:
+                continue
+
+            try:
+                size_bytes = int(size_text)
+            except ValueError as exc:
+                raise SnapshotError(
+                    f"Invalid object size for {key}: {size_text!r}"
+                ) from exc
+
+            yield key, size_bytes
+
+        truncated = (
+            root.findtext(
+                "s3:IsTruncated",
+                default="false",
+                namespaces=S3_NAMESPACE,
+            ).lower()
+            == "true"
+        )
+
+        if not truncated:
+            break
+
+        continuation_token = root.findtext(
+            "s3:NextContinuationToken",
+            namespaces=S3_NAMESPACE,
+        )
+
+        if not continuation_token:
+            raise SnapshotError(
+                "Recursive S3 listing was truncated but no "
+                "continuation token was returned"
+            )
+
+
+def find_coordinate_mmcif_recursive(
+    *,
+    bucket_url: str,
+    snapshot_id: str,
+    timeout_seconds: int = 60,
+    max_coordinate_candidates: int = 25,
+) -> str | None:
+    """Search an entire dated snapshot recursively for coordinate mmCIF.
+
+    This is a fallback for snapshots whose coordinate archive is not stored
+    beneath the usual divided/mmCIF path.
+
+    Files such as validation map-coefficient CIFs are ignored because their
+    filenames do not match the canonical four-character PDB coordinate-file
+    pattern. Matching candidates are then verified by CIF contents.
+    """
+
+    snapshot_prefix = f"{snapshot_id}/"
+    inspected_candidates = 0
+
+    for key, _ in iter_s3_objects_recursive(
+        bucket_url=bucket_url,
+        prefix=snapshot_prefix,
+        timeout_seconds=timeout_seconds,
+    ):
+        filename = key.rsplit("/", 1)[-1]
+
+        if not COORDINATE_FILENAME_PATTERN.fullmatch(filename):
+            continue
+
+        inspected_candidates += 1
+
+        if object_is_coordinate_mmcif(
+            bucket_url=bucket_url,
+            s3_key=key,
+            timeout_seconds=timeout_seconds,
+        ):
+            return key
+
+        if inspected_candidates >= max_coordinate_candidates:
+            break
+
+    return None

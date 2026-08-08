@@ -1,90 +1,79 @@
 release:
   dataset_name: PDBClean
-  snapshot: "20260101"
-  protocol_version: "protocol3.2-comp702-v1"
-
+  protocol_version: protocol3.2-comp702-v1
 snapshot:
-  bucket_url: "https://pdbsnapshots.s3.us-west-2.amazonaws.com"
-  source_prefix: "20260101/pub/pdb/data/structures/divided/mmCIF/"
+  mode: fixed
+  snapshot_id: '20260101'
+  bucket_url: https://pdbsnapshots.s3.us-west-2.amazonaws.com
   expected_mmcif_count: 246905
   expected_total_bytes: 85079649893
-
 selection:
   models:
     policy: first_model
     model_id: 1
-
   chain_namespace:
     canonical: label_asym_id
     preserve_author_chain_id: true
     preserve_entity_id: true
-
 quality_rules:
   protein_polymer:
     rule_id: Q001
     enabled: true
     allowed_polymer_types:
-      - polypeptide(L)
-      - polypeptide(D)
-
+    - polypeptide(L)
+    - polypeptide(D)
   occupancy:
     rule_id: Q002
     enabled: true
     minimum_occupancy: 1.0
     atom_scope: all_polymer_atoms
     reject_alternate_locations: true
-
   residue_continuity:
     rule_id: Q003
     enabled: true
     identifier: label_seq_id
     allow_internal_gaps: false
-
   backbone_atoms:
     rule_id: Q004
     enabled: true
     required_atoms:
-      - N
-      - CA
-      - C
+    - N
+    - CA
+    - C
     require_exactly_one: true
-
   backbone_distance:
     rule_id: Q005
     enabled: true
     minimum_distance_angstrom: 0.01
-
   amino_acids:
     rule_id: Q006
     enabled: true
     allowed_residue_names:
-      - ALA
-      - ARG
-      - ASN
-      - ASP
-      - CYS
-      - GLN
-      - GLU
-      - GLY
-      - HIS
-      - ILE
-      - LEU
-      - LYS
-      - MET
-      - PHE
-      - PRO
-      - SER
-      - THR
-      - TRP
-      - TYR
-      - VAL
-
+    - ALA
+    - ARG
+    - ASN
+    - ASP
+    - CYS
+    - GLN
+    - GLU
+    - GLY
+    - HIS
+    - ILE
+    - LEU
+    - LYS
+    - MET
+    - PHE
+    - PRO
+    - SER
+    - THR
+    - TRP
+    - TYR
+    - VAL
 bri:
   enabled: true
   implementation: backbone_rigid_invariant
   vector_partition_key: chain_length
   require_full_accounting: true
-
 geometric_search:
   engine: scipy_cKDTree
   metric: chebyshev
@@ -95,13 +84,11 @@ geometric_search:
     operator: less_than
     value: 1.0
   recompute_exact_distance: true
-
 graph:
   build_connected_components: true
   calculate_edge_density: true
   calculate_clique_status: true
   require_direct_edge_for_removal: true
-
 execution:
   batch_size: 500
   download_concurrency: 4
@@ -109,18 +96,15 @@ execution:
   connection_timeout_seconds: 60
   atomic_writes: true
   write_success_markers: true
-
 storage:
-  temporary_root: "${TMPDIR}/pdbclean"
-  output_root: "outputs/pdbclean"
+  temporary_root: ${TMPDIR}/pdbclean
+  output_root: outputs/pdbclean
   retain_downloaded_mmcif: false
-
 observability:
   structured_logging: true
   record_slurm_identifiers: true
   record_runtime: true
   record_peak_memory: true
-
 automation:
   snapshot_watcher_enabled: false
   require_stable_manifest: true

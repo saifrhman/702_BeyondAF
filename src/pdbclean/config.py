@@ -103,26 +103,55 @@ def _validate_snapshot(config: dict[str, Any]) -> None:
     if not isinstance(snapshot, dict):
         raise ConfigError("snapshot must be a mapping")
 
-    snapshot_id = snapshot.get("source_prefix", "").split("/", 1)[0]
-    release_snapshot = config["release"].get("snapshot")
+    mode = snapshot.get("mode")
 
-    if snapshot_id != release_snapshot:
+    if mode not in {"fixed", "latest_complete"}:
         raise ConfigError(
-            "release.snapshot does not match snapshot.source_prefix"
+            "snapshot.mode must be either 'fixed' or 'latest_complete'"
         )
 
-    expected_count = snapshot.get("expected_mmcif_count")
-    expected_bytes = snapshot.get("expected_total_bytes")
+    bucket_url = snapshot.get("bucket_url")
 
-    if not isinstance(expected_count, int) or expected_count <= 0:
+    if not isinstance(bucket_url, str) or not bucket_url.strip():
         raise ConfigError(
-            "snapshot.expected_mmcif_count must be a positive integer"
+            "snapshot.bucket_url must be a non-empty string"
         )
 
-    if not isinstance(expected_bytes, int) or expected_bytes <= 0:
-        raise ConfigError(
-            "snapshot.expected_total_bytes must be a positive integer"
-        )
+    if mode == "fixed":
+        snapshot_id = snapshot.get("snapshot_id")
+
+        if (
+            not isinstance(snapshot_id, str)
+            or len(snapshot_id) != 8
+            or not snapshot_id.isdigit()
+        ):
+            raise ConfigError(
+                "fixed snapshot mode requires snapshot.snapshot_id "
+                "in YYYYMMDD format"
+            )
+
+        expected_count = snapshot.get("expected_mmcif_count")
+        expected_bytes = snapshot.get("expected_total_bytes")
+
+        if expected_count is not None:
+            if not isinstance(expected_count, int) or expected_count <= 0:
+                raise ConfigError(
+                    "snapshot.expected_mmcif_count must be a "
+                    "positive integer"
+                )
+
+        if expected_bytes is not None:
+            if not isinstance(expected_bytes, int) or expected_bytes <= 0:
+                raise ConfigError(
+                    "snapshot.expected_total_bytes must be a "
+                    "positive integer"
+                )
+
+    if mode == "latest_complete":
+        if "snapshot_id" in snapshot:
+            raise ConfigError(
+                "latest_complete mode must not define snapshot_id"
+            )
 
 
 def load_config(path: str | Path) -> LoadedConfig:
