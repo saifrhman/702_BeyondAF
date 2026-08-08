@@ -116,3 +116,93 @@ def evaluate_q002_occupancy(
         passed=True,
         reason="occupancy_and_altloc_requirements_met",
     )
+
+
+def missing_internal_label_seq_ids(
+    chain: ChainObservation,
+) -> list[int]:
+    """Return absent label_seq_ids between observed minimum and maximum."""
+
+    observed = sorted(
+        {
+            atom.label_seq_id
+            for atom in chain.atoms
+            if atom.label_seq_id is not None
+        }
+    )
+
+    if len(observed) < 2:
+        return []
+
+    observed_set = set(observed)
+
+    return [
+        seq_id
+        for seq_id in range(observed[0], observed[-1] + 1)
+        if seq_id not in observed_set
+    ]
+
+
+def evaluate_q003_residue_continuity(
+    chain: ChainObservation,
+    *,
+    allow_internal_gaps: bool,
+) -> RuleResult:
+    """Q003: require consecutive observed residues by label_seq_id.
+
+    Missing residues before the first observed residue or after the last
+    observed residue are terminal truncations and are not internal gaps.
+    """
+
+    missing_identifier_count = sum(
+        atom.label_seq_id is None
+        for atom in chain.atoms
+    )
+
+    if missing_identifier_count:
+        return RuleResult(
+            rule_id="Q003",
+            passed=False,
+            reason=(
+                "missing_label_seq_id:"
+                f"{missing_identifier_count}"
+            ),
+        )
+
+    observed_ids = {
+        atom.label_seq_id
+        for atom in chain.atoms
+        if atom.label_seq_id is not None
+    }
+
+    if not observed_ids:
+        return RuleResult(
+            rule_id="Q003",
+            passed=False,
+            reason="no_observed_label_seq_ids",
+        )
+
+    internal_gaps = missing_internal_label_seq_ids(chain)
+
+    if internal_gaps and not allow_internal_gaps:
+        return RuleResult(
+            rule_id="Q003",
+            passed=False,
+            reason=(
+                "internal_label_seq_id_gaps:"
+                + ",".join(str(value) for value in internal_gaps)
+            ),
+        )
+
+    if internal_gaps:
+        return RuleResult(
+            rule_id="Q003",
+            passed=True,
+            reason="internal_gaps_allowed",
+        )
+
+    return RuleResult(
+        rule_id="Q003",
+        passed=True,
+        reason="observed_residues_consecutive",
+    )
