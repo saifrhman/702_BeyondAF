@@ -15,7 +15,7 @@ import pyarrow.parquet as pq
 from pdbclean.config import load_config
 from pdbclean.manifest import file_sha256, validate_manifest_table
 from pdbclean.schemas import SOURCE_MANIFEST_SCHEMA
-from pdbclean.snapshot import iter_snapshot_objects, resolve_snapshot
+from pdbclean.snapshot import iter_resolved_snapshot_objects, resolve_snapshot
 
 
 def parse_args() -> argparse.Namespace:
@@ -59,11 +59,9 @@ def main() -> None:
 
     rows: list[dict[str, object]] = []
 
-    for obj in iter_snapshot_objects(
+    for obj in iter_resolved_snapshot_objects(
         bucket_url=bucket_url,
-        snapshot=snapshot,
-        source_prefix=source_prefix,
-        page_size=1000,
+        resolved=resolved,
         timeout_seconds=execution_config[
             "connection_timeout_seconds"
         ],

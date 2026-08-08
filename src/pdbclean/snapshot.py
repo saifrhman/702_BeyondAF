@@ -593,3 +593,125 @@ def find_coordinate_mmcif_recursive(
             break
 
     return None
+
+
+def iter_resolved_snapshot_objects(
+    *,
+    bucket_url: str,
+    resolved: ResolvedSnapshot,
+    timeout_seconds: int = 60,
+) -> Iterator[SnapshotObject]:
+    """Yield coordinate objects according to the resolved snapshot layout."""
+
+    if resolved.layout == "canonical_divided_mmcif":
+        yield from iter_snapshot_objects(
+            bucket_url=bucket_url,
+            snapshot=resolved.snapshot_id,
+            source_prefix=resolved.source_prefix,
+            page_size=1000,
+            timeout_seconds=timeout_seconds,
+        )
+        return
+
+    if resolved.layout != "recursive_coordinate_files":
+        raise SnapshotError(
+            f"Unsupported resolved snapshot layout: {resolved.layout!r}"
+        )
+
+    base_url = bucket_url.rstrip("/") + "/"
+    continuation_token: str | None = None
+    prefix = f"{resolved.snapshot_id}/"
+
+    while True:
+        params = {
+            "list-type": "2",
+            "prefix": prefix,
+            "max-keys": 1000,
+        }
+
+        if continuation_token is not None:
+            params["continuation-token"] = continuation_token
+
+        url = base_url + "?" + urlencode(params)
+
+        try:
+            with urlopen(url, timeout=timeout_seconds) as response:
+                root = ET.fromstring(response.read())
+        except (OSError, ET.ParseError) as exc:
+            raise SnapshotError(
+                f"Failed to enumerate recursive snapshot "
+                f"{resolved.snapshot_id}: {exc}"
+            ) from exc
+
+        for item in root.findall("s3:Contents", S3_NAMESPACE):
+            key = item.findtext("s3:Key", namespaces=S3_NAMESPACE)
+            size_text = item.findtext("s3:Size", namespaces=S3_NAMESPACE)
+            etag_text = item.findtext("s3:ETag", namespaces=S3_NAMESPACE)
+            modified_text = item.findtext(
+                "s3:LastModified",
+                namespaces=S3_NAMESPACE,
+            )
+
+            if (
+                key is None
+                or size_text is None
+                or etag_text is None
+                or modified_text is None
+            ):
+                continue
+
+            filename = key.rsplit("/", 1)[-1]
+
+            if not COORDINATE_FILENAME_PATTERN.fullmatch(filename):
+                continue
+
+            if not object_is_coordinate_mmcif(
+                bucket_url=bucket_url,
+                s3_key=key,
+                timeout_seconds=timeout_seconds,
+            ):
+                continue
+
+            pdb_id = filename.removesuffix(".cif.gz").lower()
+
+            try:
+                size_bytes = int(size_text)
+                last_modified = datetime.fromisoformat(
+                    modified_text.replace("Z", "+00:00")
+                ).astimezone(timezone.utc)
+            except ValueError as exc:
+                raise SnapshotError(
+                    f"Invalid metadata for {key}: {exc}"
+                ) from exc
+
+            yield SnapshotObject(
+                snapshot=resolved.snapshot_id,
+                pdb_id=pdb_id,
+                s3_key=key,
+                size_bytes=size_bytes,
+                etag=etag_text.strip('"'),
+                last_modified_utc=last_modified,
+            )
+
+        truncated = (
+            root.findtext(
+                "s3:IsTruncated",
+                default="false",
+                namespaces=S3_NAMESPACE,
+            ).lower()
+            == "true"
+        )
+
+        if not truncated:
+            break
+
+        continuation_token = root.findtext(
+            "s3:NextContinuationToken",
+            namespaces=S3_NAMESPACE,
+        )
+
+        if not continuation_token:
+            raise SnapshotError(
+                "Recursive snapshot listing was truncated but "
+                "returned no continuation token"
+            )
