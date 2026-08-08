@@ -342,3 +342,127 @@ def evaluate_q004_backbone_atoms(
         passed=True,
         reason="required_backbone_atoms_present_once",
     )
+
+
+import math
+
+
+def ordered_backbone_atoms(
+    chain: ChainObservation,
+    *,
+    required_atoms: tuple[str, ...],
+) -> list:
+    """Return backbone atoms ordered by residue then configured atom order.
+
+    Q005 assumes Q004 semantics: every observed residue must contain
+    exactly one occurrence of every configured backbone atom.
+    """
+
+    residue_ids = sorted(
+        {
+            atom.label_seq_id
+            for atom in chain.atoms
+            if atom.label_seq_id is not None
+        }
+    )
+
+    by_residue: dict[int, dict[str, list]] = {
+        residue_id: {
+            atom_name: []
+            for atom_name in required_atoms
+        }
+        for residue_id in residue_ids
+    }
+
+    for atom in chain.atoms:
+        if atom.label_seq_id is None:
+            continue
+
+        if atom.atom_name not in required_atoms:
+            continue
+
+        by_residue[atom.label_seq_id][atom.atom_name].append(atom)
+
+    ordered = []
+
+    for residue_id in residue_ids:
+        for atom_name in required_atoms:
+            atoms = by_residue[residue_id][atom_name]
+
+            if len(atoms) != 1:
+                raise ValueError(
+                    "Q005 requires exactly one "
+                    f"{atom_name} atom for residue {residue_id}"
+                )
+
+            ordered.append(atoms[0])
+
+    return ordered
+
+
+def minimum_consecutive_backbone_distance(
+    chain: ChainObservation,
+    *,
+    required_atoms: tuple[str, ...],
+) -> float | None:
+    """Return the minimum distance between consecutive ordered backbone atoms."""
+
+    atoms = ordered_backbone_atoms(
+        chain,
+        required_atoms=required_atoms,
+    )
+
+    if len(atoms) < 2:
+        return None
+
+    return min(
+        math.dist(
+            (left.x, left.y, left.z),
+            (right.x, right.y, right.z),
+        )
+        for left, right in zip(atoms, atoms[1:])
+    )
+
+
+def evaluate_q005_backbone_distance(
+    chain: ChainObservation,
+    *,
+    required_atoms: tuple[str, ...],
+    minimum_distance_angstrom: float,
+) -> RuleResult:
+    """Q005: reject implausibly coincident consecutive backbone atoms."""
+
+    try:
+        minimum_distance = minimum_consecutive_backbone_distance(
+            chain,
+            required_atoms=required_atoms,
+        )
+    except ValueError:
+        return RuleResult(
+            rule_id="Q005",
+            passed=False,
+            reason="backbone_not_exactly_one_per_residue",
+        )
+
+    if minimum_distance is None:
+        return RuleResult(
+            rule_id="Q005",
+            passed=False,
+            reason="insufficient_backbone_atoms",
+        )
+
+    if minimum_distance < minimum_distance_angstrom:
+        return RuleResult(
+            rule_id="Q005",
+            passed=False,
+            reason=(
+                "consecutive_backbone_distance_below_minimum:"
+                f"{minimum_distance:.12g}"
+            ),
+        )
+
+    return RuleResult(
+        rule_id="Q005",
+        passed=True,
+        reason="backbone_distances_meet_minimum",
+    )
