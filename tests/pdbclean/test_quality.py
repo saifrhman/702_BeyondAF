@@ -286,3 +286,135 @@ def test_q003_rejects_missing_label_seq_id() -> None:
 
     assert result.passed is False
     assert result.reason == "missing_label_seq_id:1"
+
+from pdbclean.quality import (
+    evaluate_q004_backbone_atoms,
+    summarize_backbone_atom_issues,
+)
+
+
+def _backbone_atom(
+    *,
+    label_seq_id: int,
+    atom_name: str,
+) -> AtomObservation:
+    return AtomObservation(
+        model_id=1,
+        label_chain_id="A",
+        auth_chain_id="A",
+        entity_id="1",
+        label_seq_id=label_seq_id,
+        auth_seq_id=str(label_seq_id),
+        residue_name="ALA",
+        atom_name=atom_name,
+        alt_id=None,
+        occupancy=1.0,
+        x=0.0,
+        y=0.0,
+        z=0.0,
+    )
+
+
+def test_q004_accepts_exactly_one_backbone_atom_per_residue() -> None:
+    chain = ChainObservation(
+        pdb_id="test",
+        model_id=1,
+        label_chain_id="A",
+        atoms=[
+            _backbone_atom(label_seq_id=1, atom_name="N"),
+            _backbone_atom(label_seq_id=1, atom_name="CA"),
+            _backbone_atom(label_seq_id=1, atom_name="C"),
+            _backbone_atom(label_seq_id=2, atom_name="N"),
+            _backbone_atom(label_seq_id=2, atom_name="CA"),
+            _backbone_atom(label_seq_id=2, atom_name="C"),
+        ],
+    )
+
+    result = evaluate_q004_backbone_atoms(
+        chain,
+        required_atoms=("N", "CA", "C"),
+        require_exactly_one=True,
+    )
+
+    assert result.passed is True
+    assert result.reason == "required_backbone_atoms_present_once"
+
+
+def test_q004_rejects_missing_backbone_atom() -> None:
+    chain = ChainObservation(
+        pdb_id="test",
+        model_id=1,
+        label_chain_id="A",
+        atoms=[
+            _backbone_atom(label_seq_id=1, atom_name="N"),
+            _backbone_atom(label_seq_id=1, atom_name="CA"),
+        ],
+    )
+
+    issues = summarize_backbone_atom_issues(
+        chain,
+        required_atoms=("N", "CA", "C"),
+    )
+
+    result = evaluate_q004_backbone_atoms(
+        chain,
+        required_atoms=("N", "CA", "C"),
+        require_exactly_one=True,
+    )
+
+    assert issues.missing_atom_count == 1
+    assert issues.missing_atoms == ("1:C",)
+    assert result.passed is False
+    assert result.reason == "missing_backbone_atoms:1:1:C"
+
+
+def test_q004_rejects_duplicate_backbone_atom() -> None:
+    chain = ChainObservation(
+        pdb_id="test",
+        model_id=1,
+        label_chain_id="A",
+        atoms=[
+            _backbone_atom(label_seq_id=1, atom_name="N"),
+            _backbone_atom(label_seq_id=1, atom_name="CA"),
+            _backbone_atom(label_seq_id=1, atom_name="CA"),
+            _backbone_atom(label_seq_id=1, atom_name="C"),
+        ],
+    )
+
+    issues = summarize_backbone_atom_issues(
+        chain,
+        required_atoms=("N", "CA", "C"),
+    )
+
+    result = evaluate_q004_backbone_atoms(
+        chain,
+        required_atoms=("N", "CA", "C"),
+        require_exactly_one=True,
+    )
+
+    assert issues.duplicate_atom_count == 1
+    assert issues.duplicate_atoms == ("1:CA:2",)
+    assert result.passed is False
+    assert result.reason == "duplicate_backbone_atoms:1:1:CA:2"
+
+
+def test_q004_allows_duplicates_when_not_required_exactly_once() -> None:
+    chain = ChainObservation(
+        pdb_id="test",
+        model_id=1,
+        label_chain_id="A",
+        atoms=[
+            _backbone_atom(label_seq_id=1, atom_name="N"),
+            _backbone_atom(label_seq_id=1, atom_name="CA"),
+            _backbone_atom(label_seq_id=1, atom_name="CA"),
+            _backbone_atom(label_seq_id=1, atom_name="C"),
+        ],
+    )
+
+    result = evaluate_q004_backbone_atoms(
+        chain,
+        required_atoms=("N", "CA", "C"),
+        require_exactly_one=False,
+    )
+
+    assert result.passed is True

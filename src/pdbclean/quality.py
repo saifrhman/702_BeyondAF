@@ -206,3 +206,139 @@ def evaluate_q003_residue_continuity(
         passed=True,
         reason="observed_residues_consecutive",
     )
+
+
+@dataclass(frozen=True)
+class BackboneIssueSummary:
+    """Missing and duplicate required backbone atoms for one chain."""
+
+    missing_atom_count: int
+    duplicate_atom_count: int
+    missing_atoms: tuple[str, ...]
+    duplicate_atoms: tuple[str, ...]
+
+
+def summarize_backbone_atom_issues(
+    chain: ChainObservation,
+    *,
+    required_atoms: tuple[str, ...],
+) -> BackboneIssueSummary:
+    """Summarize required backbone atom multiplicity by label_seq_id."""
+
+    residue_ids = sorted(
+        {
+            atom.label_seq_id
+            for atom in chain.atoms
+            if atom.label_seq_id is not None
+        }
+    )
+
+    counts: dict[int, dict[str, int]] = {
+        residue_id: {
+            atom_name: 0
+            for atom_name in required_atoms
+        }
+        for residue_id in residue_ids
+    }
+
+    for atom in chain.atoms:
+        if atom.label_seq_id is None:
+            continue
+
+        if atom.atom_name not in required_atoms:
+            continue
+
+        counts[atom.label_seq_id][atom.atom_name] += 1
+
+    missing_atoms: list[str] = []
+    duplicate_atoms: list[str] = []
+    duplicate_atom_count = 0
+
+    for residue_id in residue_ids:
+        for atom_name in required_atoms:
+            count = counts[residue_id][atom_name]
+
+            if count == 0:
+                missing_atoms.append(
+                    f"{residue_id}:{atom_name}"
+                )
+            elif count > 1:
+                duplicate_atoms.append(
+                    f"{residue_id}:{atom_name}:{count}"
+                )
+                duplicate_atom_count += count - 1
+
+    return BackboneIssueSummary(
+        missing_atom_count=len(missing_atoms),
+        duplicate_atom_count=duplicate_atom_count,
+        missing_atoms=tuple(missing_atoms),
+        duplicate_atoms=tuple(duplicate_atoms),
+    )
+
+
+def evaluate_q004_backbone_atoms(
+    chain: ChainObservation,
+    *,
+    required_atoms: tuple[str, ...],
+    require_exactly_one: bool,
+) -> RuleResult:
+    """Q004: require the configured backbone atoms in every residue."""
+
+    if any(
+        atom.label_seq_id is None
+        for atom in chain.atoms
+    ):
+        return RuleResult(
+            rule_id="Q004",
+            passed=False,
+            reason="missing_label_seq_id",
+        )
+
+    observed_residue_ids = {
+        atom.label_seq_id
+        for atom in chain.atoms
+        if atom.label_seq_id is not None
+    }
+
+    if not observed_residue_ids:
+        return RuleResult(
+            rule_id="Q004",
+            passed=False,
+            reason="no_observed_residues",
+        )
+
+    issues = summarize_backbone_atom_issues(
+        chain,
+        required_atoms=required_atoms,
+    )
+
+    if issues.missing_atom_count:
+        return RuleResult(
+            rule_id="Q004",
+            passed=False,
+            reason=(
+                "missing_backbone_atoms:"
+                f"{issues.missing_atom_count}:"
+                + ",".join(issues.missing_atoms)
+            ),
+        )
+
+    if (
+        require_exactly_one
+        and issues.duplicate_atom_count
+    ):
+        return RuleResult(
+            rule_id="Q004",
+            passed=False,
+            reason=(
+                "duplicate_backbone_atoms:"
+                f"{issues.duplicate_atom_count}:"
+                + ",".join(issues.duplicate_atoms)
+            ),
+        )
+
+    return RuleResult(
+        rule_id="Q004",
+        passed=True,
+        reason="required_backbone_atoms_present_once",
+    )
