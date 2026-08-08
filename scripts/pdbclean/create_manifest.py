@@ -71,6 +71,7 @@ def main() -> None:
         rows.append(
             {
                 "snapshot": obj.snapshot,
+                "source_layout": resolved.layout,
                 "pdb_id": obj.pdb_id,
                 "s3_key": obj.s3_key,
                 "size_bytes": obj.size_bytes,

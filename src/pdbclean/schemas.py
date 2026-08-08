@@ -3,11 +3,12 @@
 import pyarrow as pa
 
 
-SOURCE_MANIFEST_SCHEMA_VERSION = "1.0"
+SOURCE_MANIFEST_SCHEMA_VERSION = "1.1"
 
 SOURCE_MANIFEST_SCHEMA = pa.schema(
     [
         pa.field("snapshot", pa.string(), nullable=False),
+        pa.field("source_layout", pa.string(), nullable=False),
         pa.field("pdb_id", pa.string(), nullable=False),
         pa.field("s3_key", pa.string(), nullable=False),
         pa.field("size_bytes", pa.int64(), nullable=False),

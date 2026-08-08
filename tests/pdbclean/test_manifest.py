@@ -15,6 +15,7 @@ def make_table(
 VALID_ROWS = [
     {
         "snapshot": "20260101",
+        "source_layout": "canonical_divided_mmcif",
         "pdb_id": "100d",
         "s3_key": (
             "20260101/pub/pdb/data/structures/"
@@ -25,6 +26,7 @@ VALID_ROWS = [
     },
     {
         "snapshot": "20260101",
+        "source_layout": "canonical_divided_mmcif",
         "pdb_id": "200l",
         "s3_key": (
             "20260101/pub/pdb/data/structures/"

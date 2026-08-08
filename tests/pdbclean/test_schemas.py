@@ -9,20 +9,21 @@ from pdbclean.schemas import (
 
 
 def test_source_manifest_schema_identity() -> None:
-    assert SOURCE_MANIFEST_SCHEMA_VERSION == "1.0"
+    assert SOURCE_MANIFEST_SCHEMA_VERSION == "1.1"
     assert (
         SOURCE_MANIFEST_SCHEMA.metadata[b"schema_name"]
         == b"pdbclean_source_manifest"
     )
     assert (
         SOURCE_MANIFEST_SCHEMA.metadata[b"schema_version"]
-        == b"1.0"
+        == b"1.1"
     )
 
 
 def test_source_manifest_schema_fields() -> None:
     expected = {
         "snapshot": pa.string(),
+        "source_layout": pa.string(),
         "pdb_id": pa.string(),
         "s3_key": pa.string(),
         "size_bytes": pa.int64(),

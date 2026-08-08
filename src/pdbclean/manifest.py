@@ -56,6 +56,7 @@ def validate_manifest_table(
 
     required_columns = {
         "snapshot",
+        "source_layout",
         "pdb_id",
         "s3_key",
         "size_bytes",
@@ -83,6 +84,7 @@ def validate_manifest_table(
 
     for index, row in enumerate(rows, start=1):
         snapshot = str(row["snapshot"])
+        source_layout = str(row["source_layout"])
         pdb_id = str(row["pdb_id"]).lower()
         s3_key = str(row["s3_key"])
         etag = str(row["etag"]).strip()
@@ -109,18 +111,42 @@ def validate_manifest_table(
                 f"Row {index}: duplicate S3 key {s3_key!r}"
             )
 
-        expected_suffix = f"/{pdb_id[1:3]}/{pdb_id}.cif.gz"
-
-        if not s3_key.startswith(expected_prefix):
-            raise ManifestError(
-                f"Row {index}: S3 key is outside snapshot prefix: "
-                f"{s3_key!r}"
+        if source_layout == "canonical_divided_mmcif":
+            expected_suffix = (
+                f"/{pdb_id[1:3]}/{pdb_id}.cif.gz"
             )
 
-        if not s3_key.endswith(expected_suffix):
+            if not s3_key.startswith(expected_prefix):
+                raise ManifestError(
+                    f"Row {index}: S3 key is outside snapshot prefix: "
+                    f"{s3_key!r}"
+                )
+
+            if not s3_key.endswith(expected_suffix):
+                raise ManifestError(
+                    f"Row {index}: S3 key does not match PDB layout: "
+                    f"{s3_key!r}"
+                )
+
+        elif source_layout == "recursive_coordinate_files":
+            if not s3_key.startswith(f"{expected_snapshot}/"):
+                raise ManifestError(
+                    f"Row {index}: recursively discovered S3 key is "
+                    f"outside snapshot {expected_snapshot}: {s3_key!r}"
+                )
+
+            filename = s3_key.rsplit("/", 1)[-1].lower()
+
+            if filename != f"{pdb_id}.cif.gz":
+                raise ManifestError(
+                    f"Row {index}: recursive coordinate filename does "
+                    f"not match PDB ID {pdb_id!r}: {s3_key!r}"
+                )
+
+        else:
             raise ManifestError(
-                f"Row {index}: S3 key does not match PDB layout: "
-                f"{s3_key!r}"
+                f"Row {index}: unsupported source_layout "
+                f"{source_layout!r}"
             )
 
         if not isinstance(size_bytes, int) or size_bytes <= 0:
