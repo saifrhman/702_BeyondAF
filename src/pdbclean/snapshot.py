@@ -298,6 +298,95 @@ def discover_snapshot_ids(
     return sorted(snapshot_ids, reverse=True)
 
 
+
+COORDINATE_ATOM_SITE_TAGS = (
+    "_atom_site.group_PDB",
+    "_atom_site.label_atom_id",
+    "_atom_site.label_comp_id",
+    "_atom_site.label_asym_id",
+    "_atom_site.Cartn_x",
+    "_atom_site.Cartn_y",
+    "_atom_site.Cartn_z",
+)
+
+
+def is_coordinate_mmcif_bytes(
+    compressed_bytes: bytes,
+) -> bool:
+    """Return True when a gzipped CIF contains usable atom coordinates."""
+
+    try:
+        raw_bytes = gzip.decompress(compressed_bytes)
+    except (OSError, EOFError):
+        return False
+
+    try:
+        document = gemmi.cif.read_string(
+            raw_bytes.decode("utf-8")
+        )
+    except (UnicodeDecodeError, RuntimeError):
+        return False
+
+    if len(document) == 0:
+        return False
+
+    for block in document:
+        for tag in COORDINATE_ATOM_SITE_TAGS:
+            if len(block.find_values(tag)) == 0:
+                break
+        else:
+            if len(block.find_values("_atom_site.Cartn_x")) > 0:
+                return True
+
+    return False
+
+
+def download_s3_object_bytes(
+    *,
+    bucket_url: str,
+    s3_key: str,
+    timeout_seconds: int = 60,
+) -> bytes:
+    """Download one public S3 object by exact key."""
+
+    object_url = (
+        bucket_url.rstrip("/")
+        + "/"
+        + quote(s3_key, safe="/")
+    )
+
+    try:
+        with urlopen(
+            object_url,
+            timeout=timeout_seconds,
+        ) as response:
+            return response.read()
+    except OSError as exc:
+        raise SnapshotError(
+            f"Failed to download S3 object {s3_key}: {exc}"
+        ) from exc
+
+
+def object_is_coordinate_mmcif(
+    *,
+    bucket_url: str,
+    s3_key: str,
+    timeout_seconds: int = 60,
+) -> bool:
+    """Classify a `.cif.gz` object by its actual CIF contents."""
+
+    if not s3_key.lower().endswith(".cif.gz"):
+        return False
+
+    compressed_bytes = download_s3_object_bytes(
+        bucket_url=bucket_url,
+        s3_key=s3_key,
+        timeout_seconds=timeout_seconds,
+    )
+
+    return is_coordinate_mmcif_bytes(compressed_bytes)
+
+
 def find_sample_mmcif(
     *,
     bucket_url: str,
