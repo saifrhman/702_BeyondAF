@@ -46,27 +46,10 @@ quality_rules:
   amino_acids:
     rule_id: Q006
     enabled: true
-    allowed_residue_names:
-    - ALA
-    - ARG
-    - ASN
-    - ASP
-    - CYS
-    - GLN
-    - GLU
-    - GLY
-    - HIS
-    - ILE
-    - LEU
-    - LYS
-    - MET
-    - PHE
-    - PRO
-    - SER
-    - THR
-    - TRP
-    - TYR
-    - VAL
+    deposited_label_source: _atom_site.label_comp_id
+    mapping_source: bri_v1.2.2_amino_acid_short
+    accepted_mapped_codes: canonical_20_one_letter
+
 bri:
   enabled: true
   implementation: backbone_rigid_invariant

@@ -446,6 +446,143 @@ def test_q004_ignores_non_backbone_atoms() -> None:
 
 
 from pdbclean.quality import (
+    evaluate_q006_standard_residues,
+    q006_nonstandard_residue_ids,
+    q006_nonstandard_residue_names,
+)
+
+
+def _q006_atom(
+    *,
+    label_seq_id: int,
+    residue_name: str,
+    atom_name: str = "CA",
+) -> AtomObservation:
+    return AtomObservation(
+        model_id=1,
+        label_chain_id="A",
+        auth_chain_id="A",
+        entity_id="1",
+        label_seq_id=label_seq_id,
+        auth_seq_id=str(label_seq_id),
+        residue_name=residue_name,
+        atom_name=atom_name,
+        alt_id=None,
+        occupancy=1.0,
+        x=0.0,
+        y=0.0,
+        z=0.0,
+        occupancy_raw="1.00",
+    )
+
+
+def test_q006_accepts_canonical_residue() -> None:
+    chain = ChainObservation(
+        pdb_id="test",
+        model_id=1,
+        label_chain_id="A",
+        atoms=[_q006_atom(label_seq_id=1, residue_name="ALA")],
+    )
+
+    result = evaluate_q006_standard_residues(chain)
+
+    assert result.passed is True
+
+
+def test_q006_accepts_llp_via_bri_ccd_mapping() -> None:
+    """Pinned BRI v1.2.2 maps LLP -> K."""
+
+    chain = ChainObservation(
+        pdb_id="test",
+        model_id=1,
+        label_chain_id="A",
+        atoms=[_q006_atom(label_seq_id=1, residue_name="LLP")],
+    )
+
+    result = evaluate_q006_standard_residues(chain)
+
+    assert result.passed is True
+    assert q006_nonstandard_residue_ids(chain) == set()
+
+
+def test_q006_accepts_mse_via_bri_ccd_mapping() -> None:
+    """Pinned BRI v1.2.2 maps MSE -> M."""
+
+    chain = ChainObservation(
+        pdb_id="test",
+        model_id=1,
+        label_chain_id="A",
+        atoms=[_q006_atom(label_seq_id=1, residue_name="MSE")],
+    )
+
+    assert evaluate_q006_standard_residues(chain).passed is True
+
+
+def test_q006_rejects_sec_pyl_and_unk() -> None:
+    chain = ChainObservation(
+        pdb_id="test",
+        model_id=1,
+        label_chain_id="A",
+        atoms=[
+            _q006_atom(label_seq_id=1, residue_name="SEC"),
+            _q006_atom(label_seq_id=2, residue_name="PYL"),
+            _q006_atom(label_seq_id=3, residue_name="UNK"),
+        ],
+    )
+
+    result = evaluate_q006_standard_residues(chain)
+
+    assert result.passed is False
+    assert q006_nonstandard_residue_ids(chain) == {1, 2, 3}
+    assert q006_nonstandard_residue_names(chain) == (
+        "PYL",
+        "SEC",
+        "UNK",
+    )
+
+
+def test_q006_rejects_residue_absent_from_bri_mapping() -> None:
+    chain = ChainObservation(
+        pdb_id="test",
+        model_id=1,
+        label_chain_id="A",
+        atoms=[
+            _q006_atom(
+                label_seq_id=9,
+                residue_name="NOT_A_REAL_CCD_CODE",
+            ),
+        ],
+    )
+
+    result = evaluate_q006_standard_residues(chain)
+
+    assert result.passed is False
+    assert q006_nonstandard_residue_ids(chain) == {9}
+
+
+def test_q006_ignores_nonbackbone_rows() -> None:
+    chain = ChainObservation(
+        pdb_id="test",
+        model_id=1,
+        label_chain_id="A",
+        atoms=[
+            _q006_atom(
+                label_seq_id=1,
+                residue_name="ALA",
+                atom_name="CA",
+            ),
+            _q006_atom(
+                label_seq_id=1,
+                residue_name="UNK",
+                atom_name="CB",
+            ),
+        ],
+    )
+
+    assert evaluate_q006_standard_residues(chain).passed is True
+
+
+from pdbclean.quality import (
     evaluate_q005_backbone_distance,
     minimum_protocol32_backbone_distance,
     protocol32_backbone_distances,

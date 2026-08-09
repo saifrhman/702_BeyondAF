@@ -324,6 +324,106 @@ def evaluate_q004_backbone_completeness(
     )
 
 
+def q006_nonstandard_residue_ids(
+    chain: ChainObservation,
+    *,
+    backbone_atoms: tuple[str, ...] = ("N", "CA", "C"),
+) -> set[int]:
+    """Return residues rejected by BRI v1.2.2 standard_residue_check.
+
+    BRI first maps deposited three-letter residue labels through its bundled
+    CCD-derived `amino_acid_short` mapping. The resulting one-letter code
+    must belong to the canonical 20-residue one-letter set.
+
+    This intentionally reproduces the pinned executable behaviour, including
+    mappings such as LLP -> K and MSE -> M.
+    """
+
+    from bri.base.base_util import (
+        amino_acid_short,
+        basic_amino_acid_20_s,
+    )
+
+    canonical = set(basic_amino_acid_20_s)
+    nonstandard: set[int] = set()
+
+    for atom in chain.atoms:
+        if atom.atom_name not in backbone_atoms:
+            continue
+
+        if atom.label_seq_id is None:
+            continue
+
+        mapped = amino_acid_short.get(atom.residue_name)
+
+        if mapped not in canonical:
+            nonstandard.add(atom.label_seq_id)
+
+    return nonstandard
+
+
+def q006_nonstandard_residue_names(
+    chain: ChainObservation,
+    *,
+    backbone_atoms: tuple[str, ...] = ("N", "CA", "C"),
+) -> tuple[str, ...]:
+    """Return deposited residue names rejected by Q006 for auditability."""
+
+    dirty_ids = q006_nonstandard_residue_ids(
+        chain,
+        backbone_atoms=backbone_atoms,
+    )
+
+    return tuple(
+        sorted(
+            {
+                atom.residue_name
+                for atom in chain.atoms
+                if atom.atom_name in backbone_atoms
+                and atom.label_seq_id in dirty_ids
+            }
+        )
+    )
+
+
+def evaluate_q006_standard_residues(
+    chain: ChainObservation,
+    *,
+    backbone_atoms: tuple[str, ...] = ("N", "CA", "C"),
+) -> RuleResult:
+    """Q006: reproduce BRI v1.2.2 standard residue validation."""
+
+    nonstandard_ids = sorted(
+        q006_nonstandard_residue_ids(
+            chain,
+            backbone_atoms=backbone_atoms,
+        )
+    )
+
+    if nonstandard_ids:
+        names = q006_nonstandard_residue_names(
+            chain,
+            backbone_atoms=backbone_atoms,
+        )
+
+        return RuleResult(
+            rule_id="Q006",
+            passed=False,
+            reason=(
+                "nonstandard_residues:"
+                + ",".join(str(value) for value in nonstandard_ids)
+                + ":"
+                + ",".join(names)
+            ),
+        )
+
+    return RuleResult(
+        rule_id="Q006",
+        passed=True,
+        reason="all_residues_map_to_canonical_20",
+    )
+
+
 import math
 
 
