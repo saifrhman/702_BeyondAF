@@ -909,3 +909,40 @@ def test_publish_quality_batch_writes_real_task_outputs(tmp_path) -> None:
     )
     assert publication.summary_path.exists()
     assert not list(tmp_path.rglob("*.tmp"))
+
+
+def test_utc_now_text_is_explicit_utc_timestamp() -> None:
+    from datetime import datetime
+
+    from pdbclean.quality_runner import _utc_now_text
+
+    value = _utc_now_text()
+
+    assert value.endswith("Z")
+
+    parsed = datetime.fromisoformat(value.replace("Z", "+00:00"))
+    assert parsed.utcoffset().total_seconds() == 0
+
+
+def test_slurm_environment_reads_ids_without_defaults() -> None:
+    from pdbclean.quality_runner import _slurm_environment
+
+    assert _slurm_environment({}) == (None, None)
+
+    assert _slurm_environment(
+        {
+            "SLURM_JOB_ID": "12345",
+            "SLURM_ARRAY_TASK_ID": "7",
+        }
+    ) == ("12345", "7")
+
+
+def test_linux_process_peak_memory_bytes_is_non_negative() -> None:
+    from pdbclean.quality_runner import _linux_process_peak_memory_bytes
+
+    value = _linux_process_peak_memory_bytes()
+
+    assert value is None or (
+        isinstance(value, int)
+        and value >= 0
+    )

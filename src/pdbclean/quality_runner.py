@@ -4,7 +4,11 @@ from __future__ import annotations
 
 from collections.abc import Callable, Iterable, Mapping
 from dataclasses import dataclass
+from datetime import datetime, timezone
+import os
 from pathlib import Path
+import resource
+import time
 from typing import Any
 
 from pdbclean.cleaning import (
@@ -74,6 +78,52 @@ class QualityTaskPublication:
     shard_paths: dict[str, Path]
     summary_path: Path
     summary: dict[str, Any]
+
+
+@dataclass(frozen=True)
+class QualityExecutionMetadata:
+    """Runtime metadata captured for one task execution."""
+
+    started_at_utc: str
+    completed_at_utc: str
+    runtime_seconds: float
+    slurm_job_id: str | None
+    slurm_array_task_id: str | None
+    peak_memory_bytes: int | None
+
+
+def _utc_now_text() -> str:
+    """Return a timezone-explicit UTC timestamp for task provenance."""
+
+    return (
+        datetime.now(timezone.utc)
+        .isoformat(timespec="microseconds")
+        .replace("+00:00", "Z")
+    )
+
+
+def _linux_process_peak_memory_bytes() -> int | None:
+    """Return this Linux process's peak resident memory in bytes."""
+
+    peak_kib = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
+
+    if peak_kib < 0:
+        return None
+
+    return int(peak_kib) * 1024
+
+
+def _slurm_environment(
+    environ: Mapping[str, str] | None = None,
+) -> tuple[str | None, str | None]:
+    """Read optional SLURM identifiers without inventing defaults."""
+
+    source = os.environ if environ is None else environ
+
+    return (
+        source.get("SLURM_JOB_ID"),
+        source.get("SLURM_ARRAY_TASK_ID"),
+    )
 
 
 class QualityRunnerError(RuntimeError):
