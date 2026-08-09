@@ -607,6 +607,83 @@ The quality summary must reconcile:
 - dirty residues by rule/type;
 - processing errors.
 
+### 7.7 Task Summary Contract
+
+Each quality-cleaning task must atomically write:
+
+`summaries/task_<task_id>.json`
+
+The task summary is an observability and accounting record. It is not a
+replacement for the Parquet Gold outputs.
+
+The JSON object must include:
+
+- summary schema name and version;
+- task identifier;
+- snapshot identifier;
+- cleaning-protocol version;
+- pipeline Git commit;
+- start and completion timestamps in UTC;
+- runtime in seconds;
+- SLURM job identifier when available;
+- SLURM array-task identifier when available;
+- peak memory usage when available.
+
+The summary must include the following source-processing counts:
+
+- input source-object count;
+- successfully processed source-object count;
+- failed source-object count.
+
+The source-object accounting invariant is:
+
+`input_source_object_count = successful_source_object_count + failed_source_object_count`
+
+The summary must include the following chain and residue counts:
+
+- parsed Silver chain count;
+- candidate entry count;
+- candidate chain count;
+- non-candidate chain count;
+- accepted chain count;
+- accepted trimmed-chain count;
+- rejected chain count;
+- dirty-residue count;
+- processing-error count;
+- chain-level processing-error count;
+- source/entry-level processing-error count;
+- total Gold record count.
+
+A processing-error record is chain-level only when both `model_id` and
+`label_chain_id` are available. Errors without complete canonical chain
+identity are counted as source/entry-level errors.
+
+The parsed-chain accounting invariant is:
+
+`parsed_silver_chain_count = accepted_chain_count + rejected_chain_count + non_candidate_chain_count + chain_level_processing_error_count`
+
+Dirty-residue records are additional lineage and are deliberately excluded
+from this equation.
+
+`total_gold_record_count` is the physical record count across all Gold shard
+types and therefore includes dirty-residue and processing-error records.
+
+The task summary must additionally contain deterministic count mappings for:
+
+- rejected chains by terminal reason;
+- rejected chains by terminal stage;
+- dirty residues by rule ID;
+- dirty residues by dirty type;
+- processing errors by processing stage;
+- processing errors by error type.
+
+The summary must contain explicit Boolean validation results for the
+source-object and parsed-chain accounting invariants. A task must not be
+marked successful when either required accounting invariant is false.
+
+Task-summary JSON must be written to a temporary path and atomically renamed
+only after the summary has been fully serialized.
+
 ## 8. BRI Generation
 
 BRI representations are generated only for chains accepted by the

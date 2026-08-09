@@ -2,8 +2,10 @@
 
 from __future__ import annotations
 
+from collections import Counter
 from collections.abc import Iterable
 from dataclasses import dataclass
+import json
 from pathlib import Path
 from typing import Any
 
@@ -28,6 +30,36 @@ class GoldTables:
     non_candidate_chains: pa.Table
     dirty_residues: pa.Table
     processing_errors: pa.Table
+
+
+QUALITY_TASK_SUMMARY_SCHEMA_NAME = "pdbclean_quality_task_summary"
+QUALITY_TASK_SUMMARY_SCHEMA_VERSION = "1.0"
+
+
+@dataclass(frozen=True)
+class QualityTaskContext:
+    """Execution metadata and upstream counts for one quality task."""
+
+    task_id: str
+    snapshot: str
+    cleaning_protocol: str
+    pipeline_git_commit: str
+
+    started_at_utc: str
+    completed_at_utc: str
+    runtime_seconds: float
+
+    input_source_object_count: int
+    successful_source_object_count: int
+    failed_source_object_count: int
+
+    parsed_silver_chain_count: int
+    candidate_entry_count: int
+    candidate_chain_count: int
+
+    slurm_job_id: str | None = None
+    slurm_array_task_id: str | None = None
+    peak_memory_bytes: int | None = None
 
 
 @dataclass(frozen=True)
@@ -218,6 +250,190 @@ def gold_records_to_tables(
             schema=GOLD_PROCESSING_ERROR_SCHEMA,
         ),
     )
+
+
+def _sorted_counts(values: Iterable[str]) -> dict[str, int]:
+    """Return deterministic lexical-key counts."""
+
+    counts = Counter(values)
+    return {
+        key: counts[key]
+        for key in sorted(counts)
+    }
+
+
+def build_quality_task_summary(
+    tables: GoldTables,
+    context: QualityTaskContext,
+) -> dict[str, Any]:
+    """Build one deterministic quality-task observability summary."""
+
+    accepted_count = tables.accepted_chains.num_rows
+    rejected_count = tables.rejected_chains.num_rows
+    non_candidate_count = tables.non_candidate_chains.num_rows
+    dirty_count = tables.dirty_residues.num_rows
+    error_count = tables.processing_errors.num_rows
+
+    error_rows = tables.processing_errors.to_pylist()
+
+    chain_level_error_count = sum(
+        row["model_id"] is not None
+        and row["label_chain_id"] is not None
+        for row in error_rows
+    )
+    source_entry_error_count = (
+        error_count - chain_level_error_count
+    )
+
+    accepted_trimmed_count = sum(
+        bool(value)
+        for value in tables.accepted_chains[
+            "terminal_trimmed"
+        ].to_pylist()
+    )
+
+    source_accounting_valid = (
+        context.input_source_object_count
+        == context.successful_source_object_count
+        + context.failed_source_object_count
+    )
+
+    chain_accounting_valid = (
+        context.parsed_silver_chain_count
+        == accepted_count
+        + rejected_count
+        + non_candidate_count
+        + chain_level_error_count
+    )
+
+    rejected_rows = tables.rejected_chains.to_pylist()
+    dirty_rows = tables.dirty_residues.to_pylist()
+
+    total_gold_record_count = (
+        accepted_count
+        + rejected_count
+        + non_candidate_count
+        + dirty_count
+        + error_count
+    )
+
+    return {
+        "summary_schema_name": QUALITY_TASK_SUMMARY_SCHEMA_NAME,
+        "summary_schema_version": QUALITY_TASK_SUMMARY_SCHEMA_VERSION,
+        "task_id": context.task_id,
+        "snapshot": context.snapshot,
+        "cleaning_protocol": context.cleaning_protocol,
+        "pipeline_git_commit": context.pipeline_git_commit,
+        "started_at_utc": context.started_at_utc,
+        "completed_at_utc": context.completed_at_utc,
+        "runtime_seconds": context.runtime_seconds,
+        "slurm_job_id": context.slurm_job_id,
+        "slurm_array_task_id": context.slurm_array_task_id,
+        "peak_memory_bytes": context.peak_memory_bytes,
+        "input_source_object_count": context.input_source_object_count,
+        "successful_source_object_count": (
+            context.successful_source_object_count
+        ),
+        "failed_source_object_count": context.failed_source_object_count,
+        "parsed_silver_chain_count": context.parsed_silver_chain_count,
+        "candidate_entry_count": context.candidate_entry_count,
+        "candidate_chain_count": context.candidate_chain_count,
+        "non_candidate_chain_count": non_candidate_count,
+        "accepted_chain_count": accepted_count,
+        "accepted_trimmed_chain_count": accepted_trimmed_count,
+        "rejected_chain_count": rejected_count,
+        "dirty_residue_count": dirty_count,
+        "processing_error_count": error_count,
+        "chain_level_processing_error_count": chain_level_error_count,
+        "source_entry_processing_error_count": source_entry_error_count,
+        "total_gold_record_count": total_gold_record_count,
+        "rejected_by_terminal_reason": _sorted_counts(
+            row["terminal_reason"]
+            for row in rejected_rows
+        ),
+        "rejected_by_terminal_stage": _sorted_counts(
+            row["terminal_stage"]
+            for row in rejected_rows
+        ),
+        "dirty_residues_by_rule_id": _sorted_counts(
+            row["rule_id"]
+            for row in dirty_rows
+        ),
+        "dirty_residues_by_type": _sorted_counts(
+            row["dirty_type"]
+            for row in dirty_rows
+        ),
+        "processing_errors_by_stage": _sorted_counts(
+            row["processing_stage"]
+            for row in error_rows
+        ),
+        "processing_errors_by_type": _sorted_counts(
+            row["error_type"]
+            for row in error_rows
+        ),
+        "source_object_accounting_valid": source_accounting_valid,
+        "parsed_chain_accounting_valid": chain_accounting_valid,
+    }
+
+
+def write_quality_task_summary_atomic(
+    summary: dict[str, Any],
+    output_root: str | Path,
+) -> Path:
+    """Validate and atomically write one quality-task JSON summary."""
+
+    if summary.get("summary_schema_name") != QUALITY_TASK_SUMMARY_SCHEMA_NAME:
+        raise ValueError("Unexpected quality-task summary schema name")
+
+    if (
+        summary.get("summary_schema_version")
+        != QUALITY_TASK_SUMMARY_SCHEMA_VERSION
+    ):
+        raise ValueError("Unexpected quality-task summary schema version")
+
+    if summary.get("source_object_accounting_valid") is not True:
+        raise ValueError(
+            "Cannot publish quality-task summary: "
+            "source-object accounting failed"
+        )
+
+    if summary.get("parsed_chain_accounting_valid") is not True:
+        raise ValueError(
+            "Cannot publish quality-task summary: "
+            "parsed-chain accounting failed"
+        )
+
+    task_id = str(summary.get("task_id", ""))
+
+    if not task_id:
+        raise ValueError("Quality-task summary requires a task_id")
+
+    if "/" in task_id or "\\" in task_id or task_id in {".", ".."}:
+        raise ValueError(f"Unsafe quality-task task_id: {task_id!r}")
+
+    output = (
+        Path(output_root)
+        / "summaries"
+        / f"task_{task_id}.json"
+    )
+    output.parent.mkdir(parents=True, exist_ok=True)
+
+    temporary = output.with_suffix(output.suffix + ".tmp")
+
+    payload = json.dumps(
+        summary,
+        sort_keys=True,
+        indent=2,
+        ensure_ascii=True,
+    )
+
+    temporary.write_text(
+        payload + "\n",
+        encoding="utf-8",
+    )
+    temporary.replace(output)
+
+    return output
 
 
 def _write_gold_table_atomic(

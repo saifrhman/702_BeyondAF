@@ -7,9 +7,12 @@ from pdbclean.cleaning import clean_protocol32_chain
 from pdbclean.gold import (
     GoldChainRecords,
     GoldProvenance,
+    QualityTaskContext,
+    build_quality_task_summary,
     gold_records_to_tables,
     materialize_gold_chain,
     write_gold_quality_shards,
+    write_quality_task_summary_atomic,
 )
 from pdbclean.mmcif_parser import AtomObservation, ChainObservation
 from pdbclean.schemas import (
@@ -466,3 +469,233 @@ def test_gold_records_to_tables_materializes_processing_errors() -> None:
     assert row["label_chain_id"] is None
     assert row["processing_stage"] == "mmcif_parse"
     assert row["error_type"] == "MMCIFParseError"
+
+
+def test_build_quality_task_summary_separates_error_levels() -> None:
+    chain = ChainObservation(
+        pdb_id="test",
+        model_id=1,
+        label_chain_id="A",
+        auth_chain_id="X",
+        entity_id="1",
+        entry_has_polypeptide=True,
+        atoms=[],
+    )
+
+    non_candidate = materialize_gold_chain(
+        chain,
+        clean_protocol32_chain(chain),
+        _provenance(),
+    )
+
+    chain_error = {
+        "snapshot": "20260101",
+        "pdb_id": "1abc",
+        "model_id": 1,
+        "label_chain_id": "A",
+        "processing_stage": "quality_cleaning",
+        "error_type": "RuntimeError",
+        "error_message": "synthetic chain failure",
+        "source_mmcif_key": "ab/1abc.cif.gz",
+        "source_etag": "etag-chain",
+        "pipeline_git_commit": "deadbeef",
+    }
+
+    source_error = {
+        "snapshot": "20260101",
+        "pdb_id": "2def",
+        "model_id": None,
+        "label_chain_id": None,
+        "processing_stage": "mmcif_parse",
+        "error_type": "MMCIFParseError",
+        "error_message": "synthetic source failure",
+        "source_mmcif_key": "de/2def.cif.gz",
+        "source_etag": "etag-source",
+        "pipeline_git_commit": "deadbeef",
+    }
+
+    tables = gold_records_to_tables(
+        [non_candidate],
+        processing_errors=[chain_error, source_error],
+    )
+
+    summary = build_quality_task_summary(
+        tables,
+        QualityTaskContext(
+            task_id="7",
+            snapshot="20260101",
+            cleaning_protocol="Protocol_3.2_BRI_v1.2.2",
+            pipeline_git_commit="deadbeef",
+            started_at_utc="2026-08-09T20:00:00Z",
+            completed_at_utc="2026-08-09T20:01:00Z",
+            runtime_seconds=60.0,
+            input_source_object_count=2,
+            successful_source_object_count=1,
+            failed_source_object_count=1,
+            parsed_silver_chain_count=2,
+            candidate_entry_count=1,
+            candidate_chain_count=1,
+            slurm_job_id="12345",
+            slurm_array_task_id="7",
+            peak_memory_bytes=1024,
+        ),
+    )
+
+    assert summary["non_candidate_chain_count"] == 1
+    assert summary["processing_error_count"] == 2
+    assert summary["chain_level_processing_error_count"] == 1
+    assert summary["source_entry_processing_error_count"] == 1
+
+    assert summary["source_object_accounting_valid"] is True
+    assert summary["parsed_chain_accounting_valid"] is True
+
+    assert summary["processing_errors_by_stage"] == {
+        "mmcif_parse": 1,
+        "quality_cleaning": 1,
+    }
+    assert summary["processing_errors_by_type"] == {
+        "MMCIFParseError": 1,
+        "RuntimeError": 1,
+    }
+
+    assert summary["total_gold_record_count"] == 3
+
+
+def test_build_quality_task_summary_detects_bad_accounting() -> None:
+    tables = gold_records_to_tables([])
+
+    summary = build_quality_task_summary(
+        tables,
+        QualityTaskContext(
+            task_id="bad",
+            snapshot="20260101",
+            cleaning_protocol="Protocol_3.2_BRI_v1.2.2",
+            pipeline_git_commit="deadbeef",
+            started_at_utc="2026-08-09T20:00:00Z",
+            completed_at_utc="2026-08-09T20:00:01Z",
+            runtime_seconds=1.0,
+            input_source_object_count=2,
+            successful_source_object_count=1,
+            failed_source_object_count=0,
+            parsed_silver_chain_count=1,
+            candidate_entry_count=0,
+            candidate_chain_count=0,
+        ),
+    )
+
+    assert summary["source_object_accounting_valid"] is False
+    assert summary["parsed_chain_accounting_valid"] is False
+
+
+def test_write_quality_task_summary_atomic(tmp_path) -> None:
+    tables = gold_records_to_tables([])
+
+    summary = build_quality_task_summary(
+        tables,
+        QualityTaskContext(
+            task_id="12",
+            snapshot="20260101",
+            cleaning_protocol="Protocol_3.2_BRI_v1.2.2",
+            pipeline_git_commit="deadbeef",
+            started_at_utc="2026-08-09T20:00:00Z",
+            completed_at_utc="2026-08-09T20:00:01Z",
+            runtime_seconds=1.0,
+            input_source_object_count=0,
+            successful_source_object_count=0,
+            failed_source_object_count=0,
+            parsed_silver_chain_count=0,
+            candidate_entry_count=0,
+            candidate_chain_count=0,
+        ),
+    )
+
+    output = write_quality_task_summary_atomic(
+        summary,
+        tmp_path,
+    )
+
+    assert output == tmp_path / "summaries" / "task_12.json"
+    assert output.exists()
+    assert not list(tmp_path.rglob("*.tmp"))
+
+    payload = output.read_text(encoding="utf-8")
+
+    assert payload.endswith("\n")
+    assert '"parsed_chain_accounting_valid": true' in payload
+    assert '"source_object_accounting_valid": true' in payload
+
+    # Rewriting the same logical summary is deterministic.
+    first = payload
+    write_quality_task_summary_atomic(summary, tmp_path)
+    second = output.read_text(encoding="utf-8")
+
+    assert second == first
+
+
+def test_write_quality_task_summary_refuses_invalid_accounting(
+    tmp_path,
+) -> None:
+    tables = gold_records_to_tables([])
+
+    summary = build_quality_task_summary(
+        tables,
+        QualityTaskContext(
+            task_id="bad",
+            snapshot="20260101",
+            cleaning_protocol="Protocol_3.2_BRI_v1.2.2",
+            pipeline_git_commit="deadbeef",
+            started_at_utc="2026-08-09T20:00:00Z",
+            completed_at_utc="2026-08-09T20:00:01Z",
+            runtime_seconds=1.0,
+            input_source_object_count=1,
+            successful_source_object_count=0,
+            failed_source_object_count=0,
+            parsed_silver_chain_count=0,
+            candidate_entry_count=0,
+            candidate_chain_count=0,
+        ),
+    )
+
+    try:
+        write_quality_task_summary_atomic(summary, tmp_path)
+    except ValueError as exc:
+        assert "source-object accounting failed" in str(exc)
+    else:
+        raise AssertionError(
+            "Expected invalid accounting to prevent summary publication"
+        )
+
+    assert not (tmp_path / "summaries" / "task_bad.json").exists()
+    assert not list(tmp_path.rglob("*.tmp"))
+
+
+def test_write_quality_task_summary_rejects_unsafe_task_id(
+    tmp_path,
+) -> None:
+    tables = gold_records_to_tables([])
+
+    summary = build_quality_task_summary(
+        tables,
+        QualityTaskContext(
+            task_id="../escape",
+            snapshot="20260101",
+            cleaning_protocol="Protocol_3.2_BRI_v1.2.2",
+            pipeline_git_commit="deadbeef",
+            started_at_utc="2026-08-09T20:00:00Z",
+            completed_at_utc="2026-08-09T20:00:01Z",
+            runtime_seconds=1.0,
+            input_source_object_count=0,
+            successful_source_object_count=0,
+            failed_source_object_count=0,
+            parsed_silver_chain_count=0,
+            candidate_entry_count=0,
+            candidate_chain_count=0,
+        ),
+    )
+
+    try:
+        write_quality_task_summary_atomic(summary, tmp_path)
+    except ValueError as exc:
+        assert "Unsafe quality-task task_id" in str(exc)
+    else:
+        raise AssertionError("Expected unsafe task_id to be rejected")
