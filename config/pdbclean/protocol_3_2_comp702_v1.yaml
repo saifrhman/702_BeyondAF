@@ -39,7 +39,6 @@ quality_rules:
     - N
     - CA
     - C
-    require_exactly_one: true
   backbone_distance:
     rule_id: Q005
     enabled: true

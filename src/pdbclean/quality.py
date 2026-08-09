@@ -241,85 +241,55 @@ def evaluate_q003_residue_continuity(
     )
 
 
-@dataclass(frozen=True)
-class BackboneIssueSummary:
-    """Missing and duplicate required backbone atoms for one chain."""
-
-    missing_atom_count: int
-    duplicate_atom_count: int
-    missing_atoms: tuple[str, ...]
-    duplicate_atoms: tuple[str, ...]
-
-
-def summarize_backbone_atom_issues(
+def q004_incomplete_residue_ids(
     chain: ChainObservation,
     *,
-    required_atoms: tuple[str, ...],
-) -> BackboneIssueSummary:
-    """Summarize required backbone atom multiplicity by label_seq_id."""
+    required_atoms: tuple[str, ...] = ("N", "CA", "C"),
+) -> set[int]:
+    """Return residues failing BRI v1.2.2 `residue_completeness_check`.
 
-    residue_ids = sorted(
-        {
-            atom.label_seq_id
-            for atom in chain.atoms
-            if atom.label_seq_id is not None
-        }
-    )
+    `integrated_chainwise_filter` receives only backbone feature rows
+    (N, CA and C). BRI counts rows per residue and marks a residue
+    incomplete whenever that count is not exactly three.
 
-    counts: dict[int, dict[str, int]] = {
-        residue_id: {
-            atom_name: 0
-            for atom_name in required_atoms
-        }
-        for residue_id in residue_ids
-    }
+    In the integrated Protocol 3.2 pipeline, duplicate backbone rows have
+    already been handled by Q002 before this check is reached.
+    """
 
-    for atom in chain.atoms:
+    backbone = [
+        atom
+        for atom in chain.atoms
+        if atom.atom_name in required_atoms
+    ]
+
+    counts: dict[int, int] = {}
+
+    for atom in backbone:
         if atom.label_seq_id is None:
             continue
 
-        if atom.atom_name not in required_atoms:
-            continue
+        counts[atom.label_seq_id] = (
+            counts.get(atom.label_seq_id, 0) + 1
+        )
 
-        counts[atom.label_seq_id][atom.atom_name] += 1
-
-    missing_atoms: list[str] = []
-    duplicate_atoms: list[str] = []
-    duplicate_atom_count = 0
-
-    for residue_id in residue_ids:
-        for atom_name in required_atoms:
-            count = counts[residue_id][atom_name]
-
-            if count == 0:
-                missing_atoms.append(
-                    f"{residue_id}:{atom_name}"
-                )
-            elif count > 1:
-                duplicate_atoms.append(
-                    f"{residue_id}:{atom_name}:{count}"
-                )
-                duplicate_atom_count += count - 1
-
-    return BackboneIssueSummary(
-        missing_atom_count=len(missing_atoms),
-        duplicate_atom_count=duplicate_atom_count,
-        missing_atoms=tuple(missing_atoms),
-        duplicate_atoms=tuple(duplicate_atoms),
-    )
+    return {
+        residue_id
+        for residue_id, count in counts.items()
+        if count != 3
+    }
 
 
-def evaluate_q004_backbone_atoms(
+def evaluate_q004_backbone_completeness(
     chain: ChainObservation,
     *,
-    required_atoms: tuple[str, ...],
-    require_exactly_one: bool,
+    required_atoms: tuple[str, ...] = ("N", "CA", "C"),
 ) -> RuleResult:
-    """Q004: require the configured backbone atoms in every residue."""
+    """Q004: reproduce BRI v1.2.2 backbone completeness checking."""
 
     if any(
         atom.label_seq_id is None
         for atom in chain.atoms
+        if atom.atom_name in required_atoms
     ):
         return RuleResult(
             rule_id="Q004",
@@ -330,52 +300,39 @@ def evaluate_q004_backbone_atoms(
     observed_residue_ids = {
         atom.label_seq_id
         for atom in chain.atoms
-        if atom.label_seq_id is not None
+        if atom.atom_name in required_atoms
+        and atom.label_seq_id is not None
     }
 
     if not observed_residue_ids:
         return RuleResult(
             rule_id="Q004",
             passed=False,
-            reason="no_observed_residues",
+            reason="no_observed_backbone_residues",
         )
 
-    issues = summarize_backbone_atom_issues(
-        chain,
-        required_atoms=required_atoms,
+    incomplete = sorted(
+        q004_incomplete_residue_ids(
+            chain,
+            required_atoms=required_atoms,
+        )
     )
 
-    if issues.missing_atom_count:
+    if incomplete:
         return RuleResult(
             rule_id="Q004",
             passed=False,
             reason=(
-                "missing_backbone_atoms:"
-                f"{issues.missing_atom_count}:"
-                + ",".join(issues.missing_atoms)
-            ),
-        )
-
-    if (
-        require_exactly_one
-        and issues.duplicate_atom_count
-    ):
-        return RuleResult(
-            rule_id="Q004",
-            passed=False,
-            reason=(
-                "duplicate_backbone_atoms:"
-                f"{issues.duplicate_atom_count}:"
-                + ",".join(issues.duplicate_atoms)
+                "incomplete_backbone_residues:"
+                + ",".join(str(residue_id) for residue_id in incomplete)
             ),
         )
 
     return RuleResult(
         rule_id="Q004",
         passed=True,
-        reason="required_backbone_atoms_present_once",
+        reason="backbone_residue_row_counts_complete",
     )
-
 
 
 import math
