@@ -128,166 +128,425 @@ The pipeline must also preserve:
 The initial release processes model 1 only. This is a versioned configuration
 choice and must not be hard-coded into the parser.
 
-## 6. Quality-Cleaning Rules
+## 6. Protocol 3.2 Quality Cleaning
 
-All cleaning rules are configurable, versioned, and auditable.
+The scientific cleaning contract is Protocol 3.2 of Anosova et al. The pinned
+BRI v1.2.2 implementation is the executable specification for operational
+details that are not fully specified by the paper.
 
-### Q001: Protein Polymer
+The rules in this protocol version are therefore not independent optional
+filters. They form one stateful cleaning procedure. Residues can be marked
+dirty and removed while a remaining continuous chain segment is retained.
 
-Retain supported polypeptide chains.
+For auditability, the pipeline preserves both:
 
-Reject:
+- the original deposited observations in Silver; and
+- all residue removals and terminal chain outcomes in Gold.
 
-- DNA chains.
-- RNA chains.
-- Carbohydrate polymers.
-- Other unsupported polymer types.
+### 6.1 Backbone Projection
 
-For every rejected chain, record the detected polymer type and the Q001 rule
-identifier.
+Before the chainwise cleaning functions are applied, BRI obtains:
 
-### Q002: Full Occupancy
+`get_feature("features", HETATM=False)`
 
-Reject a chain when any atom covered by the configured occupancy policy has an
-occupancy value below 1.0.
+This restricts the working coordinates to `ATOM` records whose atom names are:
 
-For each affected chain, record:
-
-- Minimum occupancy.
-- Number of partial-occupancy atoms.
-- Affected atom names.
-- Residue identifiers.
-- Alternate-location identifiers.
-- The Q002 rule identifier.
-
-The exact atom scope used by this rule must be defined in the versioned
-configuration.
-
-### Q003: Consecutive Residues
-
-Observed polymer residue positions must be consecutive according to
-`label_seq_id`.
-
-Reject a chain when the observed residue sequence contains:
-
-- Internal gaps.
-- Discontinuous coordinate segments.
-- Missing positions inside the retained residue range.
-
-For each affected chain, record:
-
-- Observed start position.
-- Observed end position.
-- Missing `label_seq_id` values.
-- Number of missing positions.
-- The Q003 rule identifier.
-
-### Q004: Complete and Unique Backbone
-
-Every retained residue must contain exactly one selected atom for each of:
-
-- N.
-- CA.
+- N;
+- CA;
 - C.
 
-Reject a chain when any retained residue contains:
+Side-chain atoms and HETATM records are therefore outside the operational
+backbone-cleaning input.
 
-- A missing N, CA, or C atom.
-- More than one selected N, CA, or C atom.
-- Unresolved alternate-location backbone atoms.
+The original Silver observations remain unchanged.
 
-For each affected chain, record:
+### Q001: Entry Contains a Polypeptide
 
-- Residue identifier.
-- Atom name.
-- Observed atom count.
-- Alternate-location identifiers.
-- The Q004 rule identifier.
+Protocol 3.2 excludes non-protein entries.
 
-### Q005: Backbone-Distance Validity
+In pinned BRI v1.2.2, `field_check()` implements this as an entry-level test.
+An entry is considered peptide-containing when any `_entity_poly.type` begins
+with:
 
-Construct the ordered backbone as:
+`polypeptide`
 
-N1, CA1, C1, N2, CA2, C2, and so on.
+This is not a per-chain whitelist. In a mixed entry containing both a
+polypeptide and another polymer type, Q001 passes at entry level and the
+available ATOM chains continue to the chainwise cleaning stage.
 
-Reject a chain when the distance between any consecutive backbone atoms is less
-than 0.01 angstrom.
+For Q001 record:
 
-For each affected chain, record:
+- PDB ID;
+- entry-level peptide classification;
+- observed entity polymer types;
+- terminal reason when the entry contains no polypeptide entity.
 
-- First residue identifier.
-- First atom name.
-- Second residue identifier.
-- Second atom name.
-- Measured distance.
-- The Q005 rule identifier.
+### Q002: Disorder
 
-### Q006: Standard Amino Acids
+The paper identifies chains containing atoms with occupancy below 1 as
+disordered.
 
-Retain only residues allowed by the configured amino-acid policy.
+The pinned BRI v1.2.2 operational implementation applies
+`disorder_check()` to the N/CA/C backbone projection.
 
-The initial protocol permits the standard 20 amino acids.
+A backbone residue is marked dirty when either:
 
-Reject a chain when it contains:
+1. more than one row has the same
+   `(residue_id, chain_id, model_id, atom)` identity; or
+2. the raw occupancy token does not start with `"1"`, except that the literal
+   `"."` token is explicitly tolerated.
 
-- Unsupported amino-acid residue names.
-- Modified residues without an explicit approved mapping.
-- Non-amino-acid residues inside the selected protein chain.
+Consequences of the executable semantics include:
 
-For each affected chain, record:
+- `"1.00"` is accepted;
+- `"0.50"` is dirty;
+- `"."` is accepted;
+- `"?"` is dirty;
+- alternate-location labels are not an independent rejection criterion;
+- partial-occupancy side-chain atoms are outside this check because only
+  N/CA/C rows are supplied to it.
 
-- Residue identifier.
-- Residue name.
-- Number of unsupported residues.
-- The Q006 rule identifier.
+All residues marked dirty by Q002 are removed from the working chain.
 
-Any future mapping of modified residues to standard amino acids requires a new
-protocol version.
+For every Q002 dirty residue record:
+
+- residue identifier;
+- deposited residue name;
+- affected backbone atom;
+- raw occupancy token;
+- duplicate-backbone status;
+- alternate-location identifier when present;
+- Q002 reason.
+
+### Q003: Residue Continuity
+
+BRI maps `_atom_site.label_seq_id` to its internal `residue_id`.
+
+`residue_continuity_check()` constructs the integer range from the minimum
+observed residue ID through the maximum and tests for absent positions.
+
+Missing residue ID `0` is explicitly ignored by the BRI implementation.
+
+A continuity failure is a chain-level failure: the current working chain does
+not produce a clean retained chain.
+
+Q003 is not applied only once. It is rerun after residue-removal stages as
+described in Section 6.2.
+
+For every Q003 chain-break record:
+
+- current retained start residue;
+- current retained end residue;
+- missing residue identifiers;
+- cleaning stage at which the break was detected;
+- Q003 reason.
+
+### Q004: Backbone Completeness
+
+Protocol 3.2 requires the main backbone atoms N, CA and C.
+
+In pinned BRI v1.2.2, `residue_completeness_check()` operates after the chain
+has already been projected to N/CA/C rows. It counts rows per `residue_id` and
+marks the residue dirty whenever:
+
+`backbone row count != 3`
+
+Duplicate backbone atom records are normally identified earlier by Q002.
+Operationally, however, Q004 reproduces the BRI row-count test exactly.
+
+Q004 dirty residues are removed from the working chain together with Q006
+dirty residues before continuity is checked again.
+
+For every Q004 dirty residue record:
+
+- residue identifier;
+- deposited residue name;
+- observed N/CA/C row count;
+- available backbone atom names;
+- Q004 reason.
+
+### Q005: Backbone Clash
+
+Protocol 3.2 removes backbone clashes below 0.01 angstrom.
+
+Pinned BRI v1.2.2 uses:
+
+`clash_check(chain, 0.01)`
+
+with the local atom set:
+
+`N(i), CA(i), C(i), N(i+1)`
+
+and six pair types:
+
+- N(i) - CA(i);
+- N(i) - C(i);
+- N(i) - N(i+1);
+- CA(i) - C(i);
+- CA(i) - N(i+1);
+- C(i) - N(i+1).
+
+These are six comparison types, not six total measurements per chain.
+
+For a continuous chain containing `L` residues, the implementation evaluates:
+
+`3L + 3(L - 1) = 6L - 3`
+
+distances.
+
+For example, a two-residue chain produces nine evaluated distances.
+
+The threshold is strict:
+
+`distance < 0.01 angstrom`
+
+is dirty, while a distance exactly equal to 0.01 angstrom is accepted.
+
+Residues returned by the clash check are marked dirty and removed, after which
+continuity is checked once more.
+
+For every Q005 dirty record:
+
+- residue identifier returned by the clash implementation;
+- compared atom labels;
+- measured distance;
+- threshold;
+- Q005 reason.
+
+### Q006: Standard Amino-Acid Mapping
+
+Protocol 3.2 removes non-standard amino acids.
+
+Pinned BRI v1.2.2 does not implement this as a direct three-letter whitelist.
+Before `standard_residue_check()` is called, deposited residue labels are
+mapped using the package's bundled CCD-derived:
+
+`amino_acid_short`
+
+mapping.
+
+The mapped one-letter code must belong to the canonical 20-code set:
+
+`A R N D C Q E G H I L K M F P S T W Y V`
+
+This means the pinned executable implementation includes mappings such as:
+
+- LLP -> K;
+- MSE -> M;
+
+which pass the standard-residue check, while mappings such as:
+
+- SEC -> U;
+- PYL -> O;
+- UNK -> X;
+
+do not pass.
+
+The original deposited residue name must always be preserved in Gold
+diagnostics even when a mapped one-letter code is used for the cleaning
+decision.
+
+Q006 dirty residues are removed together with Q004 dirty residues.
+
+There is a known reference discrepancy concerning LLP: direct correspondence
+described LLP as an example that would be removed, whereas the pinned BRI
+v1.2.2 CCD mapping maps LLP to K and therefore accepts it. The pipeline follows
+the pinned executable behaviour for reproducibility and records this
+discrepancy explicitly rather than silently changing the implementation.
+
+### 6.2 Stateful Execution Order
+
+The Protocol 3.2 cleaning implementation must reproduce the stateful order of
+BRI v1.2.2.
+
+For a candidate entry and chain:
+
+1. Apply Q001 at entry level.
+2. Project the chain to ATOM N/CA/C rows.
+3. Map deposited residue labels through the BRI CCD mapping.
+4. Detect Q002 disorder residues.
+5. Record and remove Q002 dirty residues.
+6. Apply Q003 continuity to the remaining chain.
+7. Detect Q006 non-standard residues.
+8. Detect Q004 incomplete residues.
+9. Record and remove the union of Q006 and Q004 dirty residues.
+10. Apply Q003 continuity again.
+11. Detect Q005 clashes using the strict 0.01 angstrom threshold.
+12. Record and remove Q005 dirty residues.
+13. Apply Q003 continuity a final time.
+14. Mark the remaining chain clean.
+
+The order is scientifically important. Q002, Q004, Q005 and Q006 do not
+automatically reject the whole original chain.
+
+For example, if a defective terminal residue is removed and residues remaining
+from the new minimum to maximum identifier are consecutive, the trimmed chain
+can still be retained.
+
+If removal of a defective internal residue creates a missing position inside
+the remaining residue range, the subsequent Q003 check detects a chain break
+and no clean chain is emitted from that working chain.
+
+If all working residues are removed, no clean chain is emitted.
+
+### 6.3 Paper Criteria Versus Executable Details
+
+The paper is the scientific source of truth for the Protocol 3.2 criteria and
+reported dataset outcome.
+
+BRI v1.2.2 is used as the executable source of truth for details including:
+
+- the N/CA/C feature projection;
+- raw occupancy-token handling;
+- duplicate-backbone detection;
+- `label_seq_id` continuity semantics;
+- special handling of residue ID 0;
+- row-count implementation of backbone completeness;
+- CCD-based residue mapping;
+- clash pair construction;
+- strict clash threshold;
+- stateful residue removal and continuity rechecking.
+
+Where direct correspondence, the paper and the pinned executable
+implementation appear to disagree, the discrepancy must be documented rather
+than resolved by an undocumented local rule.
 
 ## 7. Quality-Cleaning Outputs
 
-Each SLURM task writes independent output shards.
+Each SLURM task writes independent Gold output shards.
 
-Accepted chains:
+Clean retained chains:
 
-accepted/task_<task_id>.parquet
+`accepted/task_<task_id>.parquet`
 
-Rejected chains:
+Chain-level rejections:
 
-rejected/task_<task_id>.parquet
+`rejected/task_<task_id>.parquet`
+
+Dirty-residue lineage:
+
+`dirty_residues/task_<task_id>.parquet`
 
 Processing errors:
 
-errors/task_<task_id>.parquet
+`errors/task_<task_id>.parquet`
 
 Task summaries:
 
-summaries/task_<task_id>.json
+`summaries/task_<task_id>.json`
 
-After all tasks complete successfully, the shards are merged into:
+After successful completion of all tasks, these shards are merged into:
 
-accepted_chains.parquet
+- `accepted_chains.parquet`;
+- `rejected_chains.parquet`;
+- `dirty_residues.parquet`;
+- `processing_errors.parquet`;
+- `quality_summary.json`.
 
-rejected_chains.parquet
+### 7.1 Accepted Chains
 
-processing_errors.parquet
+An accepted-chain record describes the clean remainder after the full stateful
+Protocol 3.2 procedure.
 
-quality_summary.json
+It must include:
 
-Every rejected-chain record must include:
+- canonical source chain key;
+- original observed start and end residue identifiers;
+- retained start and end residue identifiers;
+- retained residue count;
+- retained sequence;
+- whether terminal trimming occurred;
+- number of dirty residues removed;
+- dirty rule identifiers encountered before acceptance;
+- source mmCIF key;
+- source ETag;
+- cleaning protocol version;
+- pipeline Git commit.
 
-- Canonical chain key.
-- First failing rule.
-- All failing rules.
-- Structured failure details.
-- Source mmCIF key.
-- Source ETag.
+An accepted chain may therefore also have records in `dirty_residues.parquet`.
 
-Every candidate chain must appear in exactly one final category:
+### 7.2 Dirty Residues
 
-- Accepted.
-- Rejected.
-- Processing error.
+Dirty-residue records preserve every residue-level cleaning decision made
+before a final chain outcome is known.
+
+Each record must include:
+
+- canonical source chain key;
+- residue identifier;
+- deposited residue name;
+- mapped residue code when applicable;
+- dirty rule identifier;
+- dirty type compatible with the BRI concepts
+  (`disordered`, `incomplete`, `non-standard`, or `clash`);
+- structured rule-specific details;
+- cleaning stage;
+- source lineage.
+
+Dirty-residue records are not synonymous with rejected-chain records.
+
+A chain can contain dirty terminal residues, have them removed, remain
+continuous and still be accepted.
+
+### 7.3 Rejected Chains
+
+A rejected-chain record represents a candidate chain for which no clean
+retained chain is emitted.
+
+Examples include:
+
+- entry rejected by Q001;
+- Q003 chain break before or after residue removal;
+- all working residues removed during cleaning.
+
+Each record must include:
+
+- canonical source chain key where available;
+- terminal status;
+- terminal reason;
+- stage at which processing terminated;
+- relevant missing residue identifiers for a chain break;
+- number and types of dirty residues already recorded;
+- source mmCIF key;
+- source ETag.
+
+### 7.4 Processing Errors
+
+Processing errors are reserved for technical failures rather than scientific
+rejections.
+
+Examples include:
+
+- unreadable or malformed mmCIF;
+- missing required structural fields;
+- unexpected parser failure;
+- task-level I/O failure.
+
+Scientific filtering outcomes must never be recorded as processing errors.
+
+### 7.5 Complete Accounting
+
+No candidate chain may disappear silently.
+
+Every candidate chain must have exactly one terminal chain-level outcome:
+
+- accepted;
+- rejected; or
+- processing error.
+
+Residue-level dirty records are additional lineage and do not replace the
+terminal chain outcome.
+
+The quality summary must reconcile:
+
+- candidate entries;
+- candidate chains;
+- Q001 entry-level exclusions;
+- accepted clean chains;
+- accepted chains that were trimmed;
+- rejected chains by terminal reason;
+- dirty residues by rule/type;
+- processing errors.
 
 ## 8. BRI Generation
 
