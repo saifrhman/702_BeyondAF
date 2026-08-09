@@ -14,6 +14,7 @@ from pdbclean.schemas import (
     GOLD_ACCEPTED_CHAIN_SCHEMA,
     GOLD_DIRTY_RESIDUE_SCHEMA,
     GOLD_NON_CANDIDATE_CHAIN_SCHEMA,
+    GOLD_PROCESSING_ERROR_SCHEMA,
     GOLD_REJECTED_CHAIN_SCHEMA,
 )
 
@@ -26,6 +27,7 @@ class GoldTables:
     rejected_chains: pa.Table
     non_candidate_chains: pa.Table
     dirty_residues: pa.Table
+    processing_errors: pa.Table
 
 
 @dataclass(frozen=True)
@@ -155,13 +157,15 @@ def _dirty_residue_records(
 
 def gold_records_to_tables(
     records: Iterable[GoldChainRecords],
+    processing_errors: Iterable[dict[str, Any]] = (),
 ) -> GoldTables:
-    """Convert per-chain Gold records into schema-enforced Arrow tables."""
+    """Convert Gold records into schema-enforced Arrow tables."""
 
     accepted_rows: list[dict[str, Any]] = []
     rejected_rows: list[dict[str, Any]] = []
     non_candidate_rows: list[dict[str, Any]] = []
     dirty_rows: list[dict[str, Any]] = []
+    error_rows = list(processing_errors)
 
     for record in records:
         terminal_rows = (
@@ -209,6 +213,10 @@ def gold_records_to_tables(
             dirty_rows,
             schema=GOLD_DIRTY_RESIDUE_SCHEMA,
         ),
+        processing_errors=pa.Table.from_pylist(
+            error_rows,
+            schema=GOLD_PROCESSING_ERROR_SCHEMA,
+        ),
     )
 
 
@@ -251,6 +259,7 @@ def write_gold_quality_shards(
         "rejected": root / "rejected" / filename,
         "non_candidates": root / "non_candidates" / filename,
         "dirty_residues": root / "dirty_residues" / filename,
+        "errors": root / "errors" / filename,
     }
 
     _write_gold_table_atomic(
@@ -272,6 +281,11 @@ def write_gold_quality_shards(
         tables.dirty_residues,
         GOLD_DIRTY_RESIDUE_SCHEMA,
         outputs["dirty_residues"],
+    )
+    _write_gold_table_atomic(
+        tables.processing_errors,
+        GOLD_PROCESSING_ERROR_SCHEMA,
+        outputs["errors"],
     )
 
     return outputs

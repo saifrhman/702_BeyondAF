@@ -16,6 +16,7 @@ from pdbclean.schemas import (
     GOLD_ACCEPTED_CHAIN_SCHEMA,
     GOLD_DIRTY_RESIDUE_SCHEMA,
     GOLD_NON_CANDIDATE_CHAIN_SCHEMA,
+    GOLD_PROCESSING_ERROR_SCHEMA,
     GOLD_REJECTED_CHAIN_SCHEMA,
 )
 
@@ -325,6 +326,7 @@ def test_gold_records_to_tables_preserves_explicit_schemas() -> None:
     assert tables.rejected_chains.num_rows == 0
     assert tables.non_candidate_chains.num_rows == 1
     assert tables.dirty_residues.num_rows == 0
+    assert tables.processing_errors.num_rows == 0
 
     assert tables.accepted_chains.schema == GOLD_ACCEPTED_CHAIN_SCHEMA
     assert tables.rejected_chains.schema == GOLD_REJECTED_CHAIN_SCHEMA
@@ -333,6 +335,7 @@ def test_gold_records_to_tables_preserves_explicit_schemas() -> None:
         == GOLD_NON_CANDIDATE_CHAIN_SCHEMA
     )
     assert tables.dirty_residues.schema == GOLD_DIRTY_RESIDUE_SCHEMA
+    assert tables.processing_errors.schema == GOLD_PROCESSING_ERROR_SCHEMA
 
 
 def test_gold_records_to_tables_requires_one_terminal_outcome() -> None:
@@ -380,22 +383,26 @@ def test_write_gold_quality_shards_preserves_schema_and_rows(
         "rejected",
         "non_candidates",
         "dirty_residues",
+        "errors",
     }
 
     accepted = pq.read_table(outputs["accepted"])
     rejected = pq.read_table(outputs["rejected"])
     non_candidates = pq.read_table(outputs["non_candidates"])
     dirty = pq.read_table(outputs["dirty_residues"])
+    errors = pq.read_table(outputs["errors"])
 
     assert accepted.schema == GOLD_ACCEPTED_CHAIN_SCHEMA
     assert rejected.schema == GOLD_REJECTED_CHAIN_SCHEMA
     assert non_candidates.schema == GOLD_NON_CANDIDATE_CHAIN_SCHEMA
     assert dirty.schema == GOLD_DIRTY_RESIDUE_SCHEMA
+    assert errors.schema == GOLD_PROCESSING_ERROR_SCHEMA
 
     assert accepted.num_rows == 0
     assert rejected.num_rows == 0
     assert non_candidates.num_rows == 1
     assert dirty.num_rows == 0
+    assert errors.num_rows == 0
 
     assert not list(tmp_path.rglob("*.tmp"))
 
@@ -416,6 +423,7 @@ def test_write_gold_quality_shards_supports_all_empty_tables(
         "rejected": GOLD_REJECTED_CHAIN_SCHEMA,
         "non_candidates": GOLD_NON_CANDIDATE_CHAIN_SCHEMA,
         "dirty_residues": GOLD_DIRTY_RESIDUE_SCHEMA,
+        "errors": GOLD_PROCESSING_ERROR_SCHEMA,
     }
 
     for name, schema in expected.items():
@@ -424,3 +432,37 @@ def test_write_gold_quality_shards_supports_all_empty_tables(
         assert table.schema == schema
 
     assert not list(tmp_path.rglob("*.tmp"))
+
+
+def test_gold_records_to_tables_materializes_processing_errors() -> None:
+    error = {
+        "snapshot": "20260101",
+        "pdb_id": "1abc",
+        "model_id": None,
+        "label_chain_id": None,
+        "processing_stage": "mmcif_parse",
+        "error_type": "MMCIFParseError",
+        "error_message": "synthetic parser failure",
+        "source_mmcif_key": "ab/1abc.cif.gz",
+        "source_etag": "etag-error",
+        "pipeline_git_commit": "deadbeef",
+    }
+
+    tables = gold_records_to_tables(
+        [],
+        processing_errors=[error],
+    )
+
+    assert tables.accepted_chains.num_rows == 0
+    assert tables.rejected_chains.num_rows == 0
+    assert tables.non_candidate_chains.num_rows == 0
+    assert tables.dirty_residues.num_rows == 0
+    assert tables.processing_errors.num_rows == 1
+    assert tables.processing_errors.schema == GOLD_PROCESSING_ERROR_SCHEMA
+
+    row = tables.processing_errors.to_pylist()[0]
+    assert row["pdb_id"] == "1abc"
+    assert row["model_id"] is None
+    assert row["label_chain_id"] is None
+    assert row["processing_stage"] == "mmcif_parse"
+    assert row["error_type"] == "MMCIFParseError"
