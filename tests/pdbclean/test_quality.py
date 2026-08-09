@@ -289,10 +289,7 @@ def test_q003_accepts_consecutive_observed_residues() -> None:
         ],
     )
 
-    result = evaluate_q003_residue_continuity(
-        chain,
-        allow_internal_gaps=False,
-    )
+    result = evaluate_q003_residue_continuity(chain)
 
     assert result.passed is True
     assert result.reason == "observed_residues_consecutive"
@@ -311,34 +308,28 @@ def test_q003_rejects_internal_gap() -> None:
         ],
     )
 
-    result = evaluate_q003_residue_continuity(
-        chain,
-        allow_internal_gaps=False,
-    )
+    result = evaluate_q003_residue_continuity(chain)
 
     assert result.passed is False
     assert result.reason == "internal_label_seq_id_gaps:6"
     assert missing_internal_label_seq_ids(chain) == [6]
 
 
-def test_q003_accepts_internal_gap_when_configured() -> None:
+def test_q003_ignores_missing_residue_zero_like_bri() -> None:
     chain = ChainObservation(
         pdb_id="test",
         model_id=1,
         label_chain_id="A",
         atoms=[
-            _atom_at_residue(10),
-            _atom_at_residue(12),
+            _atom_at_residue(-1),
+            _atom_at_residue(1),
         ],
     )
 
-    result = evaluate_q003_residue_continuity(
-        chain,
-        allow_internal_gaps=True,
-    )
+    result = evaluate_q003_residue_continuity(chain)
 
     assert result.passed is True
-    assert result.reason == "internal_gaps_allowed"
+    assert missing_internal_label_seq_ids(chain) == []
 
 
 def test_q003_rejects_missing_label_seq_id() -> None:
@@ -352,10 +343,7 @@ def test_q003_rejects_missing_label_seq_id() -> None:
         ],
     )
 
-    result = evaluate_q003_residue_continuity(
-        chain,
-        allow_internal_gaps=False,
-    )
+    result = evaluate_q003_residue_continuity(chain)
 
     assert result.passed is False
     assert result.reason == "missing_label_seq_id:1"

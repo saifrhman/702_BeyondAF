@@ -32,7 +32,6 @@ quality_rules:
     rule_id: Q003
     enabled: true
     identifier: label_seq_id
-    allow_internal_gaps: false
   backbone_atoms:
     rule_id: Q004
     enabled: true

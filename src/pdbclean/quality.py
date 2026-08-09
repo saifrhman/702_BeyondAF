@@ -159,7 +159,11 @@ def evaluate_q002_disorder(
 def missing_internal_label_seq_ids(
     chain: ChainObservation,
 ) -> list[int]:
-    """Return absent label_seq_ids between observed minimum and maximum."""
+    """Return residue-index breaks using BRI v1.2.2 continuity semantics.
+
+    BRI constructs the integer range from the minimum to maximum residue_id
+    and removes the observed residue IDs plus the special residue ID 0.
+    """
 
     observed = sorted(
         {
@@ -178,20 +182,18 @@ def missing_internal_label_seq_ids(
         seq_id
         for seq_id in range(observed[0], observed[-1] + 1)
         if seq_id not in observed_set
+        and seq_id != 0
     ]
 
 
 def evaluate_q003_residue_continuity(
     chain: ChainObservation,
-    *,
-    allow_internal_gaps: bool,
 ) -> RuleResult:
-    """Q003: require consecutive observed residues by label_seq_id.
+    """Q003: reproduce BRI v1.2.2 residue continuity checking."""
 
-    Missing residues before the first observed residue or after the last
-    observed residue are terminal truncations and are not internal gaps.
-    """
-
+    # BRI's residue_id column is integer-typed. A missing label_seq_id in
+    # our parsed representation therefore violates the executable input
+    # precondition rather than representing an allowed gap.
     missing_identifier_count = sum(
         atom.label_seq_id is None
         for atom in chain.atoms
@@ -222,7 +224,7 @@ def evaluate_q003_residue_continuity(
 
     internal_gaps = missing_internal_label_seq_ids(chain)
 
-    if internal_gaps and not allow_internal_gaps:
+    if internal_gaps:
         return RuleResult(
             rule_id="Q003",
             passed=False,
@@ -230,13 +232,6 @@ def evaluate_q003_residue_continuity(
                 "internal_label_seq_id_gaps:"
                 + ",".join(str(value) for value in internal_gaps)
             ),
-        )
-
-    if internal_gaps:
-        return RuleResult(
-            rule_id="Q003",
-            passed=True,
-            reason="internal_gaps_allowed",
         )
 
     return RuleResult(
