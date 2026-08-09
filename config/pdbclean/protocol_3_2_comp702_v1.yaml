@@ -16,18 +16,22 @@ selection:
     preserve_author_chain_id: true
     preserve_entity_id: true
 quality_rules:
-  protein_polymer:
+  entry_protein:
     rule_id: Q001
     enabled: true
-    allowed_polymer_types:
-    - polypeptide(L)
-    - polypeptide(D)
-  occupancy:
+    scope: entry
+    source: _entity_poly.type
+    match: startswith_polypeptide
+  disorder:
     rule_id: Q002
     enabled: true
-    minimum_occupancy: 1.0
-    atom_scope: all_polymer_atoms
-    reject_alternate_locations: true
+    atom_scope:
+    - N
+    - CA
+    - C
+    occupancy_semantics: bri_v1.2.2_raw_token
+    duplicate_backbone_atoms_are_disorder: true
+    reject_alternate_locations_independently: false
   residue_continuity:
     rule_id: Q003
     enabled: true
