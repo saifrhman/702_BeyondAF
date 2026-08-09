@@ -175,3 +175,194 @@ def test_candidate_accounting_excludes_non_candidates() -> None:
 
 def test_candidate_accounting_empty_input() -> None:
     assert candidate_accounting([]) == (0, 0)
+
+
+def _gzip_cif(text: str) -> bytes:
+    import gzip
+
+    return gzip.compress(text.encode("utf-8"))
+
+
+def _gold_provenance():
+    from pdbclean.gold import GoldProvenance
+
+    return GoldProvenance(
+        snapshot="20260101",
+        source_mmcif_key="20260101/path/test.cif.gz",
+        source_etag="etag123",
+        cleaning_protocol="Protocol_3.2_BRI_v1.2.2",
+        pipeline_git_commit="deadbeef",
+    )
+
+
+def _multimodel_cif_bytes() -> bytes:
+    cif = """data_test
+#
+loop_
+_entity_poly.entity_id
+_entity_poly.type
+1 'polypeptide(L)'
+#
+loop_
+_atom_site.group_PDB
+_atom_site.pdbx_PDB_model_num
+_atom_site.label_asym_id
+_atom_site.auth_asym_id
+_atom_site.label_entity_id
+_atom_site.label_seq_id
+_atom_site.auth_seq_id
+_atom_site.label_comp_id
+_atom_site.label_atom_id
+_atom_site.label_alt_id
+_atom_site.occupancy
+_atom_site.Cartn_x
+_atom_site.Cartn_y
+_atom_site.Cartn_z
+ATOM 1 A X 1 1 1 ALA N  . 1.00 0.0 0.0 0.0
+ATOM 1 A X 1 1 1 ALA CA . 1.00 1.0 0.0 0.0
+ATOM 1 A X 1 1 1 ALA C  . 1.00 2.0 0.0 0.0
+ATOM 2 A X 1 1 1 ALA N  . 1.00 0.0 1.0 0.0
+ATOM 2 A X 1 1 1 ALA CA . 1.00 1.0 1.0 0.0
+ATOM 2 A X 1 1 1 ALA C  . 1.00 2.0 1.0 0.0
+#
+"""
+    return _gzip_cif(cif)
+
+
+def test_process_verified_mmcif_selects_only_configured_model() -> None:
+    from pdbclean.quality_runner import process_verified_mmcif_bytes
+
+    result = process_verified_mmcif_bytes(
+        _multimodel_cif_bytes(),
+        pdb_id="TEST",
+        selection_config={
+            "models": {
+                "policy": "first_model",
+                "model_id": 1,
+            }
+        },
+        provenance=_gold_provenance(),
+    )
+
+    assert result.pdb_id == "test"
+
+    # Parser preserves both deposited models.
+    assert result.parsed_silver_chain_count == 2
+
+    # Only configured model 1 proceeds to Protocol 3.2.
+    assert result.selected_silver_chain_count == 1
+    assert result.candidate_entry_count == 1
+    assert result.candidate_chain_count == 1
+
+    assert result.source_failed is False
+    assert result.processing_errors == ()
+    assert len(result.gold_records) == 1
+
+    gold = result.gold_records[0]
+    assert gold.accepted_chain is not None
+    assert gold.accepted_chain["model_id"] == 1
+    assert gold.accepted_chain["retained_sequence"] == "A"
+
+
+def test_process_verified_mmcif_records_parse_failure() -> None:
+    from pdbclean.quality_runner import process_verified_mmcif_bytes
+
+    result = process_verified_mmcif_bytes(
+        b"not-a-gzip-stream",
+        pdb_id="BAD1",
+        selection_config={
+            "models": {
+                "policy": "first_model",
+                "model_id": 1,
+            }
+        },
+        provenance=_gold_provenance(),
+    )
+
+    assert result.pdb_id == "bad1"
+    assert result.source_failed is True
+    assert result.parsed_silver_chain_count == 0
+    assert result.selected_silver_chain_count == 0
+    assert result.candidate_entry_count == 0
+    assert result.candidate_chain_count == 0
+    assert result.gold_records == ()
+
+    assert len(result.processing_errors) == 1
+    error = result.processing_errors[0]
+
+    assert error["model_id"] is None
+    assert error["label_chain_id"] is None
+    assert error["processing_stage"] == "mmcif_parse"
+    assert error["error_type"] == "MMCIFParseError"
+
+
+def test_process_verified_mmcif_records_chain_failure(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from pdbclean.quality_runner import process_verified_mmcif_bytes
+
+    def fail_cleaning(chain):
+        raise RuntimeError("synthetic cleaning failure")
+
+    monkeypatch.setattr(
+        "pdbclean.quality_runner.clean_protocol32_chain",
+        fail_cleaning,
+    )
+
+    result = process_verified_mmcif_bytes(
+        _multimodel_cif_bytes(),
+        pdb_id="TEST",
+        selection_config={
+            "models": {
+                "policy": "first_model",
+                "model_id": 1,
+            }
+        },
+        provenance=_gold_provenance(),
+    )
+
+    assert result.source_failed is False
+    assert result.parsed_silver_chain_count == 2
+    assert result.selected_silver_chain_count == 1
+    assert result.candidate_entry_count == 1
+    assert result.candidate_chain_count == 1
+
+    assert result.gold_records == ()
+    assert len(result.processing_errors) == 1
+
+    error = result.processing_errors[0]
+
+    assert error["pdb_id"] == "test"
+    assert error["model_id"] == 1
+    assert error["label_chain_id"] == "A"
+    assert error["processing_stage"] == "quality_cleaning"
+    assert error["error_type"] == "RuntimeError"
+    assert error["error_message"] == "synthetic cleaning failure"
+
+
+
+def test_process_verified_mmcif_does_not_swallow_unexpected_parser_bug(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from pdbclean.quality_runner import process_verified_mmcif_bytes
+
+    def fail_parser(*args, **kwargs):
+        raise RuntimeError("synthetic parser bug")
+
+    monkeypatch.setattr(
+        "pdbclean.quality_runner.parse_coordinate_mmcif_bytes",
+        fail_parser,
+    )
+
+    with pytest.raises(RuntimeError, match="synthetic parser bug"):
+        process_verified_mmcif_bytes(
+            _multimodel_cif_bytes(),
+            pdb_id="TEST",
+            selection_config={
+                "models": {
+                    "policy": "first_model",
+                    "model_id": 1,
+                }
+            },
+            provenance=_gold_provenance(),
+        )
