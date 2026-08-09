@@ -4,9 +4,11 @@ from __future__ import annotations
 
 from collections.abc import Iterable
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Any
 
 import pyarrow as pa
+import pyarrow.parquet as pq
 
 from pdbclean.schemas import (
     GOLD_ACCEPTED_CHAIN_SCHEMA,
@@ -208,6 +210,71 @@ def gold_records_to_tables(
             schema=GOLD_DIRTY_RESIDUE_SCHEMA,
         ),
     )
+
+
+def _write_gold_table_atomic(
+    table: pa.Table,
+    schema: pa.Schema,
+    output_path: str | Path,
+) -> Path:
+    """Write one Gold table atomically using its explicit schema."""
+
+    output = Path(output_path)
+    output.parent.mkdir(parents=True, exist_ok=True)
+
+    canonical = table.select(schema.names).cast(schema)
+    temporary = output.with_suffix(output.suffix + ".tmp")
+
+    pq.write_table(
+        canonical,
+        temporary,
+        compression="zstd",
+        version="2.6",
+    )
+
+    temporary.replace(output)
+    return output
+
+
+def write_gold_quality_shards(
+    tables: GoldTables,
+    output_root: str | Path,
+    task_id: str | int,
+) -> dict[str, Path]:
+    """Write one task's schema-enforced Gold quality shards atomically."""
+
+    root = Path(output_root)
+    filename = f"task_{task_id}.parquet"
+
+    outputs = {
+        "accepted": root / "accepted" / filename,
+        "rejected": root / "rejected" / filename,
+        "non_candidates": root / "non_candidates" / filename,
+        "dirty_residues": root / "dirty_residues" / filename,
+    }
+
+    _write_gold_table_atomic(
+        tables.accepted_chains,
+        GOLD_ACCEPTED_CHAIN_SCHEMA,
+        outputs["accepted"],
+    )
+    _write_gold_table_atomic(
+        tables.rejected_chains,
+        GOLD_REJECTED_CHAIN_SCHEMA,
+        outputs["rejected"],
+    )
+    _write_gold_table_atomic(
+        tables.non_candidate_chains,
+        GOLD_NON_CANDIDATE_CHAIN_SCHEMA,
+        outputs["non_candidates"],
+    )
+    _write_gold_table_atomic(
+        tables.dirty_residues,
+        GOLD_DIRTY_RESIDUE_SCHEMA,
+        outputs["dirty_residues"],
+    )
+
+    return outputs
 
 
 def materialize_gold_chain(

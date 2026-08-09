@@ -1,6 +1,7 @@
 """Tests for Protocol 3.2 Gold materialization."""
 
 import pyarrow as pa
+import pyarrow.parquet as pq
 
 from pdbclean.cleaning import clean_protocol32_chain
 from pdbclean.gold import (
@@ -8,6 +9,7 @@ from pdbclean.gold import (
     GoldProvenance,
     gold_records_to_tables,
     materialize_gold_chain,
+    write_gold_quality_shards,
 )
 from pdbclean.mmcif_parser import AtomObservation, ChainObservation
 from pdbclean.schemas import (
@@ -344,3 +346,81 @@ def test_gold_records_to_tables_requires_one_terminal_outcome() -> None:
         raise AssertionError(
             "Expected invalid GoldChainRecords to raise ValueError"
         )
+
+
+def test_write_gold_quality_shards_preserves_schema_and_rows(
+    tmp_path,
+) -> None:
+    chain = ChainObservation(
+        pdb_id="test",
+        model_id=1,
+        label_chain_id="A",
+        auth_chain_id="X",
+        entity_id="1",
+        entry_has_polypeptide=True,
+        atoms=[],
+    )
+
+    result = clean_protocol32_chain(chain)
+    record = materialize_gold_chain(
+        chain,
+        result,
+        _provenance(),
+    )
+    tables = gold_records_to_tables([record])
+
+    outputs = write_gold_quality_shards(
+        tables,
+        tmp_path,
+        task_id=7,
+    )
+
+    assert set(outputs) == {
+        "accepted",
+        "rejected",
+        "non_candidates",
+        "dirty_residues",
+    }
+
+    accepted = pq.read_table(outputs["accepted"])
+    rejected = pq.read_table(outputs["rejected"])
+    non_candidates = pq.read_table(outputs["non_candidates"])
+    dirty = pq.read_table(outputs["dirty_residues"])
+
+    assert accepted.schema == GOLD_ACCEPTED_CHAIN_SCHEMA
+    assert rejected.schema == GOLD_REJECTED_CHAIN_SCHEMA
+    assert non_candidates.schema == GOLD_NON_CANDIDATE_CHAIN_SCHEMA
+    assert dirty.schema == GOLD_DIRTY_RESIDUE_SCHEMA
+
+    assert accepted.num_rows == 0
+    assert rejected.num_rows == 0
+    assert non_candidates.num_rows == 1
+    assert dirty.num_rows == 0
+
+    assert not list(tmp_path.rglob("*.tmp"))
+
+
+def test_write_gold_quality_shards_supports_all_empty_tables(
+    tmp_path,
+) -> None:
+    tables = gold_records_to_tables([])
+
+    outputs = write_gold_quality_shards(
+        tables,
+        tmp_path,
+        task_id="empty",
+    )
+
+    expected = {
+        "accepted": GOLD_ACCEPTED_CHAIN_SCHEMA,
+        "rejected": GOLD_REJECTED_CHAIN_SCHEMA,
+        "non_candidates": GOLD_NON_CANDIDATE_CHAIN_SCHEMA,
+        "dirty_residues": GOLD_DIRTY_RESIDUE_SCHEMA,
+    }
+
+    for name, schema in expected.items():
+        table = pq.read_table(outputs[name])
+        assert table.num_rows == 0
+        assert table.schema == schema
+
+    assert not list(tmp_path.rglob("*.tmp"))
