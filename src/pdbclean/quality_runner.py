@@ -13,6 +13,8 @@ from pdbclean.cleaning import (
 from pdbclean.gold import (
     GoldChainRecords,
     GoldProvenance,
+    GoldTables,
+    gold_records_to_tables,
     materialize_gold_chain,
 )
 from pdbclean.mmcif_parser import (
@@ -42,6 +44,22 @@ class SourceQualityResult:
     # True only when the source could not reach chain-level processing,
     # for example because the mmCIF could not be parsed.
     source_failed: bool = False
+
+
+@dataclass(frozen=True)
+class QualityBatchResult:
+    """Aggregated in-memory outcome for one manifest partition."""
+
+    input_source_object_count: int
+    successful_source_object_count: int
+    failed_source_object_count: int
+
+    parsed_silver_chain_count: int
+    selected_silver_chain_count: int
+    candidate_entry_count: int
+    candidate_chain_count: int
+
+    tables: GoldTables
 
 
 class QualityRunnerError(RuntimeError):
@@ -318,4 +336,71 @@ def process_manifest_source(
         pdb_id=normalized_pdb_id,
         selection_config=selection_config,
         provenance=provenance,
+    )
+
+
+
+def process_manifest_batch(
+    manifest_rows: Iterable[Mapping[str, Any]],
+    *,
+    bucket_url: str,
+    selection_config: dict[str, Any],
+    cleaning_protocol: str,
+    pipeline_git_commit: str,
+    timeout_seconds: int = 60,
+    source_processor: Callable[..., SourceQualityResult] = process_manifest_source,
+) -> QualityBatchResult:
+    """Process and aggregate one manifest partition in memory."""
+
+    records: list[GoldChainRecords] = []
+    processing_errors: list[dict[str, Any]] = []
+
+    input_source_object_count = 0
+    successful_source_object_count = 0
+    failed_source_object_count = 0
+
+    parsed_silver_chain_count = 0
+    selected_silver_chain_count = 0
+    candidate_entry_count = 0
+    candidate_chain_count = 0
+
+    for manifest_row in manifest_rows:
+        input_source_object_count += 1
+
+        result = source_processor(
+            manifest_row,
+            bucket_url=bucket_url,
+            selection_config=selection_config,
+            cleaning_protocol=cleaning_protocol,
+            pipeline_git_commit=pipeline_git_commit,
+            timeout_seconds=timeout_seconds,
+        )
+
+        if result.source_failed:
+            failed_source_object_count += 1
+        else:
+            successful_source_object_count += 1
+
+        parsed_silver_chain_count += result.parsed_silver_chain_count
+        selected_silver_chain_count += result.selected_silver_chain_count
+        candidate_entry_count += result.candidate_entry_count
+        candidate_chain_count += result.candidate_chain_count
+
+        records.extend(result.gold_records)
+        processing_errors.extend(result.processing_errors)
+
+    tables = gold_records_to_tables(
+        records,
+        processing_errors=processing_errors,
+    )
+
+    return QualityBatchResult(
+        input_source_object_count=input_source_object_count,
+        successful_source_object_count=successful_source_object_count,
+        failed_source_object_count=failed_source_object_count,
+        parsed_silver_chain_count=parsed_silver_chain_count,
+        selected_silver_chain_count=selected_silver_chain_count,
+        candidate_entry_count=candidate_entry_count,
+        candidate_chain_count=candidate_chain_count,
+        tables=tables,
     )

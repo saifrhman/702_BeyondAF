@@ -519,3 +519,203 @@ def test_process_manifest_source_rejects_malformed_manifest_row() -> None:
             cleaning_protocol="Protocol_3.2_BRI_v1.2.2",
             pipeline_git_commit="deadbeef",
         )
+
+
+def test_process_manifest_batch_aggregates_sources_and_gold_tables() -> None:
+    from pdbclean.gold import GoldProvenance
+    from pdbclean.quality_runner import (
+        SourceQualityResult,
+        process_manifest_batch,
+        process_verified_mmcif_bytes,
+    )
+
+    rows = [
+        {"pdb_id": "GOOD"},
+        {"pdb_id": "BAD"},
+    ]
+
+    def source_processor(manifest_row, **kwargs):
+        if manifest_row["pdb_id"] == "GOOD":
+            return process_verified_mmcif_bytes(
+                _multimodel_cif_bytes(),
+                pdb_id="GOOD",
+                selection_config=kwargs["selection_config"],
+                provenance=GoldProvenance(
+                    snapshot="20260101",
+                    source_mmcif_key="good.cif.gz",
+                    source_etag="etag-good",
+                    cleaning_protocol=kwargs["cleaning_protocol"],
+                    pipeline_git_commit=kwargs["pipeline_git_commit"],
+                ),
+            )
+
+        return SourceQualityResult(
+            pdb_id="bad",
+            parsed_silver_chain_count=0,
+            selected_silver_chain_count=0,
+            candidate_entry_count=0,
+            candidate_chain_count=0,
+            processing_errors=(
+                {
+                    "snapshot": "20260101",
+                    "pdb_id": "bad",
+                    "model_id": None,
+                    "label_chain_id": None,
+                    "processing_stage": "source_download_verify",
+                    "error_type": "SnapshotError",
+                    "error_message": "synthetic source failure",
+                    "source_mmcif_key": "bad.cif.gz",
+                    "source_etag": "etag-bad",
+                    "pipeline_git_commit": "deadbeef",
+                },
+            ),
+            source_failed=True,
+        )
+
+    result = process_manifest_batch(
+        rows,
+        bucket_url="https://example.invalid",
+        selection_config={
+            "models": {
+                "policy": "first_model",
+                "model_id": 1,
+            }
+        },
+        cleaning_protocol="Protocol_3.2_BRI_v1.2.2",
+        pipeline_git_commit="deadbeef",
+        source_processor=source_processor,
+    )
+
+    assert result.input_source_object_count == 2
+    assert result.successful_source_object_count == 1
+    assert result.failed_source_object_count == 1
+
+    assert result.parsed_silver_chain_count == 2
+    assert result.selected_silver_chain_count == 1
+    assert result.candidate_entry_count == 1
+    assert result.candidate_chain_count == 1
+
+    assert result.tables.accepted_chains.num_rows == 1
+    assert result.tables.rejected_chains.num_rows == 0
+    assert result.tables.non_candidate_chains.num_rows == 0
+    assert result.tables.dirty_residues.num_rows == 0
+    assert result.tables.processing_errors.num_rows == 1
+
+    error = result.tables.processing_errors.to_pylist()[0]
+    assert error["processing_stage"] == "source_download_verify"
+    assert error["model_id"] is None
+    assert error["label_chain_id"] is None
+
+
+def test_process_manifest_batch_chain_error_keeps_source_successful() -> None:
+    from pdbclean.quality_runner import (
+        SourceQualityResult,
+        process_manifest_batch,
+    )
+
+    def source_processor(manifest_row, **kwargs):
+        return SourceQualityResult(
+            pdb_id="test",
+            parsed_silver_chain_count=2,
+            selected_silver_chain_count=1,
+            candidate_entry_count=1,
+            candidate_chain_count=1,
+            processing_errors=(
+                {
+                    "snapshot": "20260101",
+                    "pdb_id": "test",
+                    "model_id": 1,
+                    "label_chain_id": "A",
+                    "processing_stage": "quality_cleaning",
+                    "error_type": "RuntimeError",
+                    "error_message": "synthetic chain failure",
+                    "source_mmcif_key": "test.cif.gz",
+                    "source_etag": "etag-test",
+                    "pipeline_git_commit": "deadbeef",
+                },
+            ),
+            source_failed=False,
+        )
+
+    result = process_manifest_batch(
+        [{"pdb_id": "TEST"}],
+        bucket_url="https://example.invalid",
+        selection_config={
+            "models": {
+                "policy": "first_model",
+                "model_id": 1,
+            }
+        },
+        cleaning_protocol="Protocol_3.2_BRI_v1.2.2",
+        pipeline_git_commit="deadbeef",
+        source_processor=source_processor,
+    )
+
+    assert result.input_source_object_count == 1
+    assert result.successful_source_object_count == 1
+    assert result.failed_source_object_count == 0
+
+    assert result.parsed_silver_chain_count == 2
+    assert result.selected_silver_chain_count == 1
+    assert result.candidate_entry_count == 1
+    assert result.candidate_chain_count == 1
+
+    assert result.tables.accepted_chains.num_rows == 0
+    assert result.tables.rejected_chains.num_rows == 0
+    assert result.tables.non_candidate_chains.num_rows == 0
+    assert result.tables.processing_errors.num_rows == 1
+
+    error = result.tables.processing_errors.to_pylist()[0]
+    assert error["model_id"] == 1
+    assert error["label_chain_id"] == "A"
+    assert error["processing_stage"] == "quality_cleaning"
+
+
+def test_process_manifest_batch_empty_partition() -> None:
+    from pdbclean.quality_runner import process_manifest_batch
+    from pdbclean.schemas import (
+        GOLD_ACCEPTED_CHAIN_SCHEMA,
+        GOLD_DIRTY_RESIDUE_SCHEMA,
+        GOLD_NON_CANDIDATE_CHAIN_SCHEMA,
+        GOLD_PROCESSING_ERROR_SCHEMA,
+        GOLD_REJECTED_CHAIN_SCHEMA,
+    )
+
+    result = process_manifest_batch(
+        [],
+        bucket_url="https://example.invalid",
+        selection_config={
+            "models": {
+                "policy": "first_model",
+                "model_id": 1,
+            }
+        },
+        cleaning_protocol="Protocol_3.2_BRI_v1.2.2",
+        pipeline_git_commit="deadbeef",
+    )
+
+    assert result.input_source_object_count == 0
+    assert result.successful_source_object_count == 0
+    assert result.failed_source_object_count == 0
+    assert result.parsed_silver_chain_count == 0
+    assert result.selected_silver_chain_count == 0
+    assert result.candidate_entry_count == 0
+    assert result.candidate_chain_count == 0
+
+    assert result.tables.accepted_chains.schema == GOLD_ACCEPTED_CHAIN_SCHEMA
+    assert result.tables.rejected_chains.schema == GOLD_REJECTED_CHAIN_SCHEMA
+    assert (
+        result.tables.non_candidate_chains.schema
+        == GOLD_NON_CANDIDATE_CHAIN_SCHEMA
+    )
+    assert result.tables.dirty_residues.schema == GOLD_DIRTY_RESIDUE_SCHEMA
+    assert (
+        result.tables.processing_errors.schema
+        == GOLD_PROCESSING_ERROR_SCHEMA
+    )
+
+    assert result.tables.accepted_chains.num_rows == 0
+    assert result.tables.rejected_chains.num_rows == 0
+    assert result.tables.non_candidate_chains.num_rows == 0
+    assert result.tables.dirty_residues.num_rows == 0
+    assert result.tables.processing_errors.num_rows == 0
