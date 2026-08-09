@@ -421,7 +421,8 @@ def test_q004_allows_duplicates_when_not_required_exactly_once() -> None:
 
 from pdbclean.quality import (
     evaluate_q005_backbone_distance,
-    minimum_consecutive_backbone_distance,
+    minimum_protocol32_backbone_distance,
+    protocol32_backbone_distances,
 )
 
 
@@ -450,6 +451,41 @@ def _backbone_atom_xyz(
     )
 
 
+def test_q005_two_residues_have_nine_protocol32_distances() -> None:
+    chain = ChainObservation(
+        pdb_id="test",
+        model_id=1,
+        label_chain_id="A",
+        atoms=[
+            _backbone_atom_xyz(label_seq_id=1, atom_name="N", x=0.0),
+            _backbone_atom_xyz(label_seq_id=1, atom_name="CA", x=1.4),
+            _backbone_atom_xyz(label_seq_id=1, atom_name="C", x=2.9),
+            _backbone_atom_xyz(label_seq_id=2, atom_name="N", x=4.2),
+            _backbone_atom_xyz(label_seq_id=2, atom_name="CA", x=5.6),
+            _backbone_atom_xyz(label_seq_id=2, atom_name="C", x=7.1),
+        ],
+    )
+
+    distances = protocol32_backbone_distances(
+        chain,
+        required_atoms=("N", "CA", "C"),
+    )
+
+    assert len(distances) == 9
+
+    assert {
+        (item.atom1, item.atom2)
+        for item in distances
+    } == {
+        ("N", "CA"),
+        ("N", "C"),
+        ("CA", "C"),
+        ("N", "N+1"),
+        ("CA", "N+1"),
+        ("C", "N+1"),
+    }
+
+
 def test_q005_accepts_normal_backbone_distances() -> None:
     chain = ChainObservation(
         pdb_id="test",
@@ -472,22 +508,27 @@ def test_q005_accepts_normal_backbone_distances() -> None:
     )
 
     assert result.passed is True
-    assert result.reason == "backbone_distances_meet_minimum"
-    assert minimum_consecutive_backbone_distance(
+    assert result.reason == "backbone_clash_threshold_met"
+
+    minimum = minimum_protocol32_backbone_distance(
         chain,
         required_atoms=("N", "CA", "C"),
-    ) > 1.0
+    )
+    assert minimum is not None
+    assert minimum > 1.0
 
 
-def test_q005_rejects_distance_below_threshold() -> None:
+def test_q005_detects_same_residue_n_c_clash() -> None:
+    """N-C is one of the BRI comparisons missed by the old implementation."""
+
     chain = ChainObservation(
         pdb_id="test",
         model_id=1,
         label_chain_id="A",
         atoms=[
             _backbone_atom_xyz(label_seq_id=1, atom_name="N", x=0.0),
-            _backbone_atom_xyz(label_seq_id=1, atom_name="CA", x=0.005),
-            _backbone_atom_xyz(label_seq_id=1, atom_name="C", x=1.5),
+            _backbone_atom_xyz(label_seq_id=1, atom_name="CA", x=1.4),
+            _backbone_atom_xyz(label_seq_id=1, atom_name="C", x=0.005),
         ],
     )
 
@@ -498,20 +539,74 @@ def test_q005_rejects_distance_below_threshold() -> None:
     )
 
     assert result.passed is False
-    assert result.reason.startswith(
-        "consecutive_backbone_distance_below_minimum:"
-    )
+    assert result.reason.startswith("backbone_clashes:1:")
 
 
-def test_q005_accepts_distance_exactly_at_threshold() -> None:
+def test_q005_detects_inter_residue_n_n_clash() -> None:
+    """N(i)-N(i+1) is another BRI comparison absent from the old code."""
+
     chain = ChainObservation(
         pdb_id="test",
         model_id=1,
         label_chain_id="A",
         atoms=[
             _backbone_atom_xyz(label_seq_id=1, atom_name="N", x=0.0),
-            _backbone_atom_xyz(label_seq_id=1, atom_name="CA", x=0.01),
-            _backbone_atom_xyz(label_seq_id=1, atom_name="C", x=1.5),
+            _backbone_atom_xyz(label_seq_id=1, atom_name="CA", x=1.4),
+            _backbone_atom_xyz(label_seq_id=1, atom_name="C", x=2.9),
+            _backbone_atom_xyz(label_seq_id=2, atom_name="N", x=0.005),
+            _backbone_atom_xyz(label_seq_id=2, atom_name="CA", x=4.2),
+            _backbone_atom_xyz(label_seq_id=2, atom_name="C", x=5.7),
+        ],
+    )
+
+    result = evaluate_q005_backbone_distance(
+        chain,
+        required_atoms=("N", "CA", "C"),
+        minimum_distance_angstrom=0.01,
+    )
+
+    assert result.passed is False
+    assert result.reason.startswith("backbone_clashes:1:")
+
+
+def test_q005_detects_inter_residue_ca_n_clash() -> None:
+    """CA(i)-N(i+1) is another comparison missed by the old code."""
+
+    chain = ChainObservation(
+        pdb_id="test",
+        model_id=1,
+        label_chain_id="A",
+        atoms=[
+            _backbone_atom_xyz(label_seq_id=1, atom_name="N", x=0.0),
+            _backbone_atom_xyz(label_seq_id=1, atom_name="CA", x=1.4),
+            _backbone_atom_xyz(label_seq_id=1, atom_name="C", x=2.9),
+            _backbone_atom_xyz(label_seq_id=2, atom_name="N", x=1.405),
+            _backbone_atom_xyz(label_seq_id=2, atom_name="CA", x=4.2),
+            _backbone_atom_xyz(label_seq_id=2, atom_name="C", x=5.7),
+        ],
+    )
+
+    result = evaluate_q005_backbone_distance(
+        chain,
+        required_atoms=("N", "CA", "C"),
+        minimum_distance_angstrom=0.01,
+    )
+
+    assert result.passed is False
+    assert result.reason.startswith("backbone_clashes:1:")
+
+
+def test_q005_threshold_is_strict() -> None:
+    """BRI uses distance < lower_bound, so exactly 0.01 Å is accepted."""
+
+    chain = ChainObservation(
+        pdb_id="test",
+        model_id=1,
+        label_chain_id="A",
+        atoms=[
+            _backbone_atom_xyz(label_seq_id=1, atom_name="N", x=0.0),
+            _backbone_atom_xyz(label_seq_id=1, atom_name="CA", x=1.4),
+            _backbone_atom_xyz(label_seq_id=1, atom_name="C", x=0.01),
         ],
     )
 
@@ -524,7 +619,7 @@ def test_q005_accepts_distance_exactly_at_threshold() -> None:
     assert result.passed is True
 
 
-def test_q005_rejects_nonunique_backbone() -> None:
+def test_q005_rejects_nonunique_backbone_precondition() -> None:
     chain = ChainObservation(
         pdb_id="test",
         model_id=1,
@@ -544,4 +639,5 @@ def test_q005_rejects_nonunique_backbone() -> None:
     )
 
     assert result.passed is False
-    assert result.reason == "backbone_not_exactly_one_per_residue"
+    assert result.reason.startswith("q005_precondition_failed:")
+

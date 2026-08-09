@@ -344,19 +344,36 @@ def evaluate_q004_backbone_atoms(
     )
 
 
+
 import math
 
 
-def ordered_backbone_atoms(
+@dataclass(frozen=True)
+class BackboneClash:
+    """One Protocol 3.2 backbone clash.
+
+    residue_id follows the BRI v1.2.2 convention: for an inter-residue
+    comparison with N(i+1), the clash is assigned to residue i.
+    """
+
+    residue_id: int
+    atom1: str
+    atom2: str
+    distance_angstrom: float
+
+
+def _index_q005_backbone_atoms(
     chain: ChainObservation,
     *,
     required_atoms: tuple[str, ...],
-) -> list:
-    """Return backbone atoms ordered by residue then configured atom order.
+) -> dict[int, dict[str, object]]:
+    """Index exactly one configured backbone atom per observed residue."""
 
-    Q005 assumes Q004 semantics: every observed residue must contain
-    exactly one occurrence of every configured backbone atom.
-    """
+    if "N" not in required_atoms:
+        raise ValueError("Q005 requires N among the configured backbone atoms")
+
+    if any(atom.label_seq_id is None for atom in chain.atoms):
+        raise ValueError("Q005 requires label_seq_id for all atoms")
 
     residue_ids = sorted(
         {
@@ -366,7 +383,10 @@ def ordered_backbone_atoms(
         }
     )
 
-    by_residue: dict[int, dict[str, list]] = {
+    if not residue_ids:
+        raise ValueError("Q005 requires at least one observed residue")
+
+    indexed: dict[int, dict[str, list]] = {
         residue_id: {
             atom_name: []
             for atom_name in required_atoms
@@ -377,17 +397,18 @@ def ordered_backbone_atoms(
     for atom in chain.atoms:
         if atom.label_seq_id is None:
             continue
-
         if atom.atom_name not in required_atoms:
             continue
 
-        by_residue[atom.label_seq_id][atom.atom_name].append(atom)
+        indexed[atom.label_seq_id][atom.atom_name].append(atom)
 
-    ordered = []
+    result: dict[int, dict[str, object]] = {}
 
     for residue_id in residue_ids:
+        result[residue_id] = {}
+
         for atom_name in required_atoms:
-            atoms = by_residue[residue_id][atom_name]
+            atoms = indexed[residue_id][atom_name]
 
             if len(atoms) != 1:
                 raise ValueError(
@@ -395,32 +416,128 @@ def ordered_backbone_atoms(
                     f"{atom_name} atom for residue {residue_id}"
                 )
 
-            ordered.append(atoms[0])
+            result[residue_id][atom_name] = atoms[0]
 
-    return ordered
+    return result
 
 
-def minimum_consecutive_backbone_distance(
+def _atom_distance(left: object, right: object) -> float:
+    """Euclidean distance between two parsed atom observations."""
+
+    return math.dist(
+        (left.x, left.y, left.z),
+        (right.x, right.y, right.z),
+    )
+
+
+def protocol32_backbone_distances(
     chain: ChainObservation,
     *,
     required_atoms: tuple[str, ...],
-) -> float | None:
-    """Return the minimum distance between consecutive ordered backbone atoms."""
+) -> tuple[BackboneClash, ...]:
+    """Return all distances tested by BRI v1.2.2 `clash_check`.
 
-    atoms = ordered_backbone_atoms(
+    For N, CA, C this reproduces the six `min_test_set` comparisons:
+
+      N(i)-CA(i)
+      N(i)-C(i)
+      N(i)-N(i+1)
+      CA(i)-C(i)
+      CA(i)-N(i+1)
+      C(i)-N(i+1)
+
+    The returned objects represent tested distances, not necessarily clashes.
+    """
+
+    indexed = _index_q005_backbone_atoms(
         chain,
         required_atoms=required_atoms,
     )
 
-    if len(atoms) < 2:
+    residue_ids = sorted(indexed)
+    distances: list[BackboneClash] = []
+
+    # Same-residue pairs. For N, CA, C these are:
+    # N-CA, N-C, CA-C.
+    for residue_id in residue_ids:
+        residue_atoms = indexed[residue_id]
+
+        for left_index, atom1 in enumerate(required_atoms):
+            for atom2 in required_atoms[left_index + 1:]:
+                distances.append(
+                    BackboneClash(
+                        residue_id=residue_id,
+                        atom1=atom1,
+                        atom2=atom2,
+                        distance_angstrom=_atom_distance(
+                            residue_atoms[atom1],
+                            residue_atoms[atom2],
+                        ),
+                    )
+                )
+
+    # Inter-residue pairs against N(i+1). BRI assigns these to residue i.
+    for residue_id, next_residue_id in zip(
+        residue_ids,
+        residue_ids[1:],
+    ):
+        if next_residue_id != residue_id + 1:
+            raise ValueError(
+                "Q005 requires consecutive residue ids; "
+                f"found {residue_id} followed by {next_residue_id}"
+            )
+
+        next_n = indexed[next_residue_id]["N"]
+
+        for atom1 in required_atoms:
+            distances.append(
+                BackboneClash(
+                    residue_id=residue_id,
+                    atom1=atom1,
+                    atom2="N+1",
+                    distance_angstrom=_atom_distance(
+                        indexed[residue_id][atom1],
+                        next_n,
+                    ),
+                )
+            )
+
+    return tuple(distances)
+
+
+def minimum_protocol32_backbone_distance(
+    chain: ChainObservation,
+    *,
+    required_atoms: tuple[str, ...],
+) -> float | None:
+    """Minimum distance over every Protocol 3.2 clash comparison."""
+
+    distances = protocol32_backbone_distances(
+        chain,
+        required_atoms=required_atoms,
+    )
+
+    if not distances:
         return None
 
-    return min(
-        math.dist(
-            (left.x, left.y, left.z),
-            (right.x, right.y, right.z),
+    return min(item.distance_angstrom for item in distances)
+
+
+def find_q005_backbone_clashes(
+    chain: ChainObservation,
+    *,
+    required_atoms: tuple[str, ...],
+    minimum_distance_angstrom: float,
+) -> tuple[BackboneClash, ...]:
+    """Find Protocol 3.2 backbone clashes strictly below the threshold."""
+
+    return tuple(
+        item
+        for item in protocol32_backbone_distances(
+            chain,
+            required_atoms=required_atoms,
         )
-        for left, right in zip(atoms, atoms[1:])
+        if item.distance_angstrom < minimum_distance_angstrom
     )
 
 
@@ -430,33 +547,45 @@ def evaluate_q005_backbone_distance(
     required_atoms: tuple[str, ...],
     minimum_distance_angstrom: float,
 ) -> RuleResult:
-    """Q005: reject implausibly coincident consecutive backbone atoms."""
+    """Q005: reproduce the BRI v1.2.2 Protocol 3.2 clash criterion."""
 
     try:
-        minimum_distance = minimum_consecutive_backbone_distance(
+        distances = protocol32_backbone_distances(
             chain,
             required_atoms=required_atoms,
         )
-    except ValueError:
+    except ValueError as exc:
         return RuleResult(
             rule_id="Q005",
             passed=False,
-            reason="backbone_not_exactly_one_per_residue",
+            reason=f"q005_precondition_failed:{exc}",
         )
 
-    if minimum_distance is None:
+    if not distances:
         return RuleResult(
             rule_id="Q005",
             passed=False,
             reason="insufficient_backbone_atoms",
         )
 
-    if minimum_distance < minimum_distance_angstrom:
+    clashes = tuple(
+        item
+        for item in distances
+        if item.distance_angstrom < minimum_distance_angstrom
+    )
+
+    if clashes:
+        minimum_distance = min(
+            item.distance_angstrom
+            for item in clashes
+        )
+
         return RuleResult(
             rule_id="Q005",
             passed=False,
             reason=(
-                "consecutive_backbone_distance_below_minimum:"
+                "backbone_clashes:"
+                f"{len(clashes)}:"
                 f"{minimum_distance:.12g}"
             ),
         )
@@ -464,5 +593,6 @@ def evaluate_q005_backbone_distance(
     return RuleResult(
         rule_id="Q005",
         passed=True,
-        reason="backbone_distances_meet_minimum",
+        reason="backbone_clash_threshold_met",
     )
+
