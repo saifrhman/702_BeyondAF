@@ -438,6 +438,10 @@ Chain-level rejections:
 
 `rejected/task_<task_id>.parquet`
 
+Chains outside the Protocol 3.2 candidate boundary:
+
+`non_candidates/task_<task_id>.parquet`
+
 Dirty-residue lineage:
 
 `dirty_residues/task_<task_id>.parquet`
@@ -454,6 +458,7 @@ After successful completion of all tasks, these shards are merged into:
 
 - `accepted_chains.parquet`;
 - `rejected_chains.parquet`;
+- `non_candidate_chains.parquet`;
 - `dirty_residues.parquet`;
 - `processing_errors.parquet`;
 - `quality_summary.json`.
@@ -466,10 +471,12 @@ Protocol 3.2 procedure.
 It must include:
 
 - canonical source chain key;
-- original observed start and end residue identifiers;
-- retained start and end residue identifiers;
+- original Protocol 3.2 backbone-projection start and end
+  `label_seq_id` values;
+- retained start and end `label_seq_id` values;
 - retained residue count;
-- retained sequence;
+- retained residue identifiers in surviving backbone row order;
+- retained sequence using the pinned BRI residue mapping;
 - whether terminal trimming occurred;
 - number of dirty residues removed;
 - dirty rule identifiers encountered before acceptance;
@@ -525,10 +532,39 @@ Each record must include:
 - source mmCIF key;
 - source ETag.
 
-### 7.4 Processing Errors
+### 7.4 Non-Candidate Chains
+
+A non-candidate record represents a parsed Silver chain whose BRI-style
+Protocol 3.2 backbone projection is empty.
+
+Specifically, a Silver chain is outside the Protocol 3.2 candidate boundary
+when selecting `ATOM` rows whose atom names are `N`, `CA`, or `C` produces no
+rows.
+
+Examples include:
+
+- HETATM-only chains;
+- ATOM chains containing no N/CA/C backbone rows.
+
+Non-candidate chains are preserved for accounting but are not scientific
+Protocol 3.2 rejections, because the chainwise cleaning rules were never
+applied to them.
+
+Each non-candidate record must include:
+
+- canonical source chain key;
+- terminal status `non_candidate`;
+- terminal reason;
+- candidate-selection stage;
+- source mmCIF key;
+- source ETag;
+- cleaning protocol version;
+- pipeline Git commit.
+
+### 7.5 Processing Errors
 
 Processing errors are reserved for technical failures rather than scientific
-rejections.
+rejections or non-candidate classifications.
 
 Examples include:
 
@@ -537,17 +573,23 @@ Examples include:
 - unexpected parser failure;
 - task-level I/O failure.
 
-Scientific filtering outcomes must never be recorded as processing errors.
+Scientific filtering outcomes and candidate-boundary classifications must
+never be recorded as processing errors.
 
-### 7.5 Complete Accounting
+### 7.6 Complete Accounting
 
-No candidate chain may disappear silently.
+No parsed Silver chain may disappear silently.
 
-Every candidate chain must have exactly one terminal chain-level outcome:
+Every parsed Silver chain must have exactly one terminal chain-level outcome:
 
+- non-candidate;
 - accepted;
 - rejected; or
 - processing error.
+
+Every Protocol 3.2 candidate chain must therefore terminate as accepted,
+rejected, or processing error. A non-candidate chain must never be counted as
+a scientific rejection.
 
 Residue-level dirty records are additional lineage and do not replace the
 terminal chain outcome.
@@ -1280,7 +1322,7 @@ The pipeline will be implemented incrementally.
 ### Phase 1: Foundation
 
 - Define configuration schema.
-- Define accepted, rejected, and error schemas.
+- Define accepted, rejected, non-candidate, dirty-residue, and error schemas.
 - Implement structured logging.
 - Implement release and canonical chain identifiers.
 
@@ -1296,7 +1338,7 @@ The pipeline will be implemented incrementally.
 - Implement mmCIF parsing.
 - Implement model and chain selection.
 - Implement Q001 through Q006.
-- Produce structured accepted and rejected records.
+- Produce structured accepted, rejected, non-candidate, and dirty-residue records.
 - Validate against known regression structures.
 
 ### Phase 4: Batch Execution
@@ -1350,8 +1392,10 @@ The first production release is accepted only when:
 
 - The 20260101 source manifest contains exactly 246,905 unique mmCIF objects.
 - Every source object is processed or explicitly recorded as failed.
-- Every candidate chain is accepted, rejected, or explicitly recorded as an
-  error.
+- Every parsed Silver chain is classified as non-candidate, accepted,
+  rejected, or explicitly recorded as an error.
+- Every Protocol 3.2 candidate chain is accepted, rejected, or explicitly
+  recorded as an error.
 - No canonical chain key appears more than once in a final category.
 - Q001 through Q006 have passing unit and regression tests.
 - Every accepted chain is accounted for during BRI generation.
