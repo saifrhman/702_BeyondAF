@@ -128,6 +128,29 @@ The pipeline must also preserve:
 The initial release processes model 1 only. This is a versioned configuration
 choice and must not be hard-coded into the parser.
 
+### 5.1 Model Selection
+
+Coordinate mmCIF parsing preserves all deposited models in Silver.
+
+Model selection is a separate, configuration-controlled processing step and
+must not be hard-coded into the parser.
+
+For `protocol3.2-comp702-v1`, the configured policy is:
+
+- `selection.models.policy: first_model`;
+- `selection.models.model_id: 1`.
+
+Therefore only parsed chains whose `model_id` equals the configured
+`selection.models.model_id` proceed to Protocol 3.2 candidate selection and
+quality cleaning.
+
+Chains from other models are outside the processing scope of this release.
+They remain recoverable from the immutable source mmCIF but are not emitted as
+Protocol 3.2 non-candidates, rejections, or accepted chains.
+
+The selected model identifier must remain part of the canonical chain key and
+all downstream Gold and BRI provenance.
+
 ## 6. Protocol 3.2 Quality Cleaning
 
 The scientific cleaning contract is Protocol 3.2 of Anosova et al. The pinned
