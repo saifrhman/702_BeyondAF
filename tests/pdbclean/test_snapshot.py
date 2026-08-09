@@ -232,3 +232,135 @@ def test_latest_complete_skips_newer_invalid_snapshot(
 
     assert resolved.snapshot_id == "20260101"
     assert resolved.layout == "canonical_divided_mmcif"
+
+
+class _FakeS3Response:
+    """Minimal urlopen-compatible response for verified-download tests."""
+
+    def __init__(
+        self,
+        payload: bytes,
+        *,
+        etag: str | None,
+    ) -> None:
+        self._payload = payload
+        self.headers = {}
+
+        if etag is not None:
+            self.headers["ETag"] = etag
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc, traceback) -> None:
+        return None
+
+    def read(self) -> bytes:
+        return self._payload
+
+
+def test_download_verified_s3_object_bytes(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from pdbclean.snapshot import download_verified_s3_object_bytes
+
+    payload = b"synthetic-cif-gzip"
+
+    monkeypatch.setattr(
+        "pdbclean.snapshot.urlopen",
+        lambda *args, **kwargs: _FakeS3Response(
+            payload,
+            etag='"abc123"',
+        ),
+    )
+
+    result = download_verified_s3_object_bytes(
+        bucket_url="https://example.invalid",
+        s3_key="20260101/path/1abc.cif.gz",
+        expected_size_bytes=len(payload),
+        expected_etag="abc123",
+        timeout_seconds=5,
+    )
+
+    assert result == payload
+
+
+def test_download_verified_s3_object_rejects_size_mismatch(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from pdbclean.snapshot import download_verified_s3_object_bytes
+
+    payload = b"abc"
+
+    monkeypatch.setattr(
+        "pdbclean.snapshot.urlopen",
+        lambda *args, **kwargs: _FakeS3Response(
+            payload,
+            etag='"etag123"',
+        ),
+    )
+
+    with pytest.raises(
+        SnapshotError,
+        match="S3 object size mismatch",
+    ):
+        download_verified_s3_object_bytes(
+            bucket_url="https://example.invalid",
+            s3_key="20260101/path/1abc.cif.gz",
+            expected_size_bytes=999,
+            expected_etag="etag123",
+        )
+
+
+def test_download_verified_s3_object_rejects_etag_mismatch(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from pdbclean.snapshot import download_verified_s3_object_bytes
+
+    payload = b"abc"
+
+    monkeypatch.setattr(
+        "pdbclean.snapshot.urlopen",
+        lambda *args, **kwargs: _FakeS3Response(
+            payload,
+            etag='"actual-etag"',
+        ),
+    )
+
+    with pytest.raises(
+        SnapshotError,
+        match="S3 object ETag mismatch",
+    ):
+        download_verified_s3_object_bytes(
+            bucket_url="https://example.invalid",
+            s3_key="20260101/path/1abc.cif.gz",
+            expected_size_bytes=len(payload),
+            expected_etag='"expected-etag"',
+        )
+
+
+def test_download_verified_s3_object_requires_response_etag(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from pdbclean.snapshot import download_verified_s3_object_bytes
+
+    payload = b"abc"
+
+    monkeypatch.setattr(
+        "pdbclean.snapshot.urlopen",
+        lambda *args, **kwargs: _FakeS3Response(
+            payload,
+            etag=None,
+        ),
+    )
+
+    with pytest.raises(
+        SnapshotError,
+        match="response has no ETag",
+    ):
+        download_verified_s3_object_bytes(
+            bucket_url="https://example.invalid",
+            s3_key="20260101/path/1abc.cif.gz",
+            expected_size_bytes=len(payload),
+            expected_etag="etag123",
+        )

@@ -367,6 +367,72 @@ def download_s3_object_bytes(
         ) from exc
 
 
+def download_verified_s3_object_bytes(
+    *,
+    bucket_url: str,
+    s3_key: str,
+    expected_size_bytes: int,
+    expected_etag: str,
+    timeout_seconds: int = 60,
+) -> bytes:
+    """Download one manifest object and verify immutable source metadata."""
+
+    if expected_size_bytes <= 0:
+        raise SnapshotError(
+            "Expected S3 object size must be positive"
+        )
+
+    expected_etag = expected_etag.strip().strip('"')
+
+    if not expected_etag:
+        raise SnapshotError(
+            "Expected S3 object ETag must be non-empty"
+        )
+
+    object_url = (
+        bucket_url.rstrip("/")
+        + "/"
+        + quote(s3_key, safe="/")
+    )
+
+    try:
+        with urlopen(
+            object_url,
+            timeout=timeout_seconds,
+        ) as response:
+            compressed_bytes = response.read()
+            response_etag = response.headers.get("ETag")
+    except OSError as exc:
+        raise SnapshotError(
+            f"Failed to download S3 object {s3_key}: {exc}"
+        ) from exc
+
+    actual_size_bytes = len(compressed_bytes)
+
+    if actual_size_bytes != expected_size_bytes:
+        raise SnapshotError(
+            f"S3 object size mismatch for {s3_key}: "
+            f"expected {expected_size_bytes}, "
+            f"received {actual_size_bytes}"
+        )
+
+    if response_etag is None:
+        raise SnapshotError(
+            f"S3 object response has no ETag for {s3_key}"
+        )
+
+    actual_etag = response_etag.strip().strip('"')
+
+    if actual_etag != expected_etag:
+        raise SnapshotError(
+            f"S3 object ETag mismatch for {s3_key}: "
+            f"expected {expected_etag!r}, "
+            f"received {actual_etag!r}"
+        )
+
+    return compressed_bytes
+
+
 def object_is_coordinate_mmcif(
     *,
     bucket_url: str,
