@@ -1,68 +1,55 @@
 """Tests for PDBClean scientific quality rules."""
 
 from pdbclean.mmcif_parser import ChainObservation
-from pdbclean.quality import evaluate_q001_protein_polymer
+from pdbclean.quality import evaluate_q001_entry_protein
 
 
-ALLOWED_PROTEIN_TYPES = {
-    "polypeptide(L)",
-    "polypeptide(D)",
-}
-
-
-def test_q001_accepts_allowed_protein_polymer() -> None:
+def test_q001_accepts_entry_containing_polypeptide() -> None:
     chain = ChainObservation(
         pdb_id="1aam",
         model_id=1,
         label_chain_id="A",
         polymer_type="polypeptide(L)",
+        entry_has_polypeptide=True,
     )
 
-    result = evaluate_q001_protein_polymer(
-        chain,
-        allowed_polymer_types=ALLOWED_PROTEIN_TYPES,
-    )
+    result = evaluate_q001_entry_protein(chain)
 
     assert result.rule_id == "Q001"
     assert result.passed is True
-    assert result.reason == "allowed_protein_polymer_type"
+    assert result.reason == "entry_contains_polypeptide_entity"
 
 
-def test_q001_rejects_missing_polymer_type() -> None:
-    chain = ChainObservation(
-        pdb_id="1aam",
-        model_id=1,
-        label_chain_id="B",
-        polymer_type=None,
-    )
-
-    result = evaluate_q001_protein_polymer(
-        chain,
-        allowed_polymer_types=ALLOWED_PROTEIN_TYPES,
-    )
-
-    assert result.passed is False
-    assert result.reason == "missing_or_nonpolymer_entity_poly_type"
-
-
-def test_q001_rejects_disallowed_polymer_type() -> None:
+def test_q001_rejects_entry_without_polypeptide() -> None:
     chain = ChainObservation(
         pdb_id="test",
         model_id=1,
         label_chain_id="A",
         polymer_type="polydeoxyribonucleotide",
+        entry_has_polypeptide=False,
     )
 
-    result = evaluate_q001_protein_polymer(
-        chain,
-        allowed_polymer_types=ALLOWED_PROTEIN_TYPES,
-    )
+    result = evaluate_q001_entry_protein(chain)
 
     assert result.passed is False
-    assert (
-        result.reason
-        == "disallowed_polymer_type:polydeoxyribonucleotide"
+    assert result.reason == "entry_contains_no_polypeptide_entity"
+
+
+def test_q001_accepts_nonprotein_chain_from_mixed_protein_entry() -> None:
+    """BRI Q001 is entry-level, not a per-chain polymer whitelist."""
+
+    chain = ChainObservation(
+        pdb_id="mixed",
+        model_id=1,
+        label_chain_id="B",
+        polymer_type="polydeoxyribonucleotide",
+        entry_has_polypeptide=True,
     )
+
+    result = evaluate_q001_entry_protein(chain)
+
+    assert result.passed is True
+
 
 from pdbclean.mmcif_parser import AtomObservation
 from pdbclean.quality import (

@@ -16,38 +16,27 @@ class RuleResult:
     reason: str
 
 
-def evaluate_q001_protein_polymer(
+def evaluate_q001_entry_protein(
     chain: ChainObservation,
-    *,
-    allowed_polymer_types: set[str],
 ) -> RuleResult:
-    """Q001: retain only explicitly allowed protein polymer types.
+    """Q001: reproduce BRI v1.2.2 `field_check` protein classification.
 
-    Polymer identity comes from `_entity_poly.type` via the chain's
-    `_atom_site.label_entity_id`. Non-polymer entities therefore fail
-    rather than being inferred from residue or atom names.
+    BRI classifies the whole entry as protein when at least one
+    `_entity_poly.type` begins with "polypeptide". It does not apply
+    a per-chain polypeptide whitelist at this stage.
     """
 
-    polymer_type = chain.polymer_type
-
-    if polymer_type is None:
+    if not chain.entry_has_polypeptide:
         return RuleResult(
             rule_id="Q001",
             passed=False,
-            reason="missing_or_nonpolymer_entity_poly_type",
-        )
-
-    if polymer_type not in allowed_polymer_types:
-        return RuleResult(
-            rule_id="Q001",
-            passed=False,
-            reason=f"disallowed_polymer_type:{polymer_type}",
+            reason="entry_contains_no_polypeptide_entity",
         )
 
     return RuleResult(
         rule_id="Q001",
         passed=True,
-        reason="allowed_protein_polymer_type",
+        reason="entry_contains_polypeptide_entity",
     )
 
 

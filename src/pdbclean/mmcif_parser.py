@@ -48,6 +48,10 @@ class ChainObservation:
     entity_id: str | None = None
     polymer_type: str | None = None
 
+    # BRI v1.2.2 field_check() classifies the whole entry as protein
+    # when any _entity_poly.type starts with "polypeptide".
+    entry_has_polypeptide: bool = False
+
     atoms: list[AtomObservation] = field(default_factory=list)
 
     @property
@@ -264,6 +268,11 @@ def parse_coordinate_mmcif_bytes(
 
     polymer_types = _polymer_type_map(block)
 
+    entry_has_polypeptide = any(
+        polymer_type.startswith("polypeptide")
+        for polymer_type in polymer_types.values()
+    )
+
     chains: dict[
         tuple[int, str],
         ChainObservation,
@@ -311,6 +320,7 @@ def parse_coordinate_mmcif_bytes(
                     if entity_id is not None
                     else None
                 ),
+                entry_has_polypeptide=entry_has_polypeptide,
             )
 
         chain = chains[chain_key]
