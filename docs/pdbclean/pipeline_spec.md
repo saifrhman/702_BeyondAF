@@ -160,6 +160,21 @@ backbone-cleaning input.
 
 The original Silver observations remain unchanged.
 
+A Silver chain becomes a Protocol 3.2 chain candidate only when this
+BRI-style projection is non-empty.
+
+Therefore:
+
+- HETATM-only chains are preserved in Silver but are not Protocol 3.2
+  candidates;
+- ATOM chains containing no N, CA, or C rows are preserved in Silver but are
+  not Protocol 3.2 candidates;
+- these non-candidate chains are not Q001-Q006 scientific rejections and are
+  not processing errors.
+
+This reproduces BRI v1.2.2 `on_entry()`, which skips chains when
+`get_feature("features", HETATM=False)` returns no target backbone rows.
+
 ### Q001: Entry Contains a Polypeptide
 
 Protocol 3.2 excludes non-protein entries.
@@ -539,6 +554,8 @@ terminal chain outcome.
 
 The quality summary must reconcile:
 
+- Silver parsed chains;
+- non-candidate chains with empty Protocol 3.2 backbone projections;
 - candidate entries;
 - candidate chains;
 - Q001 entry-level exclusions;
