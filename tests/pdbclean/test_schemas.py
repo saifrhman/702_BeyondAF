@@ -197,6 +197,37 @@ def test_gold_dirty_residue_schema_identity() -> None:
     assert required.issubset(set(GOLD_DIRTY_RESIDUE_SCHEMA.names))
 
 
+def test_gold_non_candidate_chain_schema_identity() -> None:
+    from pdbclean.schemas import (
+        GOLD_NON_CANDIDATE_CHAIN_SCHEMA,
+        GOLD_NON_CANDIDATE_CHAIN_SCHEMA_VERSION,
+    )
+
+    assert GOLD_NON_CANDIDATE_CHAIN_SCHEMA_VERSION == "1.0"
+    assert (
+        GOLD_NON_CANDIDATE_CHAIN_SCHEMA.metadata[b"schema_name"]
+        == b"pdbclean_gold_non_candidate_chain"
+    )
+
+    required = {
+        "snapshot",
+        "pdb_id",
+        "model_id",
+        "label_chain_id",
+        "terminal_status",
+        "terminal_reason",
+        "terminal_stage",
+        "source_mmcif_key",
+        "source_etag",
+        "cleaning_protocol",
+        "pipeline_git_commit",
+    }
+
+    assert required.issubset(
+        set(GOLD_NON_CANDIDATE_CHAIN_SCHEMA.names)
+    )
+
+
 def test_gold_processing_error_schema_allows_missing_chain_identity() -> None:
     from pdbclean.schemas import GOLD_PROCESSING_ERROR_SCHEMA
 
@@ -216,12 +247,14 @@ def test_gold_quality_schema_canonical_identity_types_match() -> None:
     from pdbclean.schemas import (
         GOLD_ACCEPTED_CHAIN_SCHEMA,
         GOLD_DIRTY_RESIDUE_SCHEMA,
+        GOLD_NON_CANDIDATE_CHAIN_SCHEMA,
         GOLD_REJECTED_CHAIN_SCHEMA,
     )
 
     schemas = (
         GOLD_ACCEPTED_CHAIN_SCHEMA,
         GOLD_REJECTED_CHAIN_SCHEMA,
+        GOLD_NON_CANDIDATE_CHAIN_SCHEMA,
         GOLD_DIRTY_RESIDUE_SCHEMA,
     )
 

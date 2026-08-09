@@ -280,6 +280,36 @@ GOLD_DIRTY_RESIDUE_SCHEMA = pa.schema(
 )
 
 
+GOLD_NON_CANDIDATE_CHAIN_SCHEMA_VERSION = "1.0"
+
+GOLD_NON_CANDIDATE_CHAIN_SCHEMA = pa.schema(
+    [
+        # Canonical identity / provenance
+        pa.field("snapshot", pa.string(), nullable=False),
+        pa.field("pdb_id", pa.string(), nullable=False),
+        pa.field("model_id", pa.int32(), nullable=False),
+        pa.field("label_chain_id", pa.string(), nullable=False),
+        pa.field("auth_chain_id", pa.string(), nullable=True),
+        pa.field("entity_id", pa.string(), nullable=True),
+
+        # Candidate-selection outcome
+        pa.field("terminal_status", pa.string(), nullable=False),
+        pa.field("terminal_reason", pa.string(), nullable=False),
+        pa.field("terminal_stage", pa.string(), nullable=False),
+
+        # Source / release lineage
+        pa.field("source_mmcif_key", pa.string(), nullable=False),
+        pa.field("source_etag", pa.string(), nullable=False),
+        pa.field("cleaning_protocol", pa.string(), nullable=False),
+        pa.field("pipeline_git_commit", pa.string(), nullable=False),
+    ],
+    metadata={
+        b"schema_name": b"pdbclean_gold_non_candidate_chain",
+        b"schema_version": GOLD_NON_CANDIDATE_CHAIN_SCHEMA_VERSION.encode(),
+    },
+)
+
+
 GOLD_PROCESSING_ERROR_SCHEMA_VERSION = "1.0"
 
 GOLD_PROCESSING_ERROR_SCHEMA = pa.schema(

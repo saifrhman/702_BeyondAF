@@ -8,6 +8,7 @@ BRI v1.2.2.
 from __future__ import annotations
 
 from dataclasses import dataclass, replace
+import json
 from typing import Literal
 
 from pdbclean.mmcif_parser import ChainObservation
@@ -40,6 +41,7 @@ class DirtyResidueRecord:
     rule_id: str
     dirty_type: str
     cleaning_stage: str
+    details_json: str = "{}"
 
 
 @dataclass(frozen=True)
@@ -86,6 +88,122 @@ def _deposited_residue_name(
     )
 
 
+def _json_details(payload: dict[str, object]) -> str:
+    """Serialize Gold rule evidence deterministically."""
+
+    return json.dumps(
+        payload,
+        sort_keys=True,
+        separators=(",", ":"),
+    )
+
+
+def _q002_details_json(
+    chain: ChainObservation,
+    residue_id: int,
+) -> str:
+    """Capture BRI Q002 evidence before the residue is removed."""
+
+    residue_atoms = [
+        atom
+        for atom in chain.atoms
+        if atom.label_seq_id == residue_id
+    ]
+
+    counts: dict[tuple[int | None, str, int, str], int] = {}
+
+    for atom in chain.atoms:
+        key = (
+            atom.label_seq_id,
+            atom.label_chain_id,
+            atom.model_id,
+            atom.atom_name,
+        )
+        counts[key] = counts.get(key, 0) + 1
+
+    duplicate_atom_names = sorted(
+        {
+            atom.atom_name
+            for atom in residue_atoms
+            if counts[
+                (
+                    atom.label_seq_id,
+                    atom.label_chain_id,
+                    atom.model_id,
+                    atom.atom_name,
+                )
+            ] > 1
+        }
+    )
+
+    bad_occupancy_atoms = [
+        {
+            "atom_name": atom.atom_name,
+            "occupancy_raw": atom.occupancy_raw,
+            "alt_id": atom.alt_id,
+        }
+        for atom in residue_atoms
+        if atom.occupancy_raw is None
+        or (
+            atom.occupancy_raw != "."
+            and not atom.occupancy_raw.startswith("1")
+        )
+    ]
+
+    return _json_details(
+        {
+            "duplicate_backbone_atom_names": duplicate_atom_names,
+            "bad_occupancy_atoms": bad_occupancy_atoms,
+        }
+    )
+
+
+def _q006_details_json(
+    chain: ChainObservation,
+    residue_id: int,
+) -> str:
+    """Capture pinned BRI Q006 residue-mapping evidence."""
+
+    return _json_details(
+        {
+            "deposited_residue_name": _deposited_residue_name(
+                chain,
+                residue_id,
+            ),
+            "mapped_residue_code": _mapped_residue_code(
+                chain,
+                residue_id,
+            ),
+            "mapping_source": "bri_v1.2.2_amino_acid_short",
+            "accepted_code_set": "canonical_20_one_letter",
+        }
+    )
+
+
+def _q004_details_json(
+    chain: ChainObservation,
+    residue_id: int,
+) -> str:
+    """Capture BRI Q004 backbone-row completeness evidence."""
+
+    residue_atoms = [
+        atom
+        for atom in chain.atoms
+        if atom.label_seq_id == residue_id
+    ]
+
+    return _json_details(
+        {
+            "backbone_row_count": len(residue_atoms),
+            "backbone_atom_names": sorted(
+                atom.atom_name
+                for atom in residue_atoms
+            ),
+            "required_backbone_atoms": ["N", "CA", "C"],
+        }
+    )
+
+
 def _mapped_residue_code(
     chain: ChainObservation,
     residue_id: int,
@@ -96,6 +214,31 @@ def _mapped_residue_code(
 
     deposited = _deposited_residue_name(chain, residue_id)
     return amino_acid_short.get(deposited)
+
+
+def _q005_details_json(
+    residue_id: int,
+    clashes: tuple,
+) -> str:
+    """Capture strict BRI Q005 clash evidence before residue removal."""
+
+    residue_clashes = [
+        {
+            "atom1": clash.atom1,
+            "atom2": clash.atom2,
+            "distance_angstrom": clash.distance_angstrom,
+        }
+        for clash in clashes
+        if clash.residue_id == residue_id
+    ]
+
+    return _json_details(
+        {
+            "threshold_angstrom": 0.01,
+            "comparison": "distance < threshold",
+            "clashes": residue_clashes,
+        }
+    )
 
 
 def is_protocol32_candidate(chain: ChainObservation) -> bool:
@@ -146,6 +289,10 @@ def clean_protocol32_chain(
             rule_id="Q002",
             dirty_type="disordered",
             cleaning_stage="Q002",
+            details_json=_q002_details_json(
+                working,
+                residue_id,
+            ),
         )
         for residue_id in sorted(q002_ids)
     )
@@ -196,6 +343,10 @@ def clean_protocol32_chain(
             rule_id="Q006",
             dirty_type="non-standard",
             cleaning_stage="Q006_Q004",
+            details_json=_q006_details_json(
+                working,
+                residue_id,
+            ),
         )
         for residue_id in sorted(q006_ids)
     )
@@ -217,6 +368,10 @@ def clean_protocol32_chain(
             rule_id="Q004",
             dirty_type="incomplete",
             cleaning_stage="Q006_Q004",
+            details_json=_q004_details_json(
+                working,
+                residue_id,
+            ),
         )
         for residue_id in sorted(q004_only_ids)
     )
@@ -285,6 +440,10 @@ def clean_protocol32_chain(
             rule_id="Q005",
             dirty_type="clash",
             cleaning_stage="Q005",
+            details_json=_q005_details_json(
+                residue_id,
+                clashes,
+            ),
         )
         for residue_id in sorted(q005_ids)
     )
