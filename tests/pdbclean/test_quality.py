@@ -65,12 +65,18 @@ def test_q001_rejects_disallowed_polymer_type() -> None:
     )
 
 from pdbclean.mmcif_parser import AtomObservation
-from pdbclean.quality import evaluate_q002_occupancy
+from pdbclean.quality import (
+    evaluate_q002_disorder,
+    q002_disordered_residue_ids,
+)
 
 
 def _atom(
     *,
+    label_seq_id: int = 1,
+    atom_name: str = "CA",
     occupancy: float | None = 1.0,
+    occupancy_raw: str | None = "1.00",
     alt_id: str | None = None,
 ) -> AtomObservation:
     return AtomObservation(
@@ -78,101 +84,168 @@ def _atom(
         label_chain_id="A",
         auth_chain_id="A",
         entity_id="1",
-        label_seq_id=1,
-        auth_seq_id="1",
+        label_seq_id=label_seq_id,
+        auth_seq_id=str(label_seq_id),
         residue_name="ALA",
-        atom_name="CA",
+        atom_name=atom_name,
         alt_id=alt_id,
         occupancy=occupancy,
         x=0.0,
         y=0.0,
         z=0.0,
+        occupancy_raw=occupancy_raw,
     )
 
 
-def test_q002_accepts_full_occupancy_without_altloc() -> None:
+def test_q002_accepts_full_backbone_occupancy() -> None:
     chain = ChainObservation(
         pdb_id="test",
         model_id=1,
         label_chain_id="A",
-        polymer_type="polypeptide(L)",
         atoms=[
-            _atom(occupancy=1.0),
-            _atom(occupancy=1.0),
+            _atom(atom_name="N"),
+            _atom(atom_name="CA"),
+            _atom(atom_name="C"),
         ],
     )
 
-    result = evaluate_q002_occupancy(
-        chain,
-        minimum_occupancy=1.0,
-        reject_alternate_locations=True,
-    )
+    result = evaluate_q002_disorder(chain)
 
     assert result.passed is True
-    assert result.reason == "occupancy_and_altloc_requirements_met"
+    assert result.reason == "no_disordered_backbone_residues"
 
 
-def test_q002_rejects_missing_occupancy() -> None:
+def test_q002_accepts_dot_occupancy_like_bri() -> None:
     chain = ChainObservation(
         pdb_id="test",
         model_id=1,
         label_chain_id="A",
         atoms=[
-            _atom(occupancy=1.0),
-            _atom(occupancy=None),
+            _atom(
+                atom_name="N",
+                occupancy=None,
+                occupancy_raw=".",
+            ),
         ],
     )
 
-    result = evaluate_q002_occupancy(
-        chain,
-        minimum_occupancy=1.0,
-        reject_alternate_locations=True,
-    )
+    result = evaluate_q002_disorder(chain)
 
-    assert result.passed is False
-    assert result.reason == "missing_occupancy:1"
+    assert result.passed is True
 
 
-def test_q002_rejects_occupancy_below_minimum() -> None:
+def test_q002_rejects_question_mark_occupancy() -> None:
     chain = ChainObservation(
         pdb_id="test",
         model_id=1,
         label_chain_id="A",
         atoms=[
-            _atom(occupancy=1.0),
-            _atom(occupancy=0.5),
+            _atom(
+                atom_name="CA",
+                occupancy=None,
+                occupancy_raw="?",
+            ),
         ],
     )
 
-    result = evaluate_q002_occupancy(
-        chain,
-        minimum_occupancy=1.0,
-        reject_alternate_locations=True,
-    )
+    result = evaluate_q002_disorder(chain)
 
     assert result.passed is False
-    assert result.reason == "occupancy_below_minimum:1"
+    assert result.reason == "disordered_backbone_residues:1"
 
 
-def test_q002_rejects_alternate_locations() -> None:
+def test_q002_rejects_partial_backbone_occupancy() -> None:
     chain = ChainObservation(
         pdb_id="test",
         model_id=1,
         label_chain_id="A",
         atoms=[
-            _atom(occupancy=1.0, alt_id=None),
-            _atom(occupancy=1.0, alt_id="A"),
+            _atom(
+                atom_name="CA",
+                occupancy=0.5,
+                occupancy_raw="0.50",
+            ),
         ],
     )
 
-    result = evaluate_q002_occupancy(
-        chain,
-        minimum_occupancy=1.0,
-        reject_alternate_locations=True,
-    )
+    result = evaluate_q002_disorder(chain)
 
     assert result.passed is False
-    assert result.reason == "alternate_locations_present:1"
+    assert q002_disordered_residue_ids(chain) == {1}
+
+
+def test_q002_does_not_reject_single_altloc_row() -> None:
+    """BRI has no independent label_alt_id rejection."""
+
+    chain = ChainObservation(
+        pdb_id="test",
+        model_id=1,
+        label_chain_id="A",
+        atoms=[
+            _atom(
+                atom_name="CA",
+                alt_id="A",
+                occupancy=1.0,
+                occupancy_raw="1.00",
+            ),
+        ],
+    )
+
+    result = evaluate_q002_disorder(chain)
+
+    assert result.passed is True
+
+
+def test_q002_rejects_duplicate_backbone_atom() -> None:
+    """Duplicate residue/model/chain/atom rows are disorder in BRI."""
+
+    chain = ChainObservation(
+        pdb_id="test",
+        model_id=1,
+        label_chain_id="A",
+        atoms=[
+            _atom(
+                label_seq_id=7,
+                atom_name="CA",
+                alt_id="A",
+            ),
+            _atom(
+                label_seq_id=7,
+                atom_name="CA",
+                alt_id="B",
+            ),
+        ],
+    )
+
+    result = evaluate_q002_disorder(chain)
+
+    assert result.passed is False
+    assert q002_disordered_residue_ids(chain) == {7}
+
+
+def test_q002_ignores_sidechain_partial_occupancy() -> None:
+    """Protocol 3.2 disorder_check receives N/CA/C features only."""
+
+    chain = ChainObservation(
+        pdb_id="test",
+        model_id=1,
+        label_chain_id="A",
+        atoms=[
+            _atom(atom_name="N"),
+            _atom(atom_name="CA"),
+            _atom(atom_name="C"),
+            _atom(
+                atom_name="CB",
+                occupancy=0.5,
+                occupancy_raw="0.50",
+            ),
+        ],
+    )
+
+    result = evaluate_q002_disorder(chain)
+
+    assert result.passed is True
+
 
 from pdbclean.quality import (
     evaluate_q003_residue_continuity,

@@ -51,72 +51,110 @@ def evaluate_q001_protein_polymer(
     )
 
 
-def evaluate_q002_occupancy(
+def q002_disordered_residue_ids(
     chain: ChainObservation,
     *,
-    minimum_occupancy: float,
-    reject_alternate_locations: bool,
-) -> RuleResult:
-    """Q002: require complete occupancy for all polymer-chain atoms.
+    backbone_atoms: tuple[str, ...] = ("N", "CA", "C"),
+) -> set[int]:
+    """Return residues flagged by BRI v1.2.2 `disorder_check`.
 
-    The caller applies this rule after Q001 has established that the
-    observation represents an allowed protein polymer. Missing occupancy
-    is treated as unverifiable and therefore fails the rule.
+    Protocol 3.2 cleaning receives only backbone N/CA/C atoms.
+
+    BRI flags:
+      1. duplicate rows sharing residue_id, chain_id, model_id and atom name;
+      2. occupancy tokens that do not start with "1", except ".".
+
+    Alternate-location labels are not an independent rejection criterion.
     """
 
-    missing_occupancy_count = sum(
-        atom.occupancy is None
+    backbone = [
+        atom
         for atom in chain.atoms
+        if atom.atom_name in backbone_atoms
+    ]
+
+    disordered: set[int] = set()
+
+    # BRI:
+    # chain.duplicated(
+    #     ["residue_id", "chain_id", "model_id", "atom"],
+    #     keep=False,
+    # )
+    counts: dict[tuple[int | None, str, int, str], int] = {}
+
+    for atom in backbone:
+        key = (
+            atom.label_seq_id,
+            atom.label_chain_id,
+            atom.model_id,
+            atom.atom_name,
+        )
+        counts[key] = counts.get(key, 0) + 1
+
+    duplicate_keys = {
+        key
+        for key, count in counts.items()
+        if count > 1
+    }
+
+    for atom in backbone:
+        key = (
+            atom.label_seq_id,
+            atom.label_chain_id,
+            atom.model_id,
+            atom.atom_name,
+        )
+
+        if key in duplicate_keys and atom.label_seq_id is not None:
+            disordered.add(atom.label_seq_id)
+
+        # Preserve BRI's string-level occupancy semantics exactly.
+        token = atom.occupancy_raw
+
+        if token is None:
+            # Production parser observations preserve the raw token.
+            # Treat an absent raw token as unverifiable rather than
+            # silently reconstructing BRI semantics from the float.
+            if atom.label_seq_id is not None:
+                disordered.add(atom.label_seq_id)
+            continue
+
+        if token != "." and not token.startswith("1"):
+            if atom.label_seq_id is not None:
+                disordered.add(atom.label_seq_id)
+
+    return disordered
+
+
+def evaluate_q002_disorder(
+    chain: ChainObservation,
+    *,
+    backbone_atoms: tuple[str, ...] = ("N", "CA", "C"),
+) -> RuleResult:
+    """Q002: reproduce BRI v1.2.2 Protocol 3.2 disorder detection."""
+
+    disordered = sorted(
+        q002_disordered_residue_ids(
+            chain,
+            backbone_atoms=backbone_atoms,
+        )
     )
 
-    if missing_occupancy_count:
+    if disordered:
         return RuleResult(
             rule_id="Q002",
             passed=False,
             reason=(
-                "missing_occupancy:"
-                f"{missing_occupancy_count}"
+                "disordered_backbone_residues:"
+                + ",".join(str(residue_id) for residue_id in disordered)
             ),
         )
-
-    below_minimum_count = sum(
-        atom.occupancy is not None
-        and atom.occupancy < minimum_occupancy
-        for atom in chain.atoms
-    )
-
-    if below_minimum_count:
-        return RuleResult(
-            rule_id="Q002",
-            passed=False,
-            reason=(
-                "occupancy_below_minimum:"
-                f"{below_minimum_count}"
-            ),
-        )
-
-    if reject_alternate_locations:
-        alternate_location_count = sum(
-            atom.alt_id is not None
-            for atom in chain.atoms
-        )
-
-        if alternate_location_count:
-            return RuleResult(
-                rule_id="Q002",
-                passed=False,
-                reason=(
-                    "alternate_locations_present:"
-                    f"{alternate_location_count}"
-                ),
-            )
 
     return RuleResult(
         rule_id="Q002",
         passed=True,
-        reason="occupancy_and_altloc_requirements_met",
+        reason="no_disordered_backbone_residues",
     )
-
 
 def missing_internal_label_seq_ids(
     chain: ChainObservation,

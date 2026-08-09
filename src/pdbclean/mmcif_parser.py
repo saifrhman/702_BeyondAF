@@ -31,6 +31,10 @@ class AtomObservation:
     y: float
     z: float
 
+    # Preserve the exact mmCIF token because BRI v1.2.2 distinguishes
+    # "." from "?" during Protocol 3.2 disorder checking.
+    occupancy_raw: str | None = None
+
 
 @dataclass
 class ChainObservation:
@@ -350,6 +354,10 @@ def parse_coordinate_mmcif_bytes(
                 value("_atom_site.Cartn_z", row),
                 "Cartn_z",
             ),
+            occupancy_raw=value(
+                "_atom_site.occupancy",
+                row,
+            ).strip(),
         )
 
         chain.atoms.append(atom)

@@ -28,6 +28,7 @@ def test_atom_observation_fields() -> None:
     assert atom.label_seq_id == 10
     assert atom.atom_name == "CA"
     assert atom.occupancy == 1.0
+    assert atom.occupancy_raw is None
 
 
 def test_chain_canonical_key() -> None:
@@ -103,8 +104,8 @@ _atom_site.occupancy
 _atom_site.Cartn_x
 _atom_site.Cartn_y
 _atom_site.Cartn_z
-1 A X 1 1 10 ALA N  . 1.00 0.0 0.0 0.0
-1 A X 1 1 10 ALA CA . 1.00 1.0 0.0 0.0
+1 A X 1 1 10 ALA N  . .    0.0 0.0 0.0
+1 A X 1 1 10 ALA CA . ?    1.0 0.0 0.0
 1 A X 1 1 10 ALA C  . 1.00 2.0 0.0 0.0
 1 A X 1 2 11 GLY N  . 1.00 3.0 0.0 0.0
 1 A X 1 2 11 GLY CA . 0.50 4.0 0.0 0.0
@@ -133,7 +134,15 @@ _atom_site.Cartn_z
     assert chain.atoms[0].residue_name == "ALA"
     assert chain.atoms[0].atom_name == "N"
 
+    # Numeric normalization alone cannot reproduce BRI disorder_check:
+    # both become None numerically, while the raw tokens remain distinct.
+    assert chain.atoms[0].occupancy is None
+    assert chain.atoms[0].occupancy_raw == "."
+    assert chain.atoms[1].occupancy is None
+    assert chain.atoms[1].occupancy_raw == "?"
+
     assert chain.atoms[4].occupancy == 0.5
+    assert chain.atoms[4].occupancy_raw == "0.50"
     assert chain.atoms[5].alt_id == "A"
 
 
