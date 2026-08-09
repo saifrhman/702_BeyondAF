@@ -366,3 +366,156 @@ def test_process_verified_mmcif_does_not_swallow_unexpected_parser_bug(
             },
             provenance=_gold_provenance(),
         )
+
+
+def _manifest_row() -> dict:
+    compressed = _multimodel_cif_bytes()
+
+    return {
+        "snapshot": "20260101",
+        "source_layout": "divided_mmcif",
+        "pdb_id": "TEST",
+        "s3_key": "20260101/pub/pdb/data/structures/divided/mmCIF/te/test.cif.gz",
+        "size_bytes": len(compressed),
+        "etag": "etag123",
+    }
+
+
+def test_process_manifest_source_downloads_verifies_and_processes() -> None:
+    from pdbclean.quality_runner import process_manifest_source
+
+    compressed = _multimodel_cif_bytes()
+    calls = []
+
+    def downloader(**kwargs):
+        calls.append(kwargs)
+        return compressed
+
+    result = process_manifest_source(
+        _manifest_row(),
+        bucket_url="https://example.invalid",
+        selection_config={
+            "models": {
+                "policy": "first_model",
+                "model_id": 1,
+            }
+        },
+        cleaning_protocol="Protocol_3.2_BRI_v1.2.2",
+        pipeline_git_commit="deadbeef",
+        timeout_seconds=37,
+        downloader=downloader,
+    )
+
+    assert calls == [
+        {
+            "bucket_url": "https://example.invalid",
+            "s3_key": (
+                "20260101/pub/pdb/data/structures/"
+                "divided/mmCIF/te/test.cif.gz"
+            ),
+            "expected_size_bytes": len(compressed),
+            "expected_etag": "etag123",
+            "timeout_seconds": 37,
+        }
+    ]
+
+    assert result.source_failed is False
+    assert result.parsed_silver_chain_count == 2
+    assert result.selected_silver_chain_count == 1
+    assert result.candidate_entry_count == 1
+    assert result.candidate_chain_count == 1
+    assert len(result.gold_records) == 1
+    assert result.processing_errors == ()
+
+    accepted = result.gold_records[0].accepted_chain
+    assert accepted is not None
+    assert accepted["snapshot"] == "20260101"
+    assert accepted["pdb_id"] == "test"
+    assert accepted["source_etag"] == "etag123"
+    assert accepted["pipeline_git_commit"] == "deadbeef"
+
+
+def test_process_manifest_source_records_download_verification_failure() -> None:
+    from pdbclean.quality_runner import process_manifest_source
+    from pdbclean.snapshot import SnapshotError
+
+    def downloader(**kwargs):
+        raise SnapshotError("synthetic ETag mismatch")
+
+    result = process_manifest_source(
+        _manifest_row(),
+        bucket_url="https://example.invalid",
+        selection_config={
+            "models": {
+                "policy": "first_model",
+                "model_id": 1,
+            }
+        },
+        cleaning_protocol="Protocol_3.2_BRI_v1.2.2",
+        pipeline_git_commit="deadbeef",
+        downloader=downloader,
+    )
+
+    assert result.source_failed is True
+    assert result.parsed_silver_chain_count == 0
+    assert result.selected_silver_chain_count == 0
+    assert result.gold_records == ()
+
+    assert len(result.processing_errors) == 1
+    error = result.processing_errors[0]
+
+    assert error["pdb_id"] == "test"
+    assert error["model_id"] is None
+    assert error["label_chain_id"] is None
+    assert error["processing_stage"] == "source_download_verify"
+    assert error["error_type"] == "SnapshotError"
+    assert error["error_message"] == "synthetic ETag mismatch"
+
+
+def test_process_manifest_source_does_not_swallow_unexpected_downloader_bug() -> None:
+    from pdbclean.quality_runner import process_manifest_source
+
+    def downloader(**kwargs):
+        raise RuntimeError("synthetic downloader bug")
+
+    with pytest.raises(RuntimeError, match="synthetic downloader bug"):
+        process_manifest_source(
+            _manifest_row(),
+            bucket_url="https://example.invalid",
+            selection_config={
+                "models": {
+                    "policy": "first_model",
+                    "model_id": 1,
+                }
+            },
+            cleaning_protocol="Protocol_3.2_BRI_v1.2.2",
+            pipeline_git_commit="deadbeef",
+            downloader=downloader,
+        )
+
+
+def test_process_manifest_source_rejects_malformed_manifest_row() -> None:
+    from pdbclean.quality_runner import (
+        QualityRunnerError,
+        process_manifest_source,
+    )
+
+    row = _manifest_row()
+    del row["etag"]
+
+    with pytest.raises(
+        QualityRunnerError,
+        match=r"missing required field\(s\): etag",
+    ):
+        process_manifest_source(
+            row,
+            bucket_url="https://example.invalid",
+            selection_config={
+                "models": {
+                    "policy": "first_model",
+                    "model_id": 1,
+                }
+            },
+            cleaning_protocol="Protocol_3.2_BRI_v1.2.2",
+            pipeline_git_commit="deadbeef",
+        )

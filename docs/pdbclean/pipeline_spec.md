@@ -656,6 +656,27 @@ The quality summary must reconcile:
 - dirty residues by rule/type;
 - processing errors.
 
+### 7.6.1 Processing-Error Stage Vocabulary
+
+Quality-stage processing errors use stable stage identifiers:
+
+- `source_download_verify`: the source object could not be downloaded and
+  verified against its manifest metadata. This includes transport failures,
+  byte-count mismatches, missing response ETags, and ETag mismatches. These
+  are source-level errors and therefore have null `model_id` and
+  `label_chain_id`.
+- `mmcif_parse`: verified source bytes could not be parsed into Silver chain
+  observations. These are source-level errors and therefore have null
+  `model_id` and `label_chain_id`.
+- `quality_cleaning`: an individual selected-model chain encountered an
+  unexpected exception during Protocol 3.2 cleaning or Gold
+  materialization. These are chain-level errors and carry both `model_id`
+  and `label_chain_id`.
+
+The downloader performs transfer and manifest verification as one operation,
+so download and verification failures are deliberately not classified by
+parsing exception-message text.
+
 ### 7.7 Task Summary Contract
 
 Each quality-cleaning task must atomically write:

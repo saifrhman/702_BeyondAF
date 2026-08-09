@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from collections.abc import Iterable
+from collections.abc import Callable, Iterable, Mapping
 from dataclasses import dataclass
 from typing import Any
 
@@ -19,6 +19,10 @@ from pdbclean.mmcif_parser import (
     ChainObservation,
     MMCIFParseError,
     parse_coordinate_mmcif_bytes,
+)
+from pdbclean.snapshot import (
+    SnapshotError,
+    download_verified_s3_object_bytes,
 )
 
 
@@ -196,4 +200,122 @@ def process_verified_mmcif_bytes(
         gold_records=tuple(gold_records),
         processing_errors=tuple(processing_errors),
         source_failed=False,
+    )
+
+
+
+def process_manifest_source(
+    manifest_row: Mapping[str, Any],
+    *,
+    bucket_url: str,
+    selection_config: dict[str, Any],
+    cleaning_protocol: str,
+    pipeline_git_commit: str,
+    timeout_seconds: int = 60,
+    downloader: Callable[..., bytes] = download_verified_s3_object_bytes,
+) -> SourceQualityResult:
+    """Download, verify, parse, and quality-clean one manifest source row."""
+
+    required_fields = (
+        "snapshot",
+        "pdb_id",
+        "s3_key",
+        "size_bytes",
+        "etag",
+    )
+
+    missing = [
+        field
+        for field in required_fields
+        if field not in manifest_row
+    ]
+
+    if missing:
+        raise QualityRunnerError(
+            "Manifest row missing required field(s): "
+            + ", ".join(missing)
+        )
+
+    snapshot = manifest_row["snapshot"]
+    pdb_id = manifest_row["pdb_id"]
+    s3_key = manifest_row["s3_key"]
+    size_bytes = manifest_row["size_bytes"]
+    etag = manifest_row["etag"]
+
+    if not isinstance(snapshot, str) or not snapshot:
+        raise QualityRunnerError(
+            "Manifest row snapshot must be a non-empty string"
+        )
+
+    if not isinstance(pdb_id, str) or not pdb_id:
+        raise QualityRunnerError(
+            "Manifest row pdb_id must be a non-empty string"
+        )
+
+    if not isinstance(s3_key, str) or not s3_key:
+        raise QualityRunnerError(
+            "Manifest row s3_key must be a non-empty string"
+        )
+
+    if (
+        not isinstance(size_bytes, int)
+        or isinstance(size_bytes, bool)
+        or size_bytes <= 0
+    ):
+        raise QualityRunnerError(
+            "Manifest row size_bytes must be a positive integer"
+        )
+
+    if not isinstance(etag, str) or not etag.strip().strip('"'):
+        raise QualityRunnerError(
+            "Manifest row etag must be a non-empty string"
+        )
+
+    normalized_pdb_id = pdb_id.lower()
+
+    provenance = GoldProvenance(
+        snapshot=snapshot,
+        source_mmcif_key=s3_key,
+        source_etag=etag,
+        cleaning_protocol=cleaning_protocol,
+        pipeline_git_commit=pipeline_git_commit,
+    )
+
+    try:
+        compressed_bytes = downloader(
+            bucket_url=bucket_url,
+            s3_key=s3_key,
+            expected_size_bytes=size_bytes,
+            expected_etag=etag,
+            timeout_seconds=timeout_seconds,
+        )
+    except SnapshotError as exc:
+        return SourceQualityResult(
+            pdb_id=normalized_pdb_id,
+            parsed_silver_chain_count=0,
+            selected_silver_chain_count=0,
+            candidate_entry_count=0,
+            candidate_chain_count=0,
+            processing_errors=(
+                {
+                    "snapshot": snapshot,
+                    "pdb_id": normalized_pdb_id,
+                    "model_id": None,
+                    "label_chain_id": None,
+                    "processing_stage": "source_download_verify",
+                    "error_type": type(exc).__name__,
+                    "error_message": str(exc),
+                    "source_mmcif_key": s3_key,
+                    "source_etag": etag,
+                    "pipeline_git_commit": pipeline_git_commit,
+                },
+            ),
+            source_failed=True,
+        )
+
+    return process_verified_mmcif_bytes(
+        compressed_bytes,
+        pdb_id=normalized_pdb_id,
+        selection_config=selection_config,
+        provenance=provenance,
     )
