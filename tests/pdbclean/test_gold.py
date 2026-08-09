@@ -3,7 +3,12 @@
 import pyarrow as pa
 
 from pdbclean.cleaning import clean_protocol32_chain
-from pdbclean.gold import GoldProvenance, materialize_gold_chain
+from pdbclean.gold import (
+    GoldChainRecords,
+    GoldProvenance,
+    gold_records_to_tables,
+    materialize_gold_chain,
+)
 from pdbclean.mmcif_parser import AtomObservation, ChainObservation
 from pdbclean.schemas import (
     GOLD_ACCEPTED_CHAIN_SCHEMA,
@@ -292,3 +297,50 @@ def test_materialize_clean_accepted_chain_uses_pinned_bri_mapping() -> None:
     )
 
     assert table.num_rows == 1
+
+
+def test_gold_records_to_tables_preserves_explicit_schemas() -> None:
+    chain = ChainObservation(
+        pdb_id="test",
+        model_id=1,
+        label_chain_id="A",
+        auth_chain_id="X",
+        entity_id="1",
+        entry_has_polypeptide=True,
+        atoms=[],
+    )
+
+    result = clean_protocol32_chain(chain)
+    record = materialize_gold_chain(
+        chain,
+        result,
+        _provenance(),
+    )
+
+    tables = gold_records_to_tables([record])
+
+    assert tables.accepted_chains.num_rows == 0
+    assert tables.rejected_chains.num_rows == 0
+    assert tables.non_candidate_chains.num_rows == 1
+    assert tables.dirty_residues.num_rows == 0
+
+    assert tables.accepted_chains.schema == GOLD_ACCEPTED_CHAIN_SCHEMA
+    assert tables.rejected_chains.schema == GOLD_REJECTED_CHAIN_SCHEMA
+    assert (
+        tables.non_candidate_chains.schema
+        == GOLD_NON_CANDIDATE_CHAIN_SCHEMA
+    )
+    assert tables.dirty_residues.schema == GOLD_DIRTY_RESIDUE_SCHEMA
+
+
+def test_gold_records_to_tables_requires_one_terminal_outcome() -> None:
+    invalid = GoldChainRecords()
+
+    try:
+        gold_records_to_tables([invalid])
+    except ValueError as exc:
+        assert "exactly one terminal chain-level outcome" in str(exc)
+    else:
+        raise AssertionError(
+            "Expected invalid GoldChainRecords to raise ValueError"
+        )

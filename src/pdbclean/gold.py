@@ -2,8 +2,28 @@
 
 from __future__ import annotations
 
+from collections.abc import Iterable
 from dataclasses import dataclass
 from typing import Any
+
+import pyarrow as pa
+
+from pdbclean.schemas import (
+    GOLD_ACCEPTED_CHAIN_SCHEMA,
+    GOLD_DIRTY_RESIDUE_SCHEMA,
+    GOLD_NON_CANDIDATE_CHAIN_SCHEMA,
+    GOLD_REJECTED_CHAIN_SCHEMA,
+)
+
+
+@dataclass(frozen=True)
+class GoldTables:
+    """Schema-enforced Gold quality tables for one processing batch."""
+
+    accepted_chains: pa.Table
+    rejected_chains: pa.Table
+    non_candidate_chains: pa.Table
+    dirty_residues: pa.Table
 
 
 @dataclass(frozen=True)
@@ -128,6 +148,65 @@ def _dirty_residue_records(
             "source_etag": provenance.source_etag,
         }
         for record in result.dirty_residues
+    )
+
+
+def gold_records_to_tables(
+    records: Iterable[GoldChainRecords],
+) -> GoldTables:
+    """Convert per-chain Gold records into schema-enforced Arrow tables."""
+
+    accepted_rows: list[dict[str, Any]] = []
+    rejected_rows: list[dict[str, Any]] = []
+    non_candidate_rows: list[dict[str, Any]] = []
+    dirty_rows: list[dict[str, Any]] = []
+
+    for record in records:
+        terminal_rows = (
+            record.accepted_chain,
+            record.rejected_chain,
+            record.non_candidate_chain,
+        )
+
+        terminal_count = sum(
+            row is not None
+            for row in terminal_rows
+        )
+
+        if terminal_count != 1:
+            raise ValueError(
+                "Each GoldChainRecords object must contain exactly one "
+                "terminal chain-level outcome"
+            )
+
+        if record.accepted_chain is not None:
+            accepted_rows.append(record.accepted_chain)
+
+        if record.rejected_chain is not None:
+            rejected_rows.append(record.rejected_chain)
+
+        if record.non_candidate_chain is not None:
+            non_candidate_rows.append(record.non_candidate_chain)
+
+        dirty_rows.extend(record.dirty_residues)
+
+    return GoldTables(
+        accepted_chains=pa.Table.from_pylist(
+            accepted_rows,
+            schema=GOLD_ACCEPTED_CHAIN_SCHEMA,
+        ),
+        rejected_chains=pa.Table.from_pylist(
+            rejected_rows,
+            schema=GOLD_REJECTED_CHAIN_SCHEMA,
+        ),
+        non_candidate_chains=pa.Table.from_pylist(
+            non_candidate_rows,
+            schema=GOLD_NON_CANDIDATE_CHAIN_SCHEMA,
+        ),
+        dirty_residues=pa.Table.from_pylist(
+            dirty_rows,
+            schema=GOLD_DIRTY_RESIDUE_SCHEMA,
+        ),
     )
 
 
