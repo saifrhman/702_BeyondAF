@@ -31,6 +31,10 @@ class AtomObservation:
     y: float
     z: float
 
+    # Preserve ATOM/HETATM source identity. BRI Protocol 3.2 cleaning
+    # operates on ATOM records only.
+    group_pdb: str = "ATOM"
+
     # Preserve the exact mmCIF token because BRI v1.2.2 distinguishes
     # "." from "?" during Protocol 3.2 disorder checking.
     occupancy_raw: str | None = None
@@ -206,6 +210,7 @@ def parse_coordinate_mmcif_bytes(
     block = document.sole_block()
 
     required_tags = [
+        "_atom_site.group_PDB",
         "_atom_site.label_asym_id",
         "_atom_site.label_comp_id",
         "_atom_site.label_atom_id",
@@ -221,6 +226,7 @@ def parse_coordinate_mmcif_bytes(
             )
 
     tags = [
+        "_atom_site.group_PDB",
         "_atom_site.pdbx_PDB_model_num",
         "_atom_site.label_asym_id",
         "_atom_site.auth_asym_id",
@@ -327,6 +333,10 @@ def parse_coordinate_mmcif_bytes(
 
         atom = AtomObservation(
             model_id=model_id,
+            group_pdb=value(
+                "_atom_site.group_PDB",
+                row,
+            ).strip(),
             label_chain_id=label_chain_id,
             auth_chain_id=_optional_text(
                 value("_atom_site.auth_asym_id", row)

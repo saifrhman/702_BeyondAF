@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 
 from pdbclean.mmcif_parser import ChainObservation
 
@@ -14,6 +14,29 @@ class RuleResult:
     rule_id: str
     passed: bool
     reason: str
+
+
+def protocol32_backbone_projection(
+    chain: ChainObservation,
+    *,
+    backbone_atoms: tuple[str, ...] = ("N", "CA", "C"),
+) -> ChainObservation:
+    """Return the working coordinate projection used by BRI Protocol 3.2.
+
+    BRI v1.2.2 operates on `_atom_site.group_PDB == "ATOM"` records and
+    selects the N, CA and C backbone atoms. The original parsed Silver
+    observation is not mutated.
+    """
+
+    return replace(
+        chain,
+        atoms=[
+            atom
+            for atom in chain.atoms
+            if atom.group_pdb == "ATOM"
+            and atom.atom_name in backbone_atoms
+        ],
+    )
 
 
 def evaluate_q001_entry_protein(
@@ -56,11 +79,10 @@ def q002_disordered_residue_ids(
     Alternate-location labels are not an independent rejection criterion.
     """
 
-    backbone = [
-        atom
-        for atom in chain.atoms
-        if atom.atom_name in backbone_atoms
-    ]
+    backbone = protocol32_backbone_projection(
+        chain,
+        backbone_atoms=backbone_atoms,
+    ).atoms
 
     disordered: set[int] = set()
 
@@ -154,10 +176,12 @@ def missing_internal_label_seq_ids(
     and removes the observed residue IDs plus the special residue ID 0.
     """
 
+    working = protocol32_backbone_projection(chain)
+
     observed = sorted(
         {
             atom.label_seq_id
-            for atom in chain.atoms
+            for atom in working.atoms
             if atom.label_seq_id is not None
         }
     )
@@ -183,9 +207,11 @@ def evaluate_q003_residue_continuity(
     # BRI's residue_id column is integer-typed. A missing label_seq_id in
     # our parsed representation therefore violates the executable input
     # precondition rather than representing an allowed gap.
+    working = protocol32_backbone_projection(chain)
+
     missing_identifier_count = sum(
         atom.label_seq_id is None
-        for atom in chain.atoms
+        for atom in working.atoms
     )
 
     if missing_identifier_count:
@@ -200,7 +226,7 @@ def evaluate_q003_residue_continuity(
 
     observed_ids = {
         atom.label_seq_id
-        for atom in chain.atoms
+        for atom in working.atoms
         if atom.label_seq_id is not None
     }
 
@@ -211,7 +237,7 @@ def evaluate_q003_residue_continuity(
             reason="no_observed_label_seq_ids",
         )
 
-    internal_gaps = missing_internal_label_seq_ids(chain)
+    internal_gaps = missing_internal_label_seq_ids(working)
 
     if internal_gaps:
         return RuleResult(
@@ -245,11 +271,10 @@ def q004_incomplete_residue_ids(
     already been handled by Q002 before this check is reached.
     """
 
-    backbone = [
-        atom
-        for atom in chain.atoms
-        if atom.atom_name in required_atoms
-    ]
+    backbone = protocol32_backbone_projection(
+        chain,
+        backbone_atoms=required_atoms,
+    ).atoms
 
     counts: dict[int, int] = {}
 
@@ -275,10 +300,14 @@ def evaluate_q004_backbone_completeness(
 ) -> RuleResult:
     """Q004: reproduce BRI v1.2.2 backbone completeness checking."""
 
+    working = protocol32_backbone_projection(
+        chain,
+        backbone_atoms=required_atoms,
+    )
+
     if any(
         atom.label_seq_id is None
-        for atom in chain.atoms
-        if atom.atom_name in required_atoms
+        for atom in working.atoms
     ):
         return RuleResult(
             rule_id="Q004",
@@ -288,9 +317,8 @@ def evaluate_q004_backbone_completeness(
 
     observed_residue_ids = {
         atom.label_seq_id
-        for atom in chain.atoms
-        if atom.atom_name in required_atoms
-        and atom.label_seq_id is not None
+        for atom in working.atoms
+        if atom.label_seq_id is not None
     }
 
     if not observed_residue_ids:
@@ -302,7 +330,7 @@ def evaluate_q004_backbone_completeness(
 
     incomplete = sorted(
         q004_incomplete_residue_ids(
-            chain,
+            working,
             required_atoms=required_atoms,
         )
     )
@@ -347,10 +375,12 @@ def q006_nonstandard_residue_ids(
     canonical = set(basic_amino_acid_20_s)
     nonstandard: set[int] = set()
 
-    for atom in chain.atoms:
-        if atom.atom_name not in backbone_atoms:
-            continue
+    working = protocol32_backbone_projection(
+        chain,
+        backbone_atoms=backbone_atoms,
+    )
 
+    for atom in working.atoms:
         if atom.label_seq_id is None:
             continue
 
@@ -374,13 +404,17 @@ def q006_nonstandard_residue_names(
         backbone_atoms=backbone_atoms,
     )
 
+    working = protocol32_backbone_projection(
+        chain,
+        backbone_atoms=backbone_atoms,
+    )
+
     return tuple(
         sorted(
             {
                 atom.residue_name
-                for atom in chain.atoms
-                if atom.atom_name in backbone_atoms
-                and atom.label_seq_id in dirty_ids
+                for atom in working.atoms
+                if atom.label_seq_id in dirty_ids
             }
         )
     )
@@ -451,13 +485,18 @@ def _index_q005_backbone_atoms(
     if "N" not in required_atoms:
         raise ValueError("Q005 requires N among the configured backbone atoms")
 
-    if any(atom.label_seq_id is None for atom in chain.atoms):
+    working = protocol32_backbone_projection(
+        chain,
+        backbone_atoms=required_atoms,
+    )
+
+    if any(atom.label_seq_id is None for atom in working.atoms):
         raise ValueError("Q005 requires label_seq_id for all atoms")
 
     residue_ids = sorted(
         {
             atom.label_seq_id
-            for atom in chain.atoms
+            for atom in working.atoms
             if atom.label_seq_id is not None
         }
     )
@@ -473,7 +512,7 @@ def _index_q005_backbone_atoms(
         for residue_id in residue_ids
     }
 
-    for atom in chain.atoms:
+    for atom in working.atoms:
         if atom.label_seq_id is None:
             continue
         if atom.atom_name not in required_atoms:

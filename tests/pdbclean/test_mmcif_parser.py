@@ -91,6 +91,7 @@ _entity_poly.type
 1 'polypeptide(L)'
 #
 loop_
+_atom_site.group_PDB
 _atom_site.pdbx_PDB_model_num
 _atom_site.label_asym_id
 _atom_site.auth_asym_id
@@ -104,12 +105,12 @@ _atom_site.occupancy
 _atom_site.Cartn_x
 _atom_site.Cartn_y
 _atom_site.Cartn_z
-1 A X 1 1 10 ALA N  . .    0.0 0.0 0.0
-1 A X 1 1 10 ALA CA . ?    1.0 0.0 0.0
-1 A X 1 1 10 ALA C  . 1.00 2.0 0.0 0.0
-1 A X 1 2 11 GLY N  . 1.00 3.0 0.0 0.0
-1 A X 1 2 11 GLY CA . 0.50 4.0 0.0 0.0
-1 A X 1 2 11 GLY C  A 1.00 5.0 0.0 0.0
+ATOM 1 A X 1 1 10 ALA N  . .    0.0 0.0 0.0
+ATOM 1 A X 1 1 10 ALA CA . ?    1.0 0.0 0.0
+ATOM 1 A X 1 1 10 ALA C  . 1.00 2.0 0.0 0.0
+ATOM 1 A X 1 2 11 GLY N  . 1.00 3.0 0.0 0.0
+ATOM 1 A X 1 2 11 GLY CA . 0.50 4.0 0.0 0.0
+ATOM 1 A X 1 2 11 GLY C  A 1.00 5.0 0.0 0.0
 #
 """
 
@@ -133,6 +134,7 @@ _atom_site.Cartn_z
     assert chain.atoms[0].label_seq_id == 1
     assert chain.atoms[0].residue_name == "ALA"
     assert chain.atoms[0].atom_name == "N"
+    assert chain.atoms[0].group_pdb == "ATOM"
 
     # Numeric normalization alone cannot reproduce BRI disorder_check:
     # both become None numerically, while the raw tokens remain distinct.

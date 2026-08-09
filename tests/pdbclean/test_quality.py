@@ -804,3 +804,95 @@ def test_q005_rejects_nonunique_backbone_precondition() -> None:
     assert result.passed is False
     assert result.reason.startswith("q005_precondition_failed:")
 
+
+
+def test_protocol32_projection_excludes_hetatm_from_quality_rules() -> None:
+    """BRI Protocol 3.2 cleaning operates on ATOM N/CA/C rows only."""
+
+    from pdbclean.mmcif_parser import AtomObservation
+    from pdbclean.quality import (
+        evaluate_q003_residue_continuity,
+        evaluate_q004_backbone_completeness,
+        evaluate_q005_backbone_distance,
+        protocol32_backbone_projection,
+        q006_nonstandard_residue_ids,
+    )
+
+    def atom(
+        residue_id: int,
+        atom_name: str,
+        x: float,
+        *,
+        residue_name: str = "ALA",
+        occupancy_raw: str = "1.00",
+        group_pdb: str = "ATOM",
+    ) -> AtomObservation:
+        return AtomObservation(
+            model_id=1,
+            label_chain_id="A",
+            auth_chain_id="A",
+            entity_id="1",
+            label_seq_id=residue_id,
+            auth_seq_id=str(residue_id),
+            residue_name=residue_name,
+            atom_name=atom_name,
+            alt_id=None,
+            occupancy=1.0,
+            x=x,
+            y=0.0,
+            z=0.0,
+            group_pdb=group_pdb,
+            occupancy_raw=occupancy_raw,
+        )
+
+    chain = ChainObservation(
+        pdb_id="test",
+        model_id=1,
+        label_chain_id="A",
+        entry_has_polypeptide=True,
+        atoms=[
+            atom(1, "N", 0.0),
+            atom(1, "CA", 1.0),
+            atom(1, "C", 2.0),
+            atom(2, "N", 3.0),
+            atom(2, "CA", 4.0),
+            atom(2, "C", 5.0),
+            # Must be ignored by Protocol 3.2 despite its atom name.
+            atom(
+                4,
+                "CA",
+                10.0,
+                residue_name="UNK",
+                occupancy_raw="0.50",
+                group_pdb="HETATM",
+            ),
+        ],
+    )
+
+    working = protocol32_backbone_projection(chain)
+
+    assert len(working.atoms) == 6
+    assert {atom.label_seq_id for atom in working.atoms} == {1, 2}
+    assert all(atom.group_pdb == "ATOM" for atom in working.atoms)
+
+    # Q002: bad HETATM occupancy is irrelevant.
+    assert q002_disordered_residue_ids(chain) == set()
+
+    # Q003: HETATM residue 4 must not create a false gap at residue 3.
+    assert evaluate_q003_residue_continuity(chain).passed is True
+
+    # Q004: HETATM CA must not create an incomplete extra residue.
+    assert evaluate_q004_backbone_completeness(chain).passed is True
+
+    # Q005: HETATM CA must not enter backbone indexing/distances.
+    assert (
+        evaluate_q005_backbone_distance(
+            chain,
+            required_atoms=("N", "CA", "C"),
+            minimum_distance_angstrom=0.01,
+        ).passed
+        is True
+    )
+
+    # Q006: HETATM UNK is outside the standard-residue check.
+    assert q006_nonstandard_residue_ids(chain) == set()
