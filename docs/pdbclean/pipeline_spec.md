@@ -151,6 +151,32 @@ Protocol 3.2 non-candidates, rejections, or accepted chains.
 The selected model identifier must remain part of the canonical chain key and
 all downstream Gold and BRI provenance.
 
+### 5.2 Candidate Accounting
+
+Candidate accounting is evaluated after configured model selection and before
+Q001.
+
+A selected-model chain is a Protocol 3.2 candidate when its BRI-style
+backbone projection is non-empty; that is, selecting `ATOM` rows whose atom
+names are `N`, `CA`, or `C` produces at least one row.
+
+Therefore:
+
+- `candidate_chain_count` is the number of selected-model chains with a
+  non-empty Protocol 3.2 backbone projection;
+- `candidate_entry_count` is the number of unique `pdb_id` values having at
+  least one candidate chain;
+- selected-model chains with an empty projection are counted as
+  non-candidates instead.
+
+Candidate status is established before Q001. An entry may therefore count as
+a candidate entry and subsequently have its candidate chains rejected by the
+entry-level Q001 protein check.
+
+For an entry with multiple candidate chains, the entry contributes one to
+`candidate_entry_count` and one per candidate chain to
+`candidate_chain_count`.
+
 ## 6. Protocol 3.2 Quality Cleaning
 
 The scientific cleaning contract is Protocol 3.2 of Anosova et al. The pinned

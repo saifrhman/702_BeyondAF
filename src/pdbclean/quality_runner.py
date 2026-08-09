@@ -5,6 +5,7 @@ from __future__ import annotations
 from collections.abc import Iterable
 from typing import Any
 
+from pdbclean.cleaning import is_protocol32_candidate
 from pdbclean.mmcif_parser import ChainObservation
 
 
@@ -49,3 +50,28 @@ def select_configured_model_chains(
         for chain in chains
         if chain.model_id == model_id
     ]
+
+
+
+def candidate_accounting(
+    chains: Iterable[ChainObservation],
+) -> tuple[int, int]:
+    """Return candidate-entry and candidate-chain counts."""
+
+    candidate_chains = [
+        chain
+        for chain in chains
+        if is_protocol32_candidate(chain)
+    ]
+
+    candidate_entry_count = len(
+        {
+            chain.pdb_id
+            for chain in candidate_chains
+        }
+    )
+
+    return (
+        candidate_entry_count,
+        len(candidate_chains),
+    )
