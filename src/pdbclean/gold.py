@@ -54,6 +54,7 @@ class QualityTaskContext:
     failed_source_object_count: int
 
     parsed_silver_chain_count: int
+    selected_silver_chain_count: int
     candidate_entry_count: int
     candidate_chain_count: int
 
@@ -299,7 +300,7 @@ def build_quality_task_summary(
     )
 
     chain_accounting_valid = (
-        context.parsed_silver_chain_count
+        context.selected_silver_chain_count
         == accepted_count
         + rejected_count
         + non_candidate_count
@@ -336,6 +337,9 @@ def build_quality_task_summary(
         ),
         "failed_source_object_count": context.failed_source_object_count,
         "parsed_silver_chain_count": context.parsed_silver_chain_count,
+        "selected_silver_chain_count": (
+            context.selected_silver_chain_count
+        ),
         "candidate_entry_count": context.candidate_entry_count,
         "candidate_chain_count": context.candidate_chain_count,
         "non_candidate_chain_count": non_candidate_count,
@@ -372,7 +376,7 @@ def build_quality_task_summary(
             for row in error_rows
         ),
         "source_object_accounting_valid": source_accounting_valid,
-        "parsed_chain_accounting_valid": chain_accounting_valid,
+        "selected_chain_accounting_valid": chain_accounting_valid,
     }
 
 
@@ -397,10 +401,10 @@ def write_quality_task_summary_atomic(
             "source-object accounting failed"
         )
 
-    if summary.get("parsed_chain_accounting_valid") is not True:
+    if summary.get("selected_chain_accounting_valid") is not True:
         raise ValueError(
             "Cannot publish quality-task summary: "
-            "parsed-chain accounting failed"
+            "selected-chain accounting failed"
         )
 
     task_id = str(summary.get("task_id", ""))

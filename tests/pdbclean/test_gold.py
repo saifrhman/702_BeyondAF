@@ -533,6 +533,7 @@ def test_build_quality_task_summary_separates_error_levels() -> None:
             successful_source_object_count=1,
             failed_source_object_count=1,
             parsed_silver_chain_count=2,
+            selected_silver_chain_count=2,
             candidate_entry_count=1,
             candidate_chain_count=1,
             slurm_job_id="12345",
@@ -547,7 +548,7 @@ def test_build_quality_task_summary_separates_error_levels() -> None:
     assert summary["source_entry_processing_error_count"] == 1
 
     assert summary["source_object_accounting_valid"] is True
-    assert summary["parsed_chain_accounting_valid"] is True
+    assert summary["selected_chain_accounting_valid"] is True
 
     assert summary["processing_errors_by_stage"] == {
         "mmcif_parse": 1,
@@ -578,13 +579,14 @@ def test_build_quality_task_summary_detects_bad_accounting() -> None:
             successful_source_object_count=1,
             failed_source_object_count=0,
             parsed_silver_chain_count=1,
+            selected_silver_chain_count=1,
             candidate_entry_count=0,
             candidate_chain_count=0,
         ),
     )
 
     assert summary["source_object_accounting_valid"] is False
-    assert summary["parsed_chain_accounting_valid"] is False
+    assert summary["selected_chain_accounting_valid"] is False
 
 
 def test_write_quality_task_summary_atomic(tmp_path) -> None:
@@ -604,6 +606,7 @@ def test_write_quality_task_summary_atomic(tmp_path) -> None:
             successful_source_object_count=0,
             failed_source_object_count=0,
             parsed_silver_chain_count=0,
+            selected_silver_chain_count=0,
             candidate_entry_count=0,
             candidate_chain_count=0,
         ),
@@ -621,7 +624,7 @@ def test_write_quality_task_summary_atomic(tmp_path) -> None:
     payload = output.read_text(encoding="utf-8")
 
     assert payload.endswith("\n")
-    assert '"parsed_chain_accounting_valid": true' in payload
+    assert '"selected_chain_accounting_valid": true' in payload
     assert '"source_object_accounting_valid": true' in payload
 
     # Rewriting the same logical summary is deterministic.
@@ -651,6 +654,7 @@ def test_write_quality_task_summary_refuses_invalid_accounting(
             successful_source_object_count=0,
             failed_source_object_count=0,
             parsed_silver_chain_count=0,
+            selected_silver_chain_count=0,
             candidate_entry_count=0,
             candidate_chain_count=0,
         ),
@@ -688,6 +692,7 @@ def test_write_quality_task_summary_rejects_unsafe_task_id(
             successful_source_object_count=0,
             failed_source_object_count=0,
             parsed_silver_chain_count=0,
+            selected_silver_chain_count=0,
             candidate_entry_count=0,
             candidate_chain_count=0,
         ),
@@ -699,3 +704,54 @@ def test_write_quality_task_summary_rejects_unsafe_task_id(
         assert "Unsafe quality-task task_id" in str(exc)
     else:
         raise AssertionError("Expected unsafe task_id to be rejected")
+
+
+def test_quality_task_summary_accounts_only_selected_model_chains() -> None:
+    chain = ChainObservation(
+        pdb_id="test",
+        model_id=1,
+        label_chain_id="A",
+        auth_chain_id="X",
+        entity_id="1",
+        entry_has_polypeptide=True,
+        atoms=[],
+    )
+
+    record = materialize_gold_chain(
+        chain,
+        clean_protocol32_chain(chain),
+        _provenance(),
+    )
+    tables = gold_records_to_tables([record])
+
+    summary = build_quality_task_summary(
+        tables,
+        QualityTaskContext(
+            task_id="models",
+            snapshot="20260101",
+            cleaning_protocol="Protocol_3.2_BRI_v1.2.2",
+            pipeline_git_commit="deadbeef",
+            started_at_utc="2026-08-09T20:00:00Z",
+            completed_at_utc="2026-08-09T20:00:01Z",
+            runtime_seconds=1.0,
+            input_source_object_count=1,
+            successful_source_object_count=1,
+            failed_source_object_count=0,
+
+            # Parser observed model-1 and model-2 chains.
+            parsed_silver_chain_count=2,
+
+            # Only configured model 1 entered quality cleaning.
+            selected_silver_chain_count=1,
+
+            candidate_entry_count=0,
+            candidate_chain_count=0,
+        ),
+    )
+
+    assert summary["parsed_silver_chain_count"] == 2
+    assert summary["selected_silver_chain_count"] == 1
+    assert summary["non_candidate_chain_count"] == 1
+
+    assert summary["source_object_accounting_valid"] is True
+    assert summary["selected_chain_accounting_valid"] is True

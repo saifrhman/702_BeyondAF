@@ -664,7 +664,8 @@ The source-object accounting invariant is:
 
 The summary must include the following chain and residue counts:
 
-- parsed Silver chain count;
+- parsed Silver chain count across all deposited models;
+- selected Silver chain count after configured model selection;
 - candidate entry count;
 - candidate chain count;
 - non-candidate chain count;
@@ -681,9 +682,13 @@ A processing-error record is chain-level only when both `model_id` and
 `label_chain_id` are available. Errors without complete canonical chain
 identity are counted as source/entry-level errors.
 
-The parsed-chain accounting invariant is:
+The selected-chain accounting invariant is:
 
-`parsed_silver_chain_count = accepted_chain_count + rejected_chain_count + non_candidate_chain_count + chain_level_processing_error_count`
+`selected_silver_chain_count = accepted_chain_count + rejected_chain_count + non_candidate_chain_count + chain_level_processing_error_count`
+
+`parsed_silver_chain_count` is deliberately not used in this equation because
+the parser preserves chains from models outside the configured processing
+scope.
 
 Dirty-residue records are additional lineage and are deliberately excluded
 from this equation.
@@ -701,7 +706,7 @@ The task summary must additionally contain deterministic count mappings for:
 - processing errors by error type.
 
 The summary must contain explicit Boolean validation results for the
-source-object and parsed-chain accounting invariants. A task must not be
+source-object and selected-chain accounting invariants. A task must not be
 marked successful when either required accounting invariant is false.
 
 Task-summary JSON must be written to a temporary path and atomically renamed
