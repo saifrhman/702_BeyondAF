@@ -759,6 +759,29 @@ marked successful when either required accounting invariant is false.
 Task-summary JSON must be written to a temporary path and atomically renamed
 only after the summary has been fully serialized.
 
+### 7.7.1 Task Publication Order and Completion
+
+A quality task must publish outputs in the following order:
+
+1. Materialize all Gold tables and build the task summary in memory.
+2. Validate both required accounting invariants.
+3. Atomically write the five task-level Parquet shards:
+   accepted, rejected, non-candidates, dirty residues, and processing errors.
+4. Atomically write `summaries/task_<task_id>.json` last.
+
+The task-summary file is the task-level completion marker. A task is complete
+only when its five expected Parquet shards exist and its valid task-summary
+JSON has been published.
+
+If execution fails after one or more Parquet shards have been written but
+before the summary is published, the task is incomplete. Rerunning the same
+task must replace the deterministic task shard paths atomically rather than
+append duplicate records.
+
+The task-summary completion marker is distinct from the release-level
+`_SUCCESS` marker. `_SUCCESS` is written only after all tasks and release-wide
+validation have completed successfully.
+
 ## 8. BRI Generation
 
 BRI representations are generated only for chains accepted by the

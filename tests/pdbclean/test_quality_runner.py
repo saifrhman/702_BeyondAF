@@ -719,3 +719,193 @@ def test_process_manifest_batch_empty_partition() -> None:
     assert result.tables.non_candidate_chains.num_rows == 0
     assert result.tables.dirty_residues.num_rows == 0
     assert result.tables.processing_errors.num_rows == 0
+
+
+def _valid_empty_batch():
+    from pdbclean.gold import gold_records_to_tables
+    from pdbclean.quality_runner import QualityBatchResult
+
+    return QualityBatchResult(
+        input_source_object_count=0,
+        successful_source_object_count=0,
+        failed_source_object_count=0,
+        parsed_silver_chain_count=0,
+        selected_silver_chain_count=0,
+        candidate_entry_count=0,
+        candidate_chain_count=0,
+        tables=gold_records_to_tables([]),
+    )
+
+
+def test_publish_quality_batch_writes_shards_before_summary(tmp_path) -> None:
+    from pdbclean.quality_runner import publish_quality_batch
+
+    calls = []
+
+    def shard_writer(tables, output_root, task_id):
+        calls.append(("shards", str(task_id)))
+        return {
+            "accepted": tmp_path / "accepted.parquet",
+            "rejected": tmp_path / "rejected.parquet",
+            "non_candidates": tmp_path / "non_candidates.parquet",
+            "dirty_residues": tmp_path / "dirty_residues.parquet",
+            "errors": tmp_path / "errors.parquet",
+        }
+
+    def summary_writer(summary, output_root):
+        calls.append(("summary", summary["task_id"]))
+        return tmp_path / "summary.json"
+
+    publication = publish_quality_batch(
+        _valid_empty_batch(),
+        output_root=tmp_path,
+        task_id="17",
+        snapshot="20260101",
+        cleaning_protocol="Protocol_3.2_BRI_v1.2.2",
+        pipeline_git_commit="deadbeef",
+        started_at_utc="2026-08-09T20:00:00Z",
+        completed_at_utc="2026-08-09T20:00:01Z",
+        runtime_seconds=1.0,
+        shard_writer=shard_writer,
+        summary_writer=summary_writer,
+    )
+
+    assert calls == [
+        ("shards", "17"),
+        ("summary", "17"),
+    ]
+    assert publication.summary["source_object_accounting_valid"] is True
+    assert publication.summary["selected_chain_accounting_valid"] is True
+    assert publication.summary_path == tmp_path / "summary.json"
+
+
+def test_publish_quality_batch_rejects_bad_accounting_before_writes(
+    tmp_path,
+) -> None:
+    from pdbclean.gold import gold_records_to_tables
+    from pdbclean.quality_runner import (
+        QualityBatchResult,
+        QualityRunnerError,
+        publish_quality_batch,
+    )
+
+    batch = QualityBatchResult(
+        input_source_object_count=1,
+        successful_source_object_count=0,
+        failed_source_object_count=0,
+        parsed_silver_chain_count=0,
+        selected_silver_chain_count=0,
+        candidate_entry_count=0,
+        candidate_chain_count=0,
+        tables=gold_records_to_tables([]),
+    )
+
+    calls = []
+
+    def shard_writer(*args, **kwargs):
+        calls.append("shards")
+        raise AssertionError("Shard writer must not run")
+
+    def summary_writer(*args, **kwargs):
+        calls.append("summary")
+        raise AssertionError("Summary writer must not run")
+
+    with pytest.raises(
+        QualityRunnerError,
+        match="source-object accounting failed",
+    ):
+        publish_quality_batch(
+            batch,
+            output_root=tmp_path,
+            task_id="18",
+            snapshot="20260101",
+            cleaning_protocol="Protocol_3.2_BRI_v1.2.2",
+            pipeline_git_commit="deadbeef",
+            started_at_utc="2026-08-09T20:00:00Z",
+            completed_at_utc="2026-08-09T20:00:01Z",
+            runtime_seconds=1.0,
+            shard_writer=shard_writer,
+            summary_writer=summary_writer,
+        )
+
+    assert calls == []
+
+
+def test_publish_quality_batch_summary_failure_leaves_no_completion_marker(
+    tmp_path,
+) -> None:
+    from pdbclean.quality_runner import publish_quality_batch
+
+    calls = []
+
+    def shard_writer(tables, output_root, task_id):
+        calls.append("shards")
+        return {
+            "accepted": tmp_path / "accepted" / "task_19.parquet",
+            "rejected": tmp_path / "rejected" / "task_19.parquet",
+            "non_candidates": (
+                tmp_path / "non_candidates" / "task_19.parquet"
+            ),
+            "dirty_residues": (
+                tmp_path / "dirty_residues" / "task_19.parquet"
+            ),
+            "errors": tmp_path / "errors" / "task_19.parquet",
+        }
+
+    def summary_writer(summary, output_root):
+        calls.append("summary")
+        raise OSError("synthetic summary publication failure")
+
+    with pytest.raises(
+        OSError,
+        match="synthetic summary publication failure",
+    ):
+        publish_quality_batch(
+            _valid_empty_batch(),
+            output_root=tmp_path,
+            task_id="19",
+            snapshot="20260101",
+            cleaning_protocol="Protocol_3.2_BRI_v1.2.2",
+            pipeline_git_commit="deadbeef",
+            started_at_utc="2026-08-09T20:00:00Z",
+            completed_at_utc="2026-08-09T20:00:01Z",
+            runtime_seconds=1.0,
+            shard_writer=shard_writer,
+            summary_writer=summary_writer,
+        )
+
+    assert calls == ["shards", "summary"]
+    assert not (tmp_path / "summaries" / "task_19.json").exists()
+
+
+def test_publish_quality_batch_writes_real_task_outputs(tmp_path) -> None:
+    from pdbclean.quality_runner import publish_quality_batch
+
+    publication = publish_quality_batch(
+        _valid_empty_batch(),
+        output_root=tmp_path,
+        task_id="20",
+        snapshot="20260101",
+        cleaning_protocol="Protocol_3.2_BRI_v1.2.2",
+        pipeline_git_commit="deadbeef",
+        started_at_utc="2026-08-09T20:00:00Z",
+        completed_at_utc="2026-08-09T20:00:01Z",
+        runtime_seconds=1.0,
+    )
+
+    assert set(publication.shard_paths) == {
+        "accepted",
+        "rejected",
+        "non_candidates",
+        "dirty_residues",
+        "errors",
+    }
+
+    for path in publication.shard_paths.values():
+        assert path.exists()
+
+    assert publication.summary_path == (
+        tmp_path / "summaries" / "task_20.json"
+    )
+    assert publication.summary_path.exists()
+    assert not list(tmp_path.rglob("*.tmp"))

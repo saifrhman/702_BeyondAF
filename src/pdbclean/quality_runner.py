@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from collections.abc import Callable, Iterable, Mapping
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Any
 
 from pdbclean.cleaning import (
@@ -14,8 +15,12 @@ from pdbclean.gold import (
     GoldChainRecords,
     GoldProvenance,
     GoldTables,
+    QualityTaskContext,
+    build_quality_task_summary,
     gold_records_to_tables,
     materialize_gold_chain,
+    write_gold_quality_shards,
+    write_quality_task_summary_atomic,
 )
 from pdbclean.mmcif_parser import (
     ChainObservation,
@@ -60,6 +65,15 @@ class QualityBatchResult:
     candidate_chain_count: int
 
     tables: GoldTables
+
+
+@dataclass(frozen=True)
+class QualityTaskPublication:
+    """Published outputs and summary for one completed quality task."""
+
+    shard_paths: dict[str, Path]
+    summary_path: Path
+    summary: dict[str, Any]
 
 
 class QualityRunnerError(RuntimeError):
@@ -403,4 +417,97 @@ def process_manifest_batch(
         candidate_entry_count=candidate_entry_count,
         candidate_chain_count=candidate_chain_count,
         tables=tables,
+    )
+
+
+
+def publish_quality_batch(
+    batch: QualityBatchResult,
+    *,
+    output_root: str | Path,
+    task_id: str | int,
+    snapshot: str,
+    cleaning_protocol: str,
+    pipeline_git_commit: str,
+    started_at_utc: str,
+    completed_at_utc: str,
+    runtime_seconds: float,
+    slurm_job_id: str | None = None,
+    slurm_array_task_id: str | None = None,
+    peak_memory_bytes: int | None = None,
+    shard_writer: Callable[..., dict[str, Path]] = write_gold_quality_shards,
+    summary_writer: Callable[..., Path] = write_quality_task_summary_atomic,
+) -> QualityTaskPublication:
+    """Validate and publish one quality task, writing its summary last."""
+
+    task_id_text = str(task_id)
+
+    # Validate path safety before any Parquet shard can be created.
+    if (
+        not task_id_text
+        or "/" in task_id_text
+        or "\\" in task_id_text
+        or task_id_text in {".", ".."}
+    ):
+        raise QualityRunnerError(
+            f"Unsafe quality-task task_id: {task_id_text!r}"
+        )
+
+    context = QualityTaskContext(
+        task_id=task_id_text,
+        snapshot=snapshot,
+        cleaning_protocol=cleaning_protocol,
+        pipeline_git_commit=pipeline_git_commit,
+        started_at_utc=started_at_utc,
+        completed_at_utc=completed_at_utc,
+        runtime_seconds=runtime_seconds,
+        input_source_object_count=batch.input_source_object_count,
+        successful_source_object_count=(
+            batch.successful_source_object_count
+        ),
+        failed_source_object_count=batch.failed_source_object_count,
+        parsed_silver_chain_count=batch.parsed_silver_chain_count,
+        selected_silver_chain_count=batch.selected_silver_chain_count,
+        candidate_entry_count=batch.candidate_entry_count,
+        candidate_chain_count=batch.candidate_chain_count,
+        slurm_job_id=slurm_job_id,
+        slurm_array_task_id=slurm_array_task_id,
+        peak_memory_bytes=peak_memory_bytes,
+    )
+
+    summary = build_quality_task_summary(
+        batch.tables,
+        context,
+    )
+
+    # Accounting must be valid before any task output is published.
+    if summary.get("source_object_accounting_valid") is not True:
+        raise QualityRunnerError(
+            "Cannot publish quality task: "
+            "source-object accounting failed"
+        )
+
+    if summary.get("selected_chain_accounting_valid") is not True:
+        raise QualityRunnerError(
+            "Cannot publish quality task: "
+            "selected-chain accounting failed"
+        )
+
+    shard_paths = shard_writer(
+        batch.tables,
+        output_root,
+        task_id_text,
+    )
+
+    # The summary is intentionally published last and acts as the
+    # task-level completion marker.
+    summary_path = summary_writer(
+        summary,
+        output_root,
+    )
+
+    return QualityTaskPublication(
+        shard_paths=shard_paths,
+        summary_path=summary_path,
+        summary=summary,
     )
