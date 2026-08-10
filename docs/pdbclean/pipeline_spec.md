@@ -52,10 +52,14 @@ No structural filtering occurs in this layer.
 
 ### Silver Layer
 
-The Silver layer stores parsed structural observations before acceptance or
-rejection decisions are applied.
+The Silver layer is the deterministic in-memory parsed representation used
+between immutable source mmCIF objects and Gold quality decisions.
 
-It contains one record per candidate chain, including:
+It is not published as a separate persisted dataset in this pipeline version.
+Instead, Silver observations are reconstructed from the exact immutable source
+object identified by the Bronze manifest S3 key, byte size and ETag.
+
+The parsed representation preserves, for every deposited chain and model:
 
 - PDB ID.
 - Model ID.
@@ -63,12 +67,16 @@ It contains one record per candidate chain, including:
 - Label chain ID.
 - Author chain ID.
 - Polymer type.
-- Residue identifiers.
-- Residue names.
-- Atom observations.
-- Occupancy information.
+- Residue identifiers and names.
+- Full atom observations required by the parser.
+- Raw occupancy information.
 - Alternate-location information.
 - Source-object lineage.
+
+Persisting a second copy of the structural snapshot is unnecessary for
+reproducibility because the immutable manifest identifies the exact source
+bytes and the versioned parser defines the deterministic Bronze-to-Silver
+transformation.
 
 ### Gold Layer
 
@@ -145,8 +153,10 @@ Therefore only parsed chains whose `model_id` equals the configured
 quality cleaning.
 
 Chains from other models are outside the processing scope of this release.
-They remain recoverable from the immutable source mmCIF but are not emitted as
-Protocol 3.2 non-candidates, rejections, or accepted chains.
+Their parsed observations exist only in the in-memory Silver representation
+during source processing and remain reproducible from the immutable source
+mmCIF. They are not emitted as Protocol 3.2 non-candidates, rejections, or
+accepted chains.
 
 The selected model identifier must remain part of the canonical chain key and
 all downstream Gold and BRI provenance.
@@ -187,10 +197,11 @@ The rules in this protocol version are therefore not independent optional
 filters. They form one stateful cleaning procedure. Residues can be marked
 dirty and removed while a remaining continuous chain segment is retained.
 
-For auditability, the pipeline preserves both:
+For auditability, the pipeline preserves:
 
-- the original deposited observations in Silver; and
-- all residue removals and terminal chain outcomes in Gold.
+- the immutable source-object identity needed to reproduce the original
+  deposited observations through the deterministic Silver parser; and
+- all residue removals and terminal chain outcomes in persisted Gold outputs.
 
 ### 6.1 Backbone Projection
 
@@ -207,17 +218,18 @@ This restricts the working coordinates to `ATOM` records whose atom names are:
 Side-chain atoms and HETATM records are therefore outside the operational
 backbone-cleaning input.
 
-The original Silver observations remain unchanged.
+The in-memory Silver observations remain unchanged; the Protocol 3.2
+projection is derived without mutating them.
 
 A Silver chain becomes a Protocol 3.2 chain candidate only when this
 BRI-style projection is non-empty.
 
 Therefore:
 
-- HETATM-only chains are preserved in Silver but are not Protocol 3.2
-  candidates;
-- ATOM chains containing no N, CA, or C rows are preserved in Silver but are
-  not Protocol 3.2 candidates;
+- HETATM-only chains remain represented in the in-memory Silver parse but
+  are not Protocol 3.2 candidates;
+- ATOM chains containing no N, CA, or C rows remain represented in the
+  in-memory Silver parse but are not Protocol 3.2 candidates;
 - these non-candidate chains are not Q001-Q006 scientific rejections and are
   not processing errors.
 
