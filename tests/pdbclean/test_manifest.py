@@ -6,6 +6,7 @@ import pytest
 from pdbclean.manifest import (
     ManifestError,
     manifest_partition_count,
+    resolve_manifest_snapshot,
     select_manifest_partition,
     validate_manifest_table,
 )
@@ -274,4 +275,115 @@ def test_manifest_partition_rejects_invalid_batch_size(
         manifest_partition_count(
             10,
             batch_size,
+        )
+
+
+def test_resolve_manifest_snapshot_matches_fixed_config() -> None:
+    table = pa.Table.from_pylist(
+        [
+            {"snapshot": "20260101"},
+            {"snapshot": "20260101"},
+        ]
+    )
+
+    observed = resolve_manifest_snapshot(
+        table,
+        {
+            "mode": "fixed",
+            "snapshot_id": "20260101",
+        },
+    )
+
+    assert observed == "20260101"
+
+
+def test_resolve_manifest_snapshot_rejects_fixed_mismatch() -> None:
+    table = pa.Table.from_pylist(
+        [{"snapshot": "20260401"}]
+    )
+
+    with pytest.raises(
+        ManifestError,
+        match="does not match configured fixed snapshot",
+    ):
+        resolve_manifest_snapshot(
+            table,
+            {
+                "mode": "fixed",
+                "snapshot_id": "20260101",
+            },
+        )
+
+
+def test_resolve_manifest_snapshot_uses_manifest_for_latest_complete() -> None:
+    table = pa.Table.from_pylist(
+        [
+            {"snapshot": "20261001"},
+            {"snapshot": "20261001"},
+        ]
+    )
+
+    observed = resolve_manifest_snapshot(
+        table,
+        {
+            "mode": "latest_complete",
+        },
+    )
+
+    assert observed == "20261001"
+
+
+def test_resolve_manifest_snapshot_rejects_mixed_snapshots() -> None:
+    table = pa.Table.from_pylist(
+        [
+            {"snapshot": "20260101"},
+            {"snapshot": "20260401"},
+        ]
+    )
+
+    with pytest.raises(
+        ManifestError,
+        match="exactly one snapshot identifier",
+    ):
+        resolve_manifest_snapshot(
+            table,
+            {
+                "mode": "latest_complete",
+            },
+        )
+
+
+def test_resolve_manifest_snapshot_rejects_empty_manifest() -> None:
+    table = pa.table(
+        {
+            "snapshot": pa.array([], type=pa.string()),
+        }
+    )
+
+    with pytest.raises(
+        ManifestError,
+        match="does not contain a snapshot identifier",
+    ):
+        resolve_manifest_snapshot(
+            table,
+            {
+                "mode": "latest_complete",
+            },
+        )
+
+
+def test_resolve_manifest_snapshot_rejects_missing_snapshot_column() -> None:
+    table = pa.Table.from_pylist(
+        [{"pdb_id": "1abc"}]
+    )
+
+    with pytest.raises(
+        ManifestError,
+        match="missing required column: snapshot",
+    ):
+        resolve_manifest_snapshot(
+            table,
+            {
+                "mode": "latest_complete",
+            },
         )

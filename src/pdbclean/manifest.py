@@ -312,3 +312,56 @@ def select_manifest_partition(
     )
 
     return table.slice(start, length)
+
+
+def resolve_manifest_snapshot(
+    table: pa.Table,
+    snapshot_config: dict[str, object],
+) -> str:
+    """Resolve and validate the single snapshot represented by a manifest."""
+
+    if "snapshot" not in table.column_names:
+        raise ManifestError(
+            "Manifest is missing required column: snapshot"
+        )
+
+    snapshots = {
+        str(value)
+        for value in table["snapshot"].to_pylist()
+        if value is not None
+    }
+
+    if not snapshots:
+        raise ManifestError(
+            "Manifest does not contain a snapshot identifier"
+        )
+
+    if len(snapshots) != 1:
+        raise ManifestError(
+            "Manifest must contain exactly one snapshot identifier"
+        )
+
+    manifest_snapshot = next(iter(snapshots))
+
+    mode = snapshot_config.get("mode")
+
+    if mode == "fixed":
+        configured_snapshot = snapshot_config.get("snapshot_id")
+
+        if manifest_snapshot != configured_snapshot:
+            raise ManifestError(
+                f"Manifest snapshot {manifest_snapshot!r} does not match "
+                f"configured fixed snapshot {configured_snapshot!r}"
+            )
+
+    elif mode == "latest_complete":
+        # The immutable manifest is the resolved snapshot contract for this
+        # execution. No snapshot-specific identifier is hard-coded here.
+        pass
+
+    else:
+        raise ManifestError(
+            f"Unsupported snapshot mode: {mode!r}"
+        )
+
+    return manifest_snapshot
