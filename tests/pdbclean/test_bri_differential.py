@@ -1,11 +1,22 @@
 """Differential tests against pinned BRI v1.2.2 cleaning behaviour."""
 
+import gzip
+import hashlib
+import tempfile
+from pathlib import Path
+
 import pandas as pd
 
 from bri.filter import integrated_chainwise_filter
+from bri.pdbx2df import Entry
 
 from pdbclean.cleaning import clean_protocol32_chain
-from pdbclean.mmcif_parser import AtomObservation, ChainObservation
+from pdbclean.mmcif_parser import (
+    AtomObservation,
+    ChainObservation,
+    parse_coordinate_mmcif_bytes,
+)
+from pdbclean.quality import protocol32_backbone_projection
 
 
 def _atom(
@@ -530,3 +541,119 @@ def test_preexisting_internal_q003_gap_matches_bri() -> None:
 
     assert _our_clean_residue_ids(chain) == ()
     assert _bri_clean_residue_ids(bri_result) == ()
+
+def test_1aam_revision_projection_and_outcome_match_pinned_bri() -> None:
+    """PDB revision, not special-case logic, changes the 1AAM-A outcome."""
+
+    fixture_root = (
+        Path(__file__).parent
+        / "fixtures"
+        / "1aam_revisions"
+    )
+
+    cases = (
+        (
+            "v1.3",
+            "pdb_00001aam_xyz_v1-3.cif.gz",
+            "bfe37d729a1feac8d4b2d8a57b7d1d8d088bd8f34d0817c5788699042ec1b012",
+            396,
+            True,
+            "accepted",
+        ),
+        (
+            "v2.0",
+            "pdb_00001aam_xyz_v2-0.cif.gz",
+            "57dd5b1c7bd03b38b1fcc3348805b553d762c3dfb0d2bd30e3aa13678a42d06f",
+            395,
+            False,
+            "rejected",
+        ),
+    )
+
+    for (
+        version,
+        filename,
+        expected_sha256,
+        expected_residue_count,
+        residue_246_present,
+        expected_status,
+    ) in cases:
+        compressed = (fixture_root / filename).read_bytes()
+
+        assert hashlib.sha256(compressed).hexdigest() == expected_sha256
+
+        # Pinned BRI parses and projects the deposited revision itself.
+        with tempfile.TemporaryDirectory() as tmp:
+            cif_path = Path(tmp) / "1aam.cif"
+            cif_path.write_bytes(gzip.decompress(compressed))
+
+            bri_entry = Entry(str(cif_path))
+            assert len(bri_entry.chains) == 1
+
+            bri_features = bri_entry.chains[0].get_feature(
+                "features",
+                HETATM=False,
+            ).copy()
+
+            bri_ids = tuple(
+                sorted(
+                    {
+                        int(value)
+                        for value in bri_features["residue_id"]
+                    }
+                )
+            )
+
+            bri_result = integrated_chainwise_filter(
+                bri_features.copy(deep=True)
+            )
+
+        assert bri_result is not None
+
+        # PDBClean parses the exact same compressed mmCIF revision.
+        parsed = parse_coordinate_mmcif_bytes(
+            compressed,
+            pdb_id="1aam",
+        )
+
+        our_chain = next(
+            chain
+            for chain in parsed
+            if chain.model_id == 1
+            and chain.label_chain_id == "A"
+        )
+
+        projected = protocol32_backbone_projection(our_chain)
+
+        our_ids = tuple(
+            sorted(
+                {
+                    int(atom.label_seq_id)
+                    for atom in projected.atoms
+                    if atom.label_seq_id is not None
+                }
+            )
+        )
+
+        ours = clean_protocol32_chain(our_chain)
+
+        # Both implementations must see exactly the same backbone input.
+        assert our_ids == bri_ids
+        assert len(our_ids) == expected_residue_count
+        assert (246 in our_ids) is residue_246_present
+
+        # Both implementations must reach the same final decision.
+        assert ours.status == expected_status
+        assert ours.status == _bri_terminal_status(bri_result)
+
+        if version == "v1.3":
+            assert our_ids == tuple(range(1, 397))
+            assert _our_clean_residue_ids(our_chain) == tuple(range(1, 397))
+            assert _bri_clean_residue_ids(bri_result) == tuple(range(1, 397))
+
+        if version == "v2.0":
+            assert _bri_has_chain_break(bri_result) is True
+            assert ours.terminal_stage == "Q003_after_Q002"
+            assert ours.missing_label_seq_ids == (246,)
+            assert _our_clean_residue_ids(our_chain) == ()
+            assert _bri_clean_residue_ids(bri_result) == ()
