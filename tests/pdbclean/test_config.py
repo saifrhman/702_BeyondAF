@@ -242,3 +242,32 @@ def test_execution_boolean_fields_are_validated(
         match=rf"execution\.{field} must be a boolean",
     ):
         load_config(config_path)
+
+
+@pytest.mark.parametrize(
+    ("field", "value"),
+    [
+        ("dataset_name", ""),
+        ("dataset_name", None),
+        ("protocol_version", ""),
+        ("protocol_version", None),
+    ],
+)
+def test_invalid_release_provenance_is_rejected(
+    tmp_path: Path,
+    field: str,
+    value,
+) -> None:
+    data = yaml.safe_load(CONFIG_PATH.read_text())
+    data["release"][field] = value
+
+    config_path = tmp_path / f"invalid_release_{field}.yaml"
+    config_path.write_text(
+        yaml.safe_dump(data, sort_keys=False)
+    )
+
+    with pytest.raises(
+        ConfigError,
+        match=rf"release\.{field} must be a non-empty string",
+    ):
+        load_config(config_path)

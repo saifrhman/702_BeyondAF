@@ -97,6 +97,30 @@ def _validate_required_sections(config: dict[str, Any]) -> None:
         )
 
 
+def _validate_release(config: dict[str, Any]) -> None:
+    release = config["release"]
+
+    if not isinstance(release, dict):
+        raise ConfigError("release must be a mapping")
+
+    dataset_name = release.get("dataset_name")
+
+    if not isinstance(dataset_name, str) or not dataset_name.strip():
+        raise ConfigError(
+            "release.dataset_name must be a non-empty string"
+        )
+
+    protocol_version = release.get("protocol_version")
+
+    if (
+        not isinstance(protocol_version, str)
+        or not protocol_version.strip()
+    ):
+        raise ConfigError(
+            "release.protocol_version must be a non-empty string"
+        )
+
+
 def _validate_snapshot(config: dict[str, Any]) -> None:
     snapshot = config["snapshot"]
 
@@ -256,6 +280,7 @@ def load_config(path: str | Path) -> LoadedConfig:
     expanded = _expand_environment(loaded)
 
     _validate_required_sections(expanded)
+    _validate_release(expanded)
     _validate_snapshot(expanded)
     _validate_selection(expanded)
     _validate_execution(expanded)
