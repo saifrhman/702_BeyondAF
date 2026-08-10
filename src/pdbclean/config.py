@@ -243,6 +243,7 @@ def _validate_execution(config: dict[str, Any]) -> None:
     positive_integer_fields = (
         "batch_size",
         "download_concurrency",
+        "quality_array_concurrency",
         "connection_timeout_seconds",
     )
 

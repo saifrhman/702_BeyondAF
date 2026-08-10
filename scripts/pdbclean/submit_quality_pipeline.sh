@@ -79,23 +79,34 @@ task_count = manifest_partition_count(
     batch_size,
 )
 
+array_concurrency = execution_config[
+    "quality_array_concurrency"
+]
+
 print(
     f"{snapshot}\t"
     f"{summary.row_count}\t"
     f"{batch_size}\t"
-    f"{task_count}"
+    f"{task_count}\t"
+    f"{array_concurrency}"
 )
 PY
 )"
 
-IFS=$'\t' read -r SNAPSHOT MANIFEST_ROWS BATCH_SIZE TASK_COUNT <<< "$METADATA"
+IFS=$'\t' read -r SNAPSHOT MANIFEST_ROWS BATCH_SIZE TASK_COUNT ARRAY_CONCURRENCY <<< "$METADATA"
 
 if [[ ! "$TASK_COUNT" =~ ^[0-9]+$ ]] || (( TASK_COUNT < 1 )); then
     echo "Invalid derived task count: $TASK_COUNT" >&2
     exit 2
 fi
 
+if [[ ! "$ARRAY_CONCURRENCY" =~ ^[0-9]+$ ]] || (( ARRAY_CONCURRENCY < 1 )); then
+    echo "Invalid array concurrency: $ARRAY_CONCURRENCY" >&2
+    exit 2
+fi
+
 LAST_TASK=$((TASK_COUNT - 1))
+ARRAY_RANGE="0-${LAST_TASK}%${ARRAY_CONCURRENCY}"
 
 # Production entrypoints require a clean repository. Checking here prevents
 # submitting an array whose workers would all fail provenance validation.
@@ -121,14 +132,15 @@ echo "Snapshot:       $SNAPSHOT"
 echo "Manifest rows:  $MANIFEST_ROWS"
 echo "Batch size:     $BATCH_SIZE"
 echo "Task count:     $TASK_COUNT"
-echo "Array range:    0-$LAST_TASK"
+echo "Concurrency:    $ARRAY_CONCURRENCY"
+echo "Array range:    $ARRAY_RANGE"
 echo "Git commit:     $GIT_COMMIT"
 echo "Config:         $CONFIG_PATH"
 echo "Manifest:       $MANIFEST_PATH"
 echo "Logs:           $LOG_ROOT"
 echo "========================================"
 
-ARRAY_RESULT="$(sbatch --parsable --array="0-${LAST_TASK}" "$QUALITY_SCRIPT" "$CONFIG_PATH" "$MANIFEST_PATH")"
+ARRAY_RESULT="$(sbatch --parsable --array="$ARRAY_RANGE" "$QUALITY_SCRIPT" "$CONFIG_PATH" "$MANIFEST_PATH")"
 ARRAY_JOB_ID="${ARRAY_RESULT%%;*}"
 
 if [[ ! "$ARRAY_JOB_ID" =~ ^[0-9]+$ ]]; then

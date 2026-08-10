@@ -167,10 +167,10 @@ fi
 @pytest.mark.parametrize(
     ("row_count", "batch_size", "expected_array"),
     [
-        (1, 500, "0-0"),
-        (5, 2, "0-2"),
-        (11, 4, "0-2"),
-        (37, 7, "0-5"),
+        (1, 500, "0-0%24"),
+        (5, 2, "0-2%24"),
+        (11, 4, "0-2%24"),
+        (37, 7, "0-5%24"),
     ],
 )
 def test_submission_derives_array_and_afterok_dependency(
@@ -252,6 +252,7 @@ def test_submission_derives_array_and_afterok_dependency(
         f"Task count:     {expected_task_count}"
         in result.stdout
     )
+    assert "Concurrency:    24" in result.stdout
     assert (
         f"Array range:    {expected_array}"
         in result.stdout
