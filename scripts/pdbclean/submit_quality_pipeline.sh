@@ -159,7 +159,7 @@ echo "Manifest:       $MANIFEST_PATH"
 echo "Logs:           $LOG_ROOT"
 echo "========================================"
 
-ARRAY_RESULT="$(sbatch --parsable --array="$ARRAY_RANGE" "$QUALITY_SCRIPT" "$CONFIG_PATH" "$MANIFEST_PATH" "$TASK_COUNT" "$PHYSICAL_WORKER_COUNT")"
+ARRAY_RESULT="$(sbatch --parsable --array="$ARRAY_RANGE" "$QUALITY_SCRIPT" "$CONFIG_PATH" "$MANIFEST_PATH" "$TASK_COUNT" "$PHYSICAL_WORKER_COUNT" "$REPOSITORY_ROOT")"
 ARRAY_JOB_ID="${ARRAY_RESULT%%;*}"
 
 if [[ ! "$ARRAY_JOB_ID" =~ ^[0-9]+$ ]]; then

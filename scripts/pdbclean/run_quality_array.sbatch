@@ -11,8 +11,8 @@
 
 set -euo pipefail
 
-if [[ $# -ne 4 ]]; then
-    echo "Usage: $0 CONFIG_PATH MANIFEST_PATH LOGICAL_TASK_COUNT PHYSICAL_WORKER_COUNT" >&2
+if [[ $# -ne 5 ]]; then
+    echo "Usage: $0 CONFIG_PATH MANIFEST_PATH LOGICAL_TASK_COUNT PHYSICAL_WORKER_COUNT REPOSITORY_ROOT" >&2
     exit 2
 fi
 
@@ -25,6 +25,7 @@ CONFIG_PATH="$(realpath "$1")"
 MANIFEST_PATH="$(realpath "$2")"
 LOGICAL_TASK_COUNT="$3"
 PHYSICAL_WORKER_COUNT="$4"
+REPOSITORY_ROOT="$(realpath "$5")"
 
 if [[ ! "$SLURM_ARRAY_TASK_ID" =~ ^[0-9]+$ ]]; then
     echo "Invalid SLURM_ARRAY_TASK_ID: $SLURM_ARRAY_TASK_ID" >&2
@@ -49,8 +50,15 @@ fi
 CONFIG_PATH="$(realpath "$CONFIG_PATH")"
 MANIFEST_PATH="$(realpath "$MANIFEST_PATH")"
 
-SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"
-REPOSITORY_ROOT="$(cd "$SCRIPT_DIR/../.." >/dev/null 2>&1 && pwd)"
+if [[ ! -d "$REPOSITORY_ROOT" ]]; then
+    echo "Repository root does not exist: $REPOSITORY_ROOT" >&2
+    exit 2
+fi
+
+if [[ ! -f "$REPOSITORY_ROOT/scripts/pdbclean/run_quality_task.py" ]]; then
+    echo "PDBClean task runner not found under repository root: $REPOSITORY_ROOT" >&2
+    exit 2
+fi
 
 if [[ ! -f "$CONFIG_PATH" ]]; then
     echo "Configuration does not exist: $CONFIG_PATH" >&2

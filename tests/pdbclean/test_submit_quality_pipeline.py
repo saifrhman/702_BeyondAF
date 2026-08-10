@@ -255,6 +255,12 @@ def test_submission_derives_array_and_afterok_dependency(
         expected_workers
     )
 
+    repository_root = Path(
+        array_args[worker_script_index + 5]
+    )
+    assert repository_root.is_absolute()
+    assert repository_root == repo.resolve()
+
     assert "--parsable" in merge_args
     assert "--dependency=afterok:12345" in merge_args
     assert any(
@@ -388,14 +394,28 @@ conda() {
     env["SLURM_ARRAY_JOB_ID"] = "12345"
     env["SLURM_ARRAY_TASK_ID"] = "3"
 
+    # Slurm executes a copied batch script from its spool area rather
+    # than from the repository. Reproduce that condition explicitly.
+    spool_dir = tmp_path / "var" / "spool" / "slurmd"
+    spool_dir.mkdir(parents=True)
+    spool_worker = spool_dir / "run_quality_array.sbatch"
+    spool_worker.write_text(
+        QUALITY_SCRIPT.read_text(encoding="utf-8"),
+        encoding="utf-8",
+    )
+    spool_worker.chmod(0o755)
+
+    repository_root = QUALITY_SCRIPT.resolve().parents[2]
+
     result = subprocess.run(
         [
             "bash",
-            str(QUALITY_SCRIPT.resolve()),
+            str(spool_worker),
             str(config),
             str(manifest),
             "130",
             "64",
+            str(repository_root),
         ],
         env=env,
         text=True,
@@ -406,6 +426,10 @@ conda() {
     assert result.returncode == 0, (
         f"worker stdout:\n{result.stdout}\n"
         f"worker stderr:\n{result.stderr}"
+    )
+    assert f"Repository:           {repository_root}" in result.stdout
+    assert str(spool_dir) not in (
+        result.stdout.split("Repository:", 1)[1].splitlines()[0]
     )
 
     calls = python_log.read_text(
