@@ -208,6 +208,32 @@ def _validate_selection(config: dict[str, Any]) -> None:
         )
 
 
+def _validate_storage(config: dict[str, Any]) -> None:
+    storage = config["storage"]
+
+    if not isinstance(storage, dict):
+        raise ConfigError("storage must be a mapping")
+
+    for field in (
+        "temporary_root",
+        "output_root",
+    ):
+        value = storage.get(field)
+
+        if not isinstance(value, str) or not value.strip():
+            raise ConfigError(
+                f"storage.{field} must be a non-empty string"
+            )
+
+    if not isinstance(
+        storage.get("retain_downloaded_mmcif"),
+        bool,
+    ):
+        raise ConfigError(
+            "storage.retain_downloaded_mmcif must be a boolean"
+        )
+
+
 def _validate_execution(config: dict[str, Any]) -> None:
     execution = config["execution"]
 
@@ -283,6 +309,7 @@ def load_config(path: str | Path) -> LoadedConfig:
     _validate_release(expanded)
     _validate_snapshot(expanded)
     _validate_selection(expanded)
+    _validate_storage(expanded)
     _validate_execution(expanded)
 
     return LoadedConfig(

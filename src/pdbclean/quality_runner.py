@@ -126,6 +126,43 @@ def _slurm_environment(
     )
 
 
+def quality_stage_output_root(
+    storage_output_root: str | Path,
+    *,
+    snapshot: str,
+    protocol_version: str,
+) -> Path:
+    """Return the isolated output root for one quality stage."""
+
+    if (
+        not snapshot
+        or "/" in snapshot
+        or "\\" in snapshot
+        or snapshot in {".", ".."}
+    ):
+        raise QualityRunnerError(
+            f"Unsafe quality-stage snapshot: {snapshot!r}"
+        )
+
+    if (
+        not protocol_version
+        or "/" in protocol_version
+        or "\\" in protocol_version
+        or protocol_version in {".", ".."}
+    ):
+        raise QualityRunnerError(
+            "Unsafe quality-stage protocol version: "
+            f"{protocol_version!r}"
+        )
+
+    return (
+        Path(storage_output_root)
+        / snapshot
+        / protocol_version
+        / "quality"
+    )
+
+
 class QualityRunnerError(RuntimeError):
     """Raised when quality-stage orchestration cannot proceed safely."""
 

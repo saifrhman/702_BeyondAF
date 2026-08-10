@@ -1161,3 +1161,65 @@ def test_execute_quality_task_does_not_publish_when_batch_fails(
         )
 
     assert calls == ["batch"]
+
+
+def test_quality_stage_output_root_is_dynamic() -> None:
+    from pathlib import Path
+
+    from pdbclean.quality_runner import quality_stage_output_root
+
+    observed = quality_stage_output_root(
+        "outputs/pdbclean",
+        snapshot="20310415",
+        protocol_version="protocol-next-v2",
+    )
+
+    assert observed == Path(
+        "outputs/pdbclean/20310415/protocol-next-v2/quality"
+    )
+
+
+@pytest.mark.parametrize(
+    "snapshot",
+    ["", ".", "..", "../escape", "a/b", "a\\b"],
+)
+def test_quality_stage_output_root_rejects_unsafe_snapshot(
+    snapshot: str,
+) -> None:
+    from pdbclean.quality_runner import (
+        QualityRunnerError,
+        quality_stage_output_root,
+    )
+
+    with pytest.raises(
+        QualityRunnerError,
+        match="Unsafe quality-stage snapshot",
+    ):
+        quality_stage_output_root(
+            "outputs/pdbclean",
+            snapshot=snapshot,
+            protocol_version="protocol-v1",
+        )
+
+
+@pytest.mark.parametrize(
+    "protocol_version",
+    ["", ".", "..", "../escape", "a/b", "a\\b"],
+)
+def test_quality_stage_output_root_rejects_unsafe_protocol(
+    protocol_version: str,
+) -> None:
+    from pdbclean.quality_runner import (
+        QualityRunnerError,
+        quality_stage_output_root,
+    )
+
+    with pytest.raises(
+        QualityRunnerError,
+        match="Unsafe quality-stage protocol version",
+    ):
+        quality_stage_output_root(
+            "outputs/pdbclean",
+            snapshot="20310415",
+            protocol_version=protocol_version,
+        )

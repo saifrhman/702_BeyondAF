@@ -477,7 +477,21 @@ than resolved by an undocumented local rule.
 
 ## 7. Quality-Cleaning Outputs
 
-Each SLURM task writes independent Gold output shards.
+Quality-task shards are intermediate stage outputs, distinct from the final
+published release.
+
+The quality-stage output root is derived from configuration and runtime
+provenance as:
+
+`<storage.output_root>/<snapshot>/<release.protocol_version>/quality/`
+
+Neither the snapshot identifier nor protocol version is hard-coded into the
+quality output root is derived from configuration and runtime
+provenance as:
+
+`<storage.output_root>/<snapshot>/<release runner.
+
+Within that stage root, each SLURM task writes independent Gold output shards.
 
 Clean retained chains:
 

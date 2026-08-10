@@ -271,3 +271,55 @@ def test_invalid_release_provenance_is_rejected(
         match=rf"release\.{field} must be a non-empty string",
     ):
         load_config(config_path)
+
+
+@pytest.mark.parametrize(
+    ("field", "value"),
+    [
+        ("temporary_root", ""),
+        ("temporary_root", None),
+        ("output_root", ""),
+        ("output_root", None),
+    ],
+)
+def test_invalid_storage_path_is_rejected(
+    tmp_path: Path,
+    field: str,
+    value,
+) -> None:
+    data = yaml.safe_load(CONFIG_PATH.read_text())
+    data["storage"][field] = value
+
+    config_path = tmp_path / f"invalid_storage_{field}.yaml"
+    config_path.write_text(
+        yaml.safe_dump(data, sort_keys=False)
+    )
+
+    with pytest.raises(
+        ConfigError,
+        match=rf"storage\.{field} must be a non-empty string",
+    ):
+        load_config(config_path)
+
+
+@pytest.mark.parametrize(
+    "value",
+    [None, "false", 0, 1],
+)
+def test_retain_downloaded_mmcif_must_be_boolean(
+    tmp_path: Path,
+    value,
+) -> None:
+    data = yaml.safe_load(CONFIG_PATH.read_text())
+    data["storage"]["retain_downloaded_mmcif"] = value
+
+    config_path = tmp_path / "invalid_retain_downloaded.yaml"
+    config_path.write_text(
+        yaml.safe_dump(data, sort_keys=False)
+    )
+
+    with pytest.raises(
+        ConfigError,
+        match="storage.retain_downloaded_mmcif must be a boolean",
+    ):
+        load_config(config_path)
