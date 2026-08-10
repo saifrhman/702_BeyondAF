@@ -627,3 +627,55 @@ def publish_quality_batch(
         summary_path=summary_path,
         summary=summary,
     )
+
+
+def execute_quality_task(
+    manifest_rows: Iterable[Mapping[str, Any]],
+    *,
+    output_root: str | Path,
+    task_id: str | int,
+    snapshot: str,
+    bucket_url: str,
+    selection_config: dict[str, Any],
+    cleaning_protocol: str,
+    pipeline_git_commit: str,
+    timeout_seconds: int = 60,
+    environ: Mapping[str, str] | None = None,
+    batch_processor: Callable[..., QualityBatchResult] = process_manifest_batch,
+    publisher: Callable[..., QualityTaskPublication] = publish_quality_batch,
+    utc_now: Callable[[], str] = _utc_now_text,
+    perf_counter: Callable[[], float] = time.perf_counter,
+) -> QualityTaskPublication:
+    """Execute one complete quality-cleaning task."""
+
+    slurm_job_id, slurm_array_task_id = _slurm_environment(environ)
+
+    # Start metadata is captured immediately before source processing.
+    started_at_utc = utc_now()
+    started_perf_counter = perf_counter()
+
+    batch = batch_processor(
+        manifest_rows,
+        bucket_url=bucket_url,
+        selection_config=selection_config,
+        cleaning_protocol=cleaning_protocol,
+        pipeline_git_commit=pipeline_git_commit,
+        timeout_seconds=timeout_seconds,
+    )
+
+    # publish_quality_batch writes Parquet shards first, captures final
+    # execution metadata, and publishes the summary completion marker last.
+    return publisher(
+        batch,
+        output_root=output_root,
+        task_id=task_id,
+        snapshot=snapshot,
+        cleaning_protocol=cleaning_protocol,
+        pipeline_git_commit=pipeline_git_commit,
+        started_at_utc=started_at_utc,
+        started_perf_counter=started_perf_counter,
+        slurm_job_id=slurm_job_id,
+        slurm_array_task_id=slurm_array_task_id,
+        utc_now=utc_now,
+        perf_counter=perf_counter,
+    )

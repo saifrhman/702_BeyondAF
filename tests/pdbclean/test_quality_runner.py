@@ -1022,3 +1022,142 @@ def test_publish_quality_batch_captures_completion_after_shards(
     )
     assert publication.summary["runtime_seconds"] == 5.0
     assert publication.summary["peak_memory_bytes"] == 4096
+
+
+def test_execute_quality_task_orchestrates_batch_then_publication(
+    tmp_path,
+) -> None:
+    from pdbclean.quality_runner import (
+        QualityTaskPublication,
+        execute_quality_task,
+    )
+
+    calls = []
+    batch = _valid_empty_batch()
+
+    def utc_now():
+        calls.append("utc_start")
+        return "2026-08-10T00:40:00Z"
+
+    def perf_counter():
+        calls.append("perf_start")
+        return 100.0
+
+    def batch_processor(manifest_rows, **kwargs):
+        calls.append("batch")
+        assert list(manifest_rows) == [{"pdb_id": "TEST"}]
+        assert kwargs == {
+            "bucket_url": "https://example.invalid",
+            "selection_config": {
+                "models": {
+                    "policy": "first_model",
+                    "model_id": 1,
+                }
+            },
+            "cleaning_protocol": "Protocol_3.2_BRI_v1.2.2",
+            "pipeline_git_commit": "deadbeef",
+            "timeout_seconds": 37,
+        }
+        return batch
+
+    expected = QualityTaskPublication(
+        shard_paths={},
+        summary_path=tmp_path / "summary.json",
+        summary={"task_id": "7"},
+    )
+
+    def publisher(received_batch, **kwargs):
+        calls.append("publisher")
+
+        assert received_batch is batch
+        assert kwargs["output_root"] == tmp_path
+        assert kwargs["task_id"] == "7"
+        assert kwargs["snapshot"] == "20260101"
+        assert kwargs["cleaning_protocol"] == "Protocol_3.2_BRI_v1.2.2"
+        assert kwargs["pipeline_git_commit"] == "deadbeef"
+
+        assert kwargs["started_at_utc"] == "2026-08-10T00:40:00Z"
+        assert kwargs["started_perf_counter"] == 100.0
+
+        assert kwargs["slurm_job_id"] == "12345"
+        assert kwargs["slurm_array_task_id"] == "7"
+
+        # The same clocks are forwarded so publication can capture
+        # completion only after Parquet shards have been written.
+        assert kwargs["utc_now"] is utc_now
+        assert kwargs["perf_counter"] is perf_counter
+
+        return expected
+
+    result = execute_quality_task(
+        [{"pdb_id": "TEST"}],
+        output_root=tmp_path,
+        task_id="7",
+        snapshot="20260101",
+        bucket_url="https://example.invalid",
+        selection_config={
+            "models": {
+                "policy": "first_model",
+                "model_id": 1,
+            }
+        },
+        cleaning_protocol="Protocol_3.2_BRI_v1.2.2",
+        pipeline_git_commit="deadbeef",
+        timeout_seconds=37,
+        environ={
+            "SLURM_JOB_ID": "12345",
+            "SLURM_ARRAY_TASK_ID": "7",
+        },
+        batch_processor=batch_processor,
+        publisher=publisher,
+        utc_now=utc_now,
+        perf_counter=perf_counter,
+    )
+
+    assert result is expected
+    assert calls == [
+        "utc_start",
+        "perf_start",
+        "batch",
+        "publisher",
+    ]
+
+
+def test_execute_quality_task_does_not_publish_when_batch_fails(
+    tmp_path,
+) -> None:
+    from pdbclean.quality_runner import execute_quality_task
+
+    calls = []
+
+    def batch_processor(manifest_rows, **kwargs):
+        calls.append("batch")
+        raise RuntimeError("synthetic batch failure")
+
+    def publisher(*args, **kwargs):
+        calls.append("publisher")
+        raise AssertionError("Publisher must not run")
+
+    with pytest.raises(RuntimeError, match="synthetic batch failure"):
+        execute_quality_task(
+            [],
+            output_root=tmp_path,
+            task_id="8",
+            snapshot="20260101",
+            bucket_url="https://example.invalid",
+            selection_config={
+                "models": {
+                    "policy": "first_model",
+                    "model_id": 1,
+                }
+            },
+            cleaning_protocol="Protocol_3.2_BRI_v1.2.2",
+            pipeline_git_commit="deadbeef",
+            environ={},
+            batch_processor=batch_processor,
+            publisher=publisher,
+            utc_now=lambda: "2026-08-10T00:40:00Z",
+            perf_counter=lambda: 100.0,
+        )
+
+    assert calls == ["batch"]
