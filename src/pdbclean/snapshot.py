@@ -548,7 +548,15 @@ def resolve_snapshot(
                 sample_mmcif_key=sample.s3_key,
             )
 
-        # Fallback: recursively inspect the entire dated snapshot.
+        # Automatic latest selection must stay cheap and predictable.
+        # A dated prefix without the canonical divided-mmCIF archive is
+        # skipped immediately so discovery can try the next snapshot.
+        # Recursive layout discovery remains available for an explicitly
+        # requested fixed snapshot.
+        if selection_mode == "latest_complete":
+            return None
+
+        # Fixed-mode fallback: recursively inspect the dated snapshot.
         recursive_sample = find_coordinate_mmcif_recursive(
             bucket_url=bucket_url,
             snapshot_id=snapshot_id,

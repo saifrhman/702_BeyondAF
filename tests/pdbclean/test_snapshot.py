@@ -218,9 +218,15 @@ def test_latest_complete_skips_newer_invalid_snapshot(
         fake_canonical,
     )
 
+    def fail_if_recursive_fallback_is_used(**kwargs):
+        raise AssertionError(
+            "latest_complete must not recursively scan "
+            "non-canonical snapshot prefixes"
+        )
+
     monkeypatch.setattr(
         "pdbclean.snapshot.find_coordinate_mmcif_recursive",
-        lambda **kwargs: None,
+        fail_if_recursive_fallback_is_used,
     )
 
     resolved = resolve_snapshot(

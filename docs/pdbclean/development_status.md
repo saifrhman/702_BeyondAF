@@ -1540,3 +1540,48 @@ Regression status after this change:
 
 - targeted snapshot/manifest/quality/merge/submission tests: 75 passed
 - full repository test suite: 297 passed
+
+---
+
+# 35. Latest-Snapshot Resolution Must Avoid Recursive Crawls
+
+Testing `snapshot.mode: latest_complete` against the live PDB snapshots bucket
+identified a performance problem in the original resolver.
+
+Snapshot discovery returned 33 dated prefixes, with the newest including:
+
+- 20260415
+- 20260101
+- 20250101
+- 20240101
+
+The `20260415` prefix does not expose the canonical divided-mmCIF coordinate
+archive expected for a complete PDB coordinate snapshot.
+
+Previously, when the canonical check failed, `latest_complete` fell back to a
+recursive S3 scan of the entire dated prefix. This caused snapshot resolution
+to stall for a long time.
+
+The resolver was corrected so that:
+
+- `latest_complete` checks the canonical divided-mmCIF layout only;
+- a non-canonical candidate is skipped immediately;
+- the resolver then tries the next discovered dated snapshot;
+- `fixed` mode retains the recursive-layout fallback for explicitly requested
+  unusual snapshot layouts.
+
+Live read-only verification after the fix resolved:
+
+- selection mode: `latest_complete`
+- concrete snapshot: `20260101`
+- layout: `canonical_divided_mmcif`
+- source prefix:
+  `20260101/pub/pdb/data/structures/divided/mmCIF/`
+
+Thus `20260101` is now the result of dynamic snapshot discovery, not a
+hard-coded production snapshot.
+
+Regression status after the resolver fix:
+
+- snapshot tests: 19 passed
+- full repository suite: 297 passed
