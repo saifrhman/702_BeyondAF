@@ -79,24 +79,42 @@ task_count = manifest_partition_count(
     batch_size,
 )
 
-array_concurrency = execution_config[
+worker_limit = execution_config[
+    "quality_array_worker_count"
+]
+configured_concurrency = execution_config[
     "quality_array_concurrency"
 ]
+
+physical_worker_count = min(
+    worker_limit,
+    task_count,
+)
+physical_concurrency = min(
+    configured_concurrency,
+    physical_worker_count,
+)
 
 print(
     f"{snapshot}\t"
     f"{summary.row_count}\t"
     f"{batch_size}\t"
     f"{task_count}\t"
-    f"{array_concurrency}"
+    f"{physical_worker_count}\t"
+    f"{physical_concurrency}"
 )
 PY
 )"
 
-IFS=$'\t' read -r SNAPSHOT MANIFEST_ROWS BATCH_SIZE TASK_COUNT ARRAY_CONCURRENCY <<< "$METADATA"
+IFS=$'\t' read -r SNAPSHOT MANIFEST_ROWS BATCH_SIZE TASK_COUNT PHYSICAL_WORKER_COUNT ARRAY_CONCURRENCY <<< "$METADATA"
 
 if [[ ! "$TASK_COUNT" =~ ^[0-9]+$ ]] || (( TASK_COUNT < 1 )); then
-    echo "Invalid derived task count: $TASK_COUNT" >&2
+    echo "Invalid derived logical task count: $TASK_COUNT" >&2
+    exit 2
+fi
+
+if [[ ! "$PHYSICAL_WORKER_COUNT" =~ ^[0-9]+$ ]] || (( PHYSICAL_WORKER_COUNT < 1 )); then
+    echo "Invalid physical worker count: $PHYSICAL_WORKER_COUNT" >&2
     exit 2
 fi
 
@@ -105,8 +123,8 @@ if [[ ! "$ARRAY_CONCURRENCY" =~ ^[0-9]+$ ]] || (( ARRAY_CONCURRENCY < 1 )); then
     exit 2
 fi
 
-LAST_TASK=$((TASK_COUNT - 1))
-ARRAY_RANGE="0-${LAST_TASK}%${ARRAY_CONCURRENCY}"
+LAST_WORKER=$((PHYSICAL_WORKER_COUNT - 1))
+ARRAY_RANGE="0-${LAST_WORKER}%${ARRAY_CONCURRENCY}"
 
 # Production entrypoints require a clean repository. Checking here prevents
 # submitting an array whose workers would all fail provenance validation.
@@ -131,7 +149,8 @@ echo "PDBClean quality pipeline submission"
 echo "Snapshot:       $SNAPSHOT"
 echo "Manifest rows:  $MANIFEST_ROWS"
 echo "Batch size:     $BATCH_SIZE"
-echo "Task count:     $TASK_COUNT"
+echo "Logical tasks:  $TASK_COUNT"
+echo "Workers:        $PHYSICAL_WORKER_COUNT"
 echo "Concurrency:    $ARRAY_CONCURRENCY"
 echo "Array range:    $ARRAY_RANGE"
 echo "Git commit:     $GIT_COMMIT"
@@ -140,7 +159,7 @@ echo "Manifest:       $MANIFEST_PATH"
 echo "Logs:           $LOG_ROOT"
 echo "========================================"
 
-ARRAY_RESULT="$(sbatch --parsable --array="$ARRAY_RANGE" "$QUALITY_SCRIPT" "$CONFIG_PATH" "$MANIFEST_PATH")"
+ARRAY_RESULT="$(sbatch --parsable --array="$ARRAY_RANGE" "$QUALITY_SCRIPT" "$CONFIG_PATH" "$MANIFEST_PATH" "$TASK_COUNT" "$PHYSICAL_WORKER_COUNT")"
 ARRAY_JOB_ID="${ARRAY_RESULT%%;*}"
 
 if [[ ! "$ARRAY_JOB_ID" =~ ^[0-9]+$ ]]; then

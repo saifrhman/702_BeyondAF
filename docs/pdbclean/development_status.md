@@ -1447,3 +1447,52 @@ Latest validated full test suite:
 `245 passed`
 
 The next code-development stage is the quality shard merge/global validator.
+
+---
+
+# 33. Barkla Long-Partition QOS Limits
+
+Production submission testing identified an additional Barkla scheduling
+constraint applied by the `long` partition.
+
+Partition configuration:
+
+- allowed user QOS: `normal`
+- partition QOS: `longlimits`
+
+The effective `longlimits` values are:
+
+- `MaxSubmitJobsPU = 100`
+- `MaxJobsPU = 4`
+
+A single Slurm array containing all 494 logical quality partitions was therefore
+rejected with:
+
+`QOSMaxSubmitJobPerUserLimit`
+
+The Slurm array concurrency suffix does not solve this issue because an array
+such as `0-493%24` still represents 494 submitted array elements.
+
+The pipeline must therefore distinguish:
+
+- logical PDBClean task IDs, derived dynamically from the Bronze manifest
+- physical Slurm worker IDs, constrained by the cluster scheduler
+
+The planned production mapping preserves all 494 logical task IDs and their
+deterministic `task_<id>` outputs while distributing them across a smaller
+number of physical Slurm workers.
+
+Current planned physical execution:
+
+- up to 64 Slurm array workers
+- physical array concurrency capped at 4
+- each worker processes logical task IDs using deterministic striding
+- final merge remains dependent on successful completion of all physical
+  workers
+
+For the current 20260101 manifest this implies approximately 7-8 logical
+quality partitions per physical worker.
+
+This scheduling adaptation changes only orchestration. It does not change
+Protocol 3.2 semantics, manifest partitioning, Gold schemas, logical task
+identities, or scientific outputs.

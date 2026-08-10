@@ -77,7 +77,8 @@ graph:
 execution:
   batch_size: 500
   download_concurrency: 4
-  quality_array_concurrency: 24
+  quality_array_worker_count: 64
+  quality_array_concurrency: 4
   max_retries: 3
   connection_timeout_seconds: 60
   atomic_writes: true

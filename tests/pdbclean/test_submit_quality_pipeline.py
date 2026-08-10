@@ -165,18 +165,27 @@ fi
 
 
 @pytest.mark.parametrize(
-    ("row_count", "batch_size", "expected_array"),
+    (
+        "row_count",
+        "batch_size",
+        "expected_logical_tasks",
+        "expected_workers",
+        "expected_array",
+    ),
     [
-        (1, 500, "0-0%24"),
-        (5, 2, "0-2%24"),
-        (11, 4, "0-2%24"),
-        (37, 7, "0-5%24"),
+        (1, 500, 1, 1, "0-0%1"),
+        (5, 2, 3, 3, "0-2%3"),
+        (11, 4, 3, 3, "0-2%3"),
+        (37, 7, 6, 6, "0-5%4"),
+        (130, 1, 130, 64, "0-63%4"),
     ],
 )
 def test_submission_derives_array_and_afterok_dependency(
     tmp_path: Path,
     row_count: int,
     batch_size: int,
+    expected_logical_tasks: int,
+    expected_workers: int,
     expected_array: str,
 ) -> None:
     config = _write_config(
@@ -232,9 +241,18 @@ def test_submission_derives_array_and_afterok_dependency(
 
     assert "--parsable" in array_args
     assert f"--array={expected_array}" in array_args
-    assert any(
-        value.endswith("run_quality_array.sbatch")
-        for value in array_args
+
+    worker_script_index = next(
+        index
+        for index, value in enumerate(array_args)
+        if value.endswith("run_quality_array.sbatch")
+    )
+
+    assert array_args[worker_script_index + 3] == str(
+        expected_logical_tasks
+    )
+    assert array_args[worker_script_index + 4] == str(
+        expected_workers
     )
 
     assert "--parsable" in merge_args
@@ -244,15 +262,19 @@ def test_submission_derives_array_and_afterok_dependency(
         for value in merge_args
     )
 
-    expected_task_count = (
-        row_count + batch_size - 1
-    ) // batch_size
-
     assert (
-        f"Task count:     {expected_task_count}"
+        f"Logical tasks:  {expected_logical_tasks}"
         in result.stdout
     )
-    assert "Concurrency:    24" in result.stdout
+    assert (
+        f"Workers:        {expected_workers}"
+        in result.stdout
+    )
+    expected_concurrency = min(4, expected_workers)
+    assert (
+        f"Concurrency:    {expected_concurrency}"
+        in result.stdout
+    )
     assert (
         f"Array range:    {expected_array}"
         in result.stdout
@@ -280,3 +302,156 @@ def test_submission_scripts_do_not_hardcode_494() -> None:
         assert "494" not in path.read_text(
             encoding="utf-8"
         )
+
+
+def test_physical_worker_processes_expected_logical_stride(
+    tmp_path: Path,
+) -> None:
+    fake_bin = tmp_path / "fake-bin"
+    fake_bin.mkdir()
+
+    python_log = tmp_path / "python.log"
+
+    fake_module = fake_bin / "module"
+    fake_module.write_text(
+        "#!/bin/bash\nexit 0\n",
+        encoding="utf-8",
+    )
+    fake_module.chmod(0o755)
+
+    fake_conda = fake_bin / "conda"
+    fake_conda.write_text(
+        """#!/bin/bash
+set -euo pipefail
+if [[ "${1:-}" == "shell.bash" && "${2:-}" == "hook" ]]; then
+    echo ":"
+    exit 0
+fi
+exit 0
+""",
+        encoding="utf-8",
+    )
+    fake_conda.chmod(0o755)
+
+    fake_python = fake_bin / "python"
+    fake_python.write_text(
+        """#!/bin/bash
+set -euo pipefail
+printf '%s\n' "$*" >> "$FAKE_PYTHON_LOG"
+""",
+        encoding="utf-8",
+    )
+    fake_python.chmod(0o755)
+
+    config = tmp_path / "config.yaml"
+    config.write_text("test\n", encoding="utf-8")
+
+    manifest = tmp_path / "manifest.parquet"
+    manifest.write_text("test\n", encoding="utf-8")
+
+    env = os.environ.copy()
+
+    # Barkla defines module/conda through shell initialisation. Force a
+    # controlled non-interactive shell environment so the worker cannot
+    # alter PATH and accidentally invoke the real Python environment.
+    bash_env = tmp_path / "bash_env.sh"
+    bash_env.write_text(
+        """module() {
+    return 0
+}
+
+conda() {
+    if [[ "${1:-}" == "shell.bash" && "${2:-}" == "hook" ]]; then
+        printf ':\\n'
+    fi
+    return 0
+}
+""",
+        encoding="utf-8",
+    )
+
+    for key in tuple(env):
+        if (
+            key.startswith("BASH_FUNC_conda")
+            or key.startswith("BASH_FUNC_module")
+        ):
+            env.pop(key)
+
+    env["BASH_ENV"] = str(bash_env)
+    env["PATH"] = (
+        str(fake_bin)
+        + os.pathsep
+        + env["PATH"]
+    )
+    env["FAKE_PYTHON_LOG"] = str(python_log)
+    env["SLURM_JOB_ID"] = "12345"
+    env["SLURM_ARRAY_JOB_ID"] = "12345"
+    env["SLURM_ARRAY_TASK_ID"] = "3"
+
+    result = subprocess.run(
+        [
+            "bash",
+            str(QUALITY_SCRIPT.resolve()),
+            str(config),
+            str(manifest),
+            "130",
+            "64",
+        ],
+        env=env,
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+
+    assert result.returncode == 0, (
+        f"worker stdout:\n{result.stdout}\n"
+        f"worker stderr:\n{result.stderr}"
+    )
+
+    calls = python_log.read_text(
+        encoding="utf-8"
+    ).splitlines()
+
+    task_ids = []
+
+    for call in calls:
+        args = shlex.split(call)
+        index = args.index("--task-id")
+        task_ids.append(int(args[index + 1]))
+
+    assert task_ids == [3, 67]
+
+
+def test_physical_worker_striding_covers_logical_tasks_once() -> None:
+    logical_task_count = 494
+    physical_worker_count = 64
+
+    assignments = [
+        logical_task_id
+        for worker_id in range(physical_worker_count)
+        for logical_task_id in range(
+            worker_id,
+            logical_task_count,
+            physical_worker_count,
+        )
+    ]
+
+    assert len(assignments) == logical_task_count
+    assert len(set(assignments)) == logical_task_count
+    assert sorted(assignments) == list(
+        range(logical_task_count)
+    )
+
+    per_worker_counts = [
+        len(
+            range(
+                worker_id,
+                logical_task_count,
+                physical_worker_count,
+            )
+        )
+        for worker_id in range(physical_worker_count)
+    ]
+
+    assert min(per_worker_counts) == 7
+    assert max(per_worker_counts) == 8
