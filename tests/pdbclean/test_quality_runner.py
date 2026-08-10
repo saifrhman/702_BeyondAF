@@ -764,8 +764,10 @@ def test_publish_quality_batch_writes_shards_before_summary(tmp_path) -> None:
         cleaning_protocol="Protocol_3.2_BRI_v1.2.2",
         pipeline_git_commit="deadbeef",
         started_at_utc="2026-08-09T20:00:00Z",
-        completed_at_utc="2026-08-09T20:00:01Z",
-        runtime_seconds=1.0,
+        started_perf_counter=10.0,
+        utc_now=lambda: "2026-08-09T20:00:01Z",
+        perf_counter=lambda: 11.0,
+        peak_memory_reader=lambda: 1024,
         shard_writer=shard_writer,
         summary_writer=summary_writer,
     )
@@ -822,8 +824,10 @@ def test_publish_quality_batch_rejects_bad_accounting_before_writes(
             cleaning_protocol="Protocol_3.2_BRI_v1.2.2",
             pipeline_git_commit="deadbeef",
             started_at_utc="2026-08-09T20:00:00Z",
-            completed_at_utc="2026-08-09T20:00:01Z",
-            runtime_seconds=1.0,
+            started_perf_counter=10.0,
+            utc_now=lambda: "2026-08-09T20:00:01Z",
+            perf_counter=lambda: 11.0,
+            peak_memory_reader=lambda: 1024,
             shard_writer=shard_writer,
             summary_writer=summary_writer,
         )
@@ -868,8 +872,10 @@ def test_publish_quality_batch_summary_failure_leaves_no_completion_marker(
             cleaning_protocol="Protocol_3.2_BRI_v1.2.2",
             pipeline_git_commit="deadbeef",
             started_at_utc="2026-08-09T20:00:00Z",
-            completed_at_utc="2026-08-09T20:00:01Z",
-            runtime_seconds=1.0,
+            started_perf_counter=10.0,
+            utc_now=lambda: "2026-08-09T20:00:01Z",
+            perf_counter=lambda: 11.0,
+            peak_memory_reader=lambda: 1024,
             shard_writer=shard_writer,
             summary_writer=summary_writer,
         )
@@ -889,8 +895,10 @@ def test_publish_quality_batch_writes_real_task_outputs(tmp_path) -> None:
         cleaning_protocol="Protocol_3.2_BRI_v1.2.2",
         pipeline_git_commit="deadbeef",
         started_at_utc="2026-08-09T20:00:00Z",
-        completed_at_utc="2026-08-09T20:00:01Z",
-        runtime_seconds=1.0,
+        started_perf_counter=10.0,
+        utc_now=lambda: "2026-08-09T20:00:01Z",
+        perf_counter=lambda: 11.0,
+        peak_memory_reader=lambda: 1024,
     )
 
     assert set(publication.shard_paths) == {
@@ -946,3 +954,71 @@ def test_linux_process_peak_memory_bytes_is_non_negative() -> None:
         isinstance(value, int)
         and value >= 0
     )
+
+
+
+def test_publish_quality_batch_captures_completion_after_shards(
+    tmp_path,
+) -> None:
+    from pdbclean.quality_runner import publish_quality_batch
+
+    calls = []
+
+    def shard_writer(tables, output_root, task_id):
+        calls.append("shards")
+        return {
+            "accepted": tmp_path / "accepted.parquet",
+            "rejected": tmp_path / "rejected.parquet",
+            "non_candidates": tmp_path / "non_candidates.parquet",
+            "dirty_residues": tmp_path / "dirty_residues.parquet",
+            "errors": tmp_path / "errors.parquet",
+        }
+
+    def utc_now():
+        calls.append("completed_at")
+        return "2026-08-09T20:00:05Z"
+
+    def perf_counter():
+        calls.append("runtime")
+        return 15.0
+
+    def peak_memory_reader():
+        calls.append("peak_memory")
+        return 4096
+
+    def summary_writer(summary, output_root):
+        calls.append("summary")
+        return tmp_path / "summary.json"
+
+    publication = publish_quality_batch(
+        _valid_empty_batch(),
+        output_root=tmp_path,
+        task_id="timing",
+        snapshot="20260101",
+        cleaning_protocol="Protocol_3.2_BRI_v1.2.2",
+        pipeline_git_commit="deadbeef",
+        started_at_utc="2026-08-09T20:00:00Z",
+        started_perf_counter=10.0,
+        shard_writer=shard_writer,
+        summary_writer=summary_writer,
+        utc_now=utc_now,
+        perf_counter=perf_counter,
+        peak_memory_reader=peak_memory_reader,
+    )
+
+    assert calls == [
+        "shards",
+        "completed_at",
+        "runtime",
+        "peak_memory",
+        "summary",
+    ]
+
+    assert publication.summary["started_at_utc"] == (
+        "2026-08-09T20:00:00Z"
+    )
+    assert publication.summary["completed_at_utc"] == (
+        "2026-08-09T20:00:05Z"
+    )
+    assert publication.summary["runtime_seconds"] == 5.0
+    assert publication.summary["peak_memory_bytes"] == 4096

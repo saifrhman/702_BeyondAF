@@ -480,13 +480,16 @@ def publish_quality_batch(
     cleaning_protocol: str,
     pipeline_git_commit: str,
     started_at_utc: str,
-    completed_at_utc: str,
-    runtime_seconds: float,
+    started_perf_counter: float,
     slurm_job_id: str | None = None,
     slurm_array_task_id: str | None = None,
-    peak_memory_bytes: int | None = None,
     shard_writer: Callable[..., dict[str, Path]] = write_gold_quality_shards,
     summary_writer: Callable[..., Path] = write_quality_task_summary_atomic,
+    utc_now: Callable[[], str] = _utc_now_text,
+    perf_counter: Callable[[], float] = time.perf_counter,
+    peak_memory_reader: Callable[
+        [], int | None
+    ] = _linux_process_peak_memory_bytes,
 ) -> QualityTaskPublication:
     """Validate and publish one quality task, writing its summary last."""
 
@@ -503,14 +506,24 @@ def publish_quality_batch(
             f"Unsafe quality-task task_id: {task_id_text!r}"
         )
 
-    context = QualityTaskContext(
+    if (
+        not isinstance(started_perf_counter, (int, float))
+        or isinstance(started_perf_counter, bool)
+    ):
+        raise QualityRunnerError(
+            "started_perf_counter must be numeric"
+        )
+
+    # Build a provisional context solely to validate accounting before
+    # publishing any task output. Timing fields do not affect accounting.
+    provisional_context = QualityTaskContext(
         task_id=task_id_text,
         snapshot=snapshot,
         cleaning_protocol=cleaning_protocol,
         pipeline_git_commit=pipeline_git_commit,
         started_at_utc=started_at_utc,
-        completed_at_utc=completed_at_utc,
-        runtime_seconds=runtime_seconds,
+        completed_at_utc=started_at_utc,
+        runtime_seconds=0.0,
         input_source_object_count=batch.input_source_object_count,
         successful_source_object_count=(
             batch.successful_source_object_count
@@ -522,31 +535,84 @@ def publish_quality_batch(
         candidate_chain_count=batch.candidate_chain_count,
         slurm_job_id=slurm_job_id,
         slurm_array_task_id=slurm_array_task_id,
-        peak_memory_bytes=peak_memory_bytes,
+        peak_memory_bytes=None,
     )
 
-    summary = build_quality_task_summary(
+    provisional_summary = build_quality_task_summary(
         batch.tables,
-        context,
+        provisional_context,
     )
 
     # Accounting must be valid before any task output is published.
-    if summary.get("source_object_accounting_valid") is not True:
+    if (
+        provisional_summary.get("source_object_accounting_valid")
+        is not True
+    ):
         raise QualityRunnerError(
             "Cannot publish quality task: "
             "source-object accounting failed"
         )
 
-    if summary.get("selected_chain_accounting_valid") is not True:
+    if (
+        provisional_summary.get("selected_chain_accounting_valid")
+        is not True
+    ):
         raise QualityRunnerError(
             "Cannot publish quality task: "
             "selected-chain accounting failed"
         )
 
+    # All five deterministic Parquet shards are published before the
+    # task-level completion marker.
     shard_paths = shard_writer(
         batch.tables,
         output_root,
         task_id_text,
+    )
+
+    # Completion metadata deliberately includes Parquet publication.
+    completed_at_utc = utc_now()
+    runtime_seconds = perf_counter() - started_perf_counter
+
+    if runtime_seconds < 0:
+        raise QualityRunnerError(
+            "Monotonic task runtime cannot be negative"
+        )
+
+    execution_metadata = QualityExecutionMetadata(
+        started_at_utc=started_at_utc,
+        completed_at_utc=completed_at_utc,
+        runtime_seconds=runtime_seconds,
+        slurm_job_id=slurm_job_id,
+        slurm_array_task_id=slurm_array_task_id,
+        peak_memory_bytes=peak_memory_reader(),
+    )
+
+    context = QualityTaskContext(
+        task_id=task_id_text,
+        snapshot=snapshot,
+        cleaning_protocol=cleaning_protocol,
+        pipeline_git_commit=pipeline_git_commit,
+        started_at_utc=execution_metadata.started_at_utc,
+        completed_at_utc=execution_metadata.completed_at_utc,
+        runtime_seconds=execution_metadata.runtime_seconds,
+        input_source_object_count=batch.input_source_object_count,
+        successful_source_object_count=(
+            batch.successful_source_object_count
+        ),
+        failed_source_object_count=batch.failed_source_object_count,
+        parsed_silver_chain_count=batch.parsed_silver_chain_count,
+        selected_silver_chain_count=batch.selected_silver_chain_count,
+        candidate_entry_count=batch.candidate_entry_count,
+        candidate_chain_count=batch.candidate_chain_count,
+        slurm_job_id=execution_metadata.slurm_job_id,
+        slurm_array_task_id=execution_metadata.slurm_array_task_id,
+        peak_memory_bytes=execution_metadata.peak_memory_bytes,
+    )
+
+    summary = build_quality_task_summary(
+        batch.tables,
+        context,
     )
 
     # The summary is intentionally published last and acts as the

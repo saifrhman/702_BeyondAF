@@ -782,6 +782,18 @@ The task-summary completion marker is distinct from the release-level
 `_SUCCESS` marker. `_SUCCESS` is written only after all tasks and release-wide
 validation have completed successfully.
 
+Task execution timing uses the following semantics:
+
+- `started_at_utc` is captured immediately before source processing begins;
+- elapsed runtime is measured with a monotonic high-resolution clock;
+- the five Parquet shards are included in task runtime;
+- `completed_at_utc`, final `runtime_seconds`, and peak-memory usage are
+  captured after all five Parquet shards have been successfully published
+  and immediately before the task-summary completion marker is written.
+
+Therefore, a task-summary record describes the completed processing and
+Parquet-publication work that precedes that summary.
+
 ## 8. BRI Generation
 
 BRI representations are generated only for chains accepted by the
