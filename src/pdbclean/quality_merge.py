@@ -762,7 +762,9 @@ def _validate_source_provenance_rows(
             )
 
 
-def _chain_identity(row: dict[str, Any]) -> tuple[str, int, str]:
+def _chain_identity(
+    row: dict[str, Any],
+) -> tuple[str, int, str]:
     return (
         row["pdb_id"],
         row["model_id"],
@@ -770,125 +772,266 @@ def _chain_identity(row: dict[str, Any]) -> tuple[str, int, str]:
     )
 
 
-def _validate_unique_outcome_identities(
-    tables: dict[str, pa.Table],
-) -> int:
+def _iter_parquet_tables(
+    path: Path,
+    *,
+    columns: list[str],
+    batch_size: int = 65536,
+) -> Iterable[pa.Table]:
+    """Stream selected Parquet columns without loading a whole shard."""
+
+    try:
+        parquet_file = pq.ParquetFile(path)
+
+        for batch in parquet_file.iter_batches(
+            batch_size=batch_size,
+            columns=columns,
+        ):
+            yield pa.Table.from_batches([batch])
+
+    except Exception as exc:
+        raise QualityMergeError(
+            f"Cannot stream Parquet data from {path}: {exc}"
+        ) from exc
+
+
+def _stream_outcome_shards(
+    artifacts: tuple[QualityTaskArtifacts, ...],
+    *,
+    manifest_sources: dict[str, tuple[str, str]],
+    expected_snapshot: str,
+    expected_cleaning_protocol: str,
+    expected_pipeline_git_commit: str,
+) -> tuple[
+    dict[str, int],
+    dict[tuple[str, int, str], str],
+]:
+    """Validate accepted/rejected/non-candidate rows incrementally."""
+
+    counts = {
+        "accepted": 0,
+        "rejected": 0,
+        "non_candidates": 0,
+    }
+
     seen: dict[tuple[str, int, str], str] = {}
 
+    columns = [
+        "snapshot",
+        "pdb_id",
+        "model_id",
+        "label_chain_id",
+        "source_mmcif_key",
+        "source_etag",
+        "cleaning_protocol",
+        "pipeline_git_commit",
+    ]
+
+    # Scan one outcome family at a time so duplicate/conflicting
+    # identities are detected across both tasks and categories.
     for table_name in (
         "accepted",
         "rejected",
         "non_candidates",
     ):
-        for row in tables[table_name].select(
-            ["pdb_id", "model_id", "label_chain_id"]
-        ).to_pylist():
-            identity = _chain_identity(row)
+        for artifact in artifacts:
+            path = artifact.shard_paths[table_name]
 
-            previous = seen.get(identity)
-            if previous is not None:
-                raise QualityMergeError(
-                    "Duplicate or conflicting Gold chain identity "
-                    f"{identity!r}: found in {previous} and "
-                    f"{table_name}"
+            for table in _iter_parquet_tables(
+                path,
+                columns=columns,
+            ):
+                counts[table_name] += table.num_rows
+
+                _validate_source_provenance_rows(
+                    table,
+                    manifest_sources=manifest_sources,
+                    expected_snapshot=expected_snapshot,
+                    expected_cleaning_protocol=(
+                        expected_cleaning_protocol
+                    ),
+                    expected_pipeline_git_commit=(
+                        expected_pipeline_git_commit
+                    ),
+                    table_name=table_name,
                 )
 
-            seen[identity] = table_name
+                identity_rows = table.select(
+                    [
+                        "pdb_id",
+                        "model_id",
+                        "label_chain_id",
+                    ]
+                ).to_pylist()
 
-    return len(seen)
+                for row in identity_rows:
+                    identity = _chain_identity(row)
+
+                    previous = seen.get(identity)
+
+                    if previous is not None:
+                        raise QualityMergeError(
+                            "Duplicate or conflicting Gold chain "
+                            f"identity {identity!r}: found in "
+                            f"{previous} and {table_name}"
+                        )
+
+                    seen[identity] = table_name
+
+    return counts, seen
 
 
-def _validate_chain_level_error_identities(
-    error_table: pa.Table,
+def _stream_error_shards(
+    artifacts: tuple[QualityTaskArtifacts, ...],
     *,
+    manifest_sources: dict[str, tuple[str, str]],
+    expected_snapshot: str,
+    expected_cleaning_protocol: str,
+    expected_pipeline_git_commit: str,
     outcome_identities: set[tuple[str, int, str]],
-) -> None:
+) -> int:
+    """Validate processing-error rows incrementally."""
+
+    count = 0
     seen_errors: set[tuple[str, int, str]] = set()
 
-    for row in error_table.select(
-        ["pdb_id", "model_id", "label_chain_id"]
-    ).to_pylist():
-        model_id = row["model_id"]
-        chain_id = row["label_chain_id"]
+    columns = [
+        "snapshot",
+        "pdb_id",
+        "model_id",
+        "label_chain_id",
+        "source_mmcif_key",
+        "source_etag",
+        "pipeline_git_commit",
+    ]
 
-        if model_id is None or chain_id is None:
-            continue
+    for artifact in artifacts:
+        path = artifact.shard_paths["errors"]
 
-        identity = (
-            row["pdb_id"],
-            model_id,
-            chain_id,
-        )
+        for table in _iter_parquet_tables(
+            path,
+            columns=columns,
+        ):
+            count += table.num_rows
 
-        if identity in seen_errors:
-            raise QualityMergeError(
-                f"Duplicate chain-level processing error: "
-                f"{identity!r}"
+            _validate_source_provenance_rows(
+                table,
+                manifest_sources=manifest_sources,
+                expected_snapshot=expected_snapshot,
+                expected_cleaning_protocol=(
+                    expected_cleaning_protocol
+                ),
+                expected_pipeline_git_commit=(
+                    expected_pipeline_git_commit
+                ),
+                table_name="errors",
             )
 
-        if identity in outcome_identities:
-            raise QualityMergeError(
-                "Chain has both a Gold outcome and a processing "
-                f"error: {identity!r}"
-            )
+            for row in table.select(
+                [
+                    "pdb_id",
+                    "model_id",
+                    "label_chain_id",
+                ]
+            ).to_pylist():
+                model_id = row["model_id"]
+                chain_id = row["label_chain_id"]
 
-        seen_errors.add(identity)
+                if model_id is None or chain_id is None:
+                    continue
+
+                identity = (
+                    row["pdb_id"],
+                    model_id,
+                    chain_id,
+                )
+
+                if identity in seen_errors:
+                    raise QualityMergeError(
+                        "Duplicate chain-level processing error: "
+                        f"{identity!r}"
+                    )
+
+                if identity in outcome_identities:
+                    raise QualityMergeError(
+                        "Chain has both a Gold outcome and a "
+                        f"processing error: {identity!r}"
+                    )
+
+                seen_errors.add(identity)
+
+    return count
 
 
-def _validate_dirty_residue_identities(
-    dirty_table: pa.Table,
-) -> None:
+def _stream_dirty_residue_shards(
+    artifacts: tuple[QualityTaskArtifacts, ...],
+    *,
+    manifest_sources: dict[str, tuple[str, str]],
+    expected_snapshot: str,
+    expected_cleaning_protocol: str,
+    expected_pipeline_git_commit: str,
+) -> int:
+    """Validate dirty-residue rows incrementally."""
+
+    count = 0
     seen: set[tuple[str, int, str, int]] = set()
 
-    for row in dirty_table.select(
-        [
-            "pdb_id",
-            "model_id",
-            "label_chain_id",
-            "label_seq_id",
-        ]
-    ).to_pylist():
-        identity = (
-            row["pdb_id"],
-            row["model_id"],
-            row["label_chain_id"],
-            row["label_seq_id"],
-        )
+    columns = [
+        "snapshot",
+        "pdb_id",
+        "model_id",
+        "label_chain_id",
+        "label_seq_id",
+        "source_mmcif_key",
+        "source_etag",
+    ]
 
-        if identity in seen:
-            raise QualityMergeError(
-                f"Duplicate dirty-residue identity: {identity!r}"
+    for artifact in artifacts:
+        path = artifact.shard_paths["dirty_residues"]
+
+        for table in _iter_parquet_tables(
+            path,
+            columns=columns,
+        ):
+            count += table.num_rows
+
+            _validate_source_provenance_rows(
+                table,
+                manifest_sources=manifest_sources,
+                expected_snapshot=expected_snapshot,
+                expected_cleaning_protocol=(
+                    expected_cleaning_protocol
+                ),
+                expected_pipeline_git_commit=(
+                    expected_pipeline_git_commit
+                ),
+                table_name="dirty_residues",
             )
 
-        seen.add(identity)
+            for row in table.select(
+                [
+                    "pdb_id",
+                    "model_id",
+                    "label_chain_id",
+                    "label_seq_id",
+                ]
+            ).to_pylist():
+                identity = (
+                    row["pdb_id"],
+                    row["model_id"],
+                    row["label_chain_id"],
+                    row["label_seq_id"],
+                )
 
+                if identity in seen:
+                    raise QualityMergeError(
+                        "Duplicate dirty-residue identity: "
+                        f"{identity!r}"
+                    )
 
-def _read_all_quality_shards(
-    artifacts: Iterable[QualityTaskArtifacts],
-) -> dict[str, pa.Table]:
-    artifacts = tuple(artifacts)
-    tables: dict[str, pa.Table] = {}
+                seen.add(identity)
 
-    for shard_name, schema in QUALITY_SHARD_SCHEMAS.items():
-        task_tables = [
-            pq.read_table(
-                artifact.shard_paths[shard_name]
-            )
-            for artifact in artifacts
-        ]
-
-        if task_tables:
-            tables[shard_name] = pa.concat_tables(
-                task_tables,
-                promote_options="none",
-            )
-        else:
-            tables[shard_name] = pa.Table.from_pylist(
-                [],
-                schema=schema,
-            )
-
-    return tables
+    return count
 
 
 def validate_quality_global_state(
@@ -899,9 +1042,14 @@ def validate_quality_global_state(
     expected_cleaning_protocol: str,
     expected_pipeline_git_commit: str,
 ) -> QualityGlobalValidation:
-    """Validate global Gold identities and immutable source provenance."""
+    """Stream and validate global Gold identity and provenance state."""
 
-    artifacts = tuple(artifacts)
+    artifacts = tuple(
+        sorted(
+            artifacts,
+            key=lambda artifact: artifact.task_id,
+        )
+    )
 
     try:
         validate_manifest_table(
@@ -914,56 +1062,55 @@ def validate_quality_global_state(
         ) from exc
 
     manifest_sources = _manifest_source_index(manifest)
-    tables = _read_all_quality_shards(artifacts)
 
-    for table_name, table in tables.items():
-        _validate_source_provenance_rows(
-            table,
-            manifest_sources=manifest_sources,
-            expected_snapshot=expected_snapshot,
-            expected_cleaning_protocol=(
-                expected_cleaning_protocol
-            ),
-            expected_pipeline_git_commit=(
-                expected_pipeline_git_commit
-            ),
-            table_name=table_name,
-        )
-
-    unique_outcome_count = _validate_unique_outcome_identities(
-        tables
+    outcome_counts, outcome_map = _stream_outcome_shards(
+        artifacts,
+        manifest_sources=manifest_sources,
+        expected_snapshot=expected_snapshot,
+        expected_cleaning_protocol=(
+            expected_cleaning_protocol
+        ),
+        expected_pipeline_git_commit=(
+            expected_pipeline_git_commit
+        ),
     )
 
-    outcome_identities = {
-        _chain_identity(row)
-        for table_name in (
-            "accepted",
-            "rejected",
-            "non_candidates",
-        )
-        for row in tables[table_name].select(
-            ["pdb_id", "model_id", "label_chain_id"]
-        ).to_pylist()
-    }
+    outcome_identities = set(outcome_map)
 
-    _validate_chain_level_error_identities(
-        tables["errors"],
+    processing_error_count = _stream_error_shards(
+        artifacts,
+        manifest_sources=manifest_sources,
+        expected_snapshot=expected_snapshot,
+        expected_cleaning_protocol=(
+            expected_cleaning_protocol
+        ),
+        expected_pipeline_git_commit=(
+            expected_pipeline_git_commit
+        ),
         outcome_identities=outcome_identities,
     )
 
-    _validate_dirty_residue_identities(
-        tables["dirty_residues"]
+    dirty_residue_count = _stream_dirty_residue_shards(
+        artifacts,
+        manifest_sources=manifest_sources,
+        expected_snapshot=expected_snapshot,
+        expected_cleaning_protocol=(
+            expected_cleaning_protocol
+        ),
+        expected_pipeline_git_commit=(
+            expected_pipeline_git_commit
+        ),
     )
 
     return QualityGlobalValidation(
-        accepted_chain_count=tables["accepted"].num_rows,
-        rejected_chain_count=tables["rejected"].num_rows,
+        accepted_chain_count=outcome_counts["accepted"],
+        rejected_chain_count=outcome_counts["rejected"],
         non_candidate_chain_count=(
-            tables["non_candidates"].num_rows
+            outcome_counts["non_candidates"]
         ),
-        dirty_residue_count=tables["dirty_residues"].num_rows,
-        processing_error_count=tables["errors"].num_rows,
-        unique_outcome_chain_count=unique_outcome_count,
+        dirty_residue_count=dirty_residue_count,
+        processing_error_count=processing_error_count,
+        unique_outcome_chain_count=len(outcome_identities),
     )
 
 
