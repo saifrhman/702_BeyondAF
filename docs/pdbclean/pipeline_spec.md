@@ -50,6 +50,23 @@ It contains:
 
 No structural filtering occurs in this layer.
 
+The persisted Bronze-stage output root is:
+
+`<storage.output_root>/<snapshot>/bronze/`
+
+It contains:
+
+- `source_manifest.csv`;
+- `source_manifest.parquet`;
+- `source_manifest_summary.json`.
+
+The Bronze path is snapshot-specific but intentionally independent of
+`release.protocol_version`. The same immutable source manifest may therefore
+be reused by multiple protocol versions operating on the same snapshot.
+
+A completed published release copies the validated
+`source_manifest.parquet` into its own immutable release directory.
+
 ### Silver Layer
 
 The Silver layer is the deterministic in-memory parsed representation used
