@@ -364,3 +364,106 @@ def test_download_verified_s3_object_requires_response_etag(
             expected_size_bytes=len(payload),
             expected_etag="etag123",
         )
+
+
+def test_verified_download_transport_failure_has_specific_type(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from pdbclean.snapshot import (
+        SnapshotError,
+        SnapshotTransportError,
+        download_verified_s3_object_bytes,
+    )
+
+    def fail(*args, **kwargs):
+        raise OSError("synthetic network failure")
+
+    monkeypatch.setattr(
+        "pdbclean.snapshot.urlopen",
+        fail,
+    )
+
+    with pytest.raises(
+        SnapshotTransportError,
+        match="synthetic network failure",
+    ) as exc_info:
+        download_verified_s3_object_bytes(
+            bucket_url="https://example.invalid",
+            s3_key="20260101/path/1abc.cif.gz",
+            expected_size_bytes=3,
+            expected_etag="etag123",
+        )
+
+    assert isinstance(exc_info.value, SnapshotError)
+
+
+@pytest.mark.parametrize(
+    ("expected_size", "response_etag", "expected_etag", "match"),
+    [
+        (999, '"etag123"', "etag123", "size mismatch"),
+        (3, None, "etag123", "response has no ETag"),
+        (3, '"actual"', "expected", "ETag mismatch"),
+    ],
+)
+def test_verified_download_integrity_failure_has_specific_type(
+    monkeypatch: pytest.MonkeyPatch,
+    expected_size: int,
+    response_etag: str | None,
+    expected_etag: str,
+    match: str,
+) -> None:
+    from pdbclean.snapshot import (
+        SnapshotError,
+        SnapshotVerificationError,
+        download_verified_s3_object_bytes,
+    )
+
+    payload = b"abc"
+
+    monkeypatch.setattr(
+        "pdbclean.snapshot.urlopen",
+        lambda *args, **kwargs: _FakeS3Response(
+            payload,
+            etag=response_etag,
+        ),
+    )
+
+    with pytest.raises(
+        SnapshotVerificationError,
+        match=match,
+    ) as exc_info:
+        download_verified_s3_object_bytes(
+            bucket_url="https://example.invalid",
+            s3_key="20260101/path/1abc.cif.gz",
+            expected_size_bytes=expected_size,
+            expected_etag=expected_etag,
+        )
+
+    assert isinstance(exc_info.value, SnapshotError)
+
+
+@pytest.mark.parametrize(
+    ("expected_size", "expected_etag"),
+    [
+        (0, "etag123"),
+        (-1, "etag123"),
+        (3, ""),
+        (3, '""'),
+    ],
+)
+def test_verified_download_invalid_expected_metadata_is_verification_error(
+    expected_size: int,
+    expected_etag: str,
+) -> None:
+    from pdbclean.snapshot import (
+        SnapshotVerificationError,
+        download_verified_s3_object_bytes,
+    )
+
+    with pytest.raises(SnapshotVerificationError):
+        download_verified_s3_object_bytes(
+            bucket_url="https://example.invalid",
+            s3_key="20260101/path/1abc.cif.gz",
+            expected_size_bytes=expected_size,
+            expected_etag=expected_etag,
+        )

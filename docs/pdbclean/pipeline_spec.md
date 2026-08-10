@@ -995,6 +995,33 @@ Every removal decision must record:
 
 The pipeline uses SLURM arrays and explicit job dependencies.
 
+### 12.1 Source Retries and Concurrency
+
+Quality-task source handling is controlled by the versioned execution
+configuration.
+
+`execution.max_retries` is the number of retries permitted after the initial
+download attempt. Therefore `max_retries: 3` permits at most four transfer
+attempts for one source object.
+
+Retries apply only to explicitly classified transient source-transfer failures
+(`SnapshotTransportError`). Immutable-source verification failures, including
+byte-count mismatches, missing response ETags and ETag mismatches, are not
+retried. Other non-transport `SnapshotError` failures are also not retried.
+Unexpected exceptions are not converted into source failures and must
+propagate so that the task fails visibly.
+
+`execution.download_concurrency` is the maximum number of source-processing
+workers active within one quality task. A worker performs the source download,
+verification, parsing and chain cleaning for one manifest row. This permits
+network transfers to overlap while bounding task-level concurrency.
+
+Concurrency must not change logical output ordering. Source results are
+consumed and aggregated in the original validated manifest order even when
+individual workers finish out of order. Gold records, processing-error lineage
+and task accounting therefore remain deterministic with respect to the
+immutable manifest.
+
 The processing stages are:
 
 1. Discover and validate a complete PDB snapshot.

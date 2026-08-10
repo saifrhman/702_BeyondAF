@@ -163,6 +163,10 @@ def main() -> None:
         timeout_seconds=execution_config[
             "connection_timeout_seconds"
         ],
+        max_retries=execution_config["max_retries"],
+        download_concurrency=execution_config[
+            "download_concurrency"
+        ],
     )
 
     print(f"Snapshot: {snapshot}")

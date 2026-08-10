@@ -1057,6 +1057,8 @@ def test_execute_quality_task_orchestrates_batch_then_publication(
             "cleaning_protocol": "Protocol_3.2_BRI_v1.2.2",
             "pipeline_git_commit": "deadbeef",
             "timeout_seconds": 37,
+            "max_retries": 4,
+            "download_concurrency": 3,
         }
         return batch
 
@@ -1104,6 +1106,8 @@ def test_execute_quality_task_orchestrates_batch_then_publication(
         cleaning_protocol="Protocol_3.2_BRI_v1.2.2",
         pipeline_git_commit="deadbeef",
         timeout_seconds=37,
+        max_retries=4,
+        download_concurrency=3,
         environ={
             "SLURM_JOB_ID": "12345",
             "SLURM_ARRAY_TASK_ID": "7",
@@ -1222,4 +1226,324 @@ def test_quality_stage_output_root_rejects_unsafe_protocol(
             "outputs/pdbclean",
             snapshot="20310415",
             protocol_version=protocol_version,
+        )
+
+
+def test_process_manifest_source_retries_transport_failure_then_succeeds() -> None:
+    from pdbclean.quality_runner import process_manifest_source
+    from pdbclean.snapshot import SnapshotTransportError
+
+    compressed = _multimodel_cif_bytes()
+    attempts = 0
+
+    def downloader(**kwargs):
+        nonlocal attempts
+        attempts += 1
+
+        if attempts < 3:
+            raise SnapshotTransportError(
+                f"synthetic transient failure {attempts}"
+            )
+
+        return compressed
+
+    result = process_manifest_source(
+        _manifest_row(),
+        bucket_url="https://example.invalid",
+        selection_config={
+            "models": {
+                "policy": "first_model",
+                "model_id": 1,
+            }
+        },
+        cleaning_protocol="Protocol_3.2_BRI_v1.2.2",
+        pipeline_git_commit="deadbeef",
+        max_retries=3,
+        downloader=downloader,
+    )
+
+    assert attempts == 3
+    assert result.source_failed is False
+    assert len(result.gold_records) == 1
+
+
+def test_process_manifest_source_exhausts_transport_retries() -> None:
+    from pdbclean.quality_runner import process_manifest_source
+    from pdbclean.snapshot import SnapshotTransportError
+
+    attempts = 0
+
+    def downloader(**kwargs):
+        nonlocal attempts
+        attempts += 1
+        raise SnapshotTransportError("synthetic network outage")
+
+    result = process_manifest_source(
+        _manifest_row(),
+        bucket_url="https://example.invalid",
+        selection_config={
+            "models": {
+                "policy": "first_model",
+                "model_id": 1,
+            }
+        },
+        cleaning_protocol="Protocol_3.2_BRI_v1.2.2",
+        pipeline_git_commit="deadbeef",
+        max_retries=2,
+        downloader=downloader,
+    )
+
+    # One initial attempt plus two retries.
+    assert attempts == 3
+    assert result.source_failed is True
+    assert len(result.processing_errors) == 1
+    assert (
+        result.processing_errors[0]["error_type"]
+        == "SnapshotTransportError"
+    )
+
+
+def test_process_manifest_source_does_not_retry_verification_failure() -> None:
+    from pdbclean.quality_runner import process_manifest_source
+    from pdbclean.snapshot import SnapshotVerificationError
+
+    attempts = 0
+
+    def downloader(**kwargs):
+        nonlocal attempts
+        attempts += 1
+        raise SnapshotVerificationError(
+            "synthetic ETag mismatch"
+        )
+
+    result = process_manifest_source(
+        _manifest_row(),
+        bucket_url="https://example.invalid",
+        selection_config={
+            "models": {
+                "policy": "first_model",
+                "model_id": 1,
+            }
+        },
+        cleaning_protocol="Protocol_3.2_BRI_v1.2.2",
+        pipeline_git_commit="deadbeef",
+        max_retries=3,
+        downloader=downloader,
+    )
+
+    assert attempts == 1
+    assert result.source_failed is True
+    assert (
+        result.processing_errors[0]["error_type"]
+        == "SnapshotVerificationError"
+    )
+
+
+@pytest.mark.parametrize("max_retries", [-1, True, 1.5, "3"])
+def test_process_manifest_source_rejects_invalid_max_retries(
+    max_retries,
+) -> None:
+    from pdbclean.quality_runner import (
+        QualityRunnerError,
+        process_manifest_source,
+    )
+
+    with pytest.raises(
+        QualityRunnerError,
+        match="max_retries must be a non-negative integer",
+    ):
+        process_manifest_source(
+            _manifest_row(),
+            bucket_url="https://example.invalid",
+            selection_config={
+                "models": {
+                    "policy": "first_model",
+                    "model_id": 1,
+                }
+            },
+            cleaning_protocol="Protocol_3.2_BRI_v1.2.2",
+            pipeline_git_commit="deadbeef",
+            max_retries=max_retries,
+        )
+
+
+def test_process_manifest_batch_forwards_max_retries() -> None:
+    from pdbclean.quality_runner import (
+        SourceQualityResult,
+        process_manifest_batch,
+    )
+
+    observed = []
+
+    def source_processor(manifest_row, **kwargs):
+        observed.append(kwargs["max_retries"])
+
+        return SourceQualityResult(
+            pdb_id=manifest_row["pdb_id"].lower(),
+            parsed_silver_chain_count=0,
+            selected_silver_chain_count=0,
+            candidate_entry_count=0,
+            candidate_chain_count=0,
+            source_failed=False,
+        )
+
+    result = process_manifest_batch(
+        [{"pdb_id": "TEST"}],
+        bucket_url="https://example.invalid",
+        selection_config={
+            "models": {
+                "policy": "first_model",
+                "model_id": 1,
+            }
+        },
+        cleaning_protocol="Protocol_3.2_BRI_v1.2.2",
+        pipeline_git_commit="deadbeef",
+        max_retries=7,
+        download_concurrency=1,
+        source_processor=source_processor,
+    )
+
+    assert observed == [7]
+    assert result.input_source_object_count == 1
+    assert result.successful_source_object_count == 1
+
+
+def test_process_manifest_batch_concurrency_preserves_manifest_order() -> None:
+    import threading
+
+    from pdbclean.quality_runner import (
+        SourceQualityResult,
+        process_manifest_batch,
+    )
+
+    second_started = threading.Event()
+
+    rows = [
+        {"pdb_id": "FIRST"},
+        {"pdb_id": "SECOND"},
+    ]
+
+    def source_processor(manifest_row, **kwargs):
+        pdb_id = manifest_row["pdb_id"].lower()
+
+        assert kwargs["max_retries"] == 2
+
+        if pdb_id == "first":
+            if not second_started.wait(timeout=2.0):
+                raise AssertionError(
+                    "Second source never started concurrently"
+                )
+        else:
+            second_started.set()
+
+        return SourceQualityResult(
+            pdb_id=pdb_id,
+            parsed_silver_chain_count=0,
+            selected_silver_chain_count=0,
+            candidate_entry_count=0,
+            candidate_chain_count=0,
+            processing_errors=(
+                {
+                    "snapshot": "20260101",
+                    "pdb_id": pdb_id,
+                    "model_id": None,
+                    "label_chain_id": None,
+                    "processing_stage": "source_download_verify",
+                    "error_type": "SyntheticError",
+                    "error_message": pdb_id,
+                    "source_mmcif_key": f"{pdb_id}.cif.gz",
+                    "source_etag": f"etag-{pdb_id}",
+                    "pipeline_git_commit": "deadbeef",
+                },
+            ),
+            source_failed=True,
+        )
+
+    result = process_manifest_batch(
+        rows,
+        bucket_url="https://example.invalid",
+        selection_config={
+            "models": {
+                "policy": "first_model",
+                "model_id": 1,
+            }
+        },
+        cleaning_protocol="Protocol_3.2_BRI_v1.2.2",
+        pipeline_git_commit="deadbeef",
+        max_retries=2,
+        download_concurrency=2,
+        source_processor=source_processor,
+    )
+
+    # SECOND is allowed to finish first internally, but publication order
+    # must still follow the immutable manifest.
+    assert [
+        row["pdb_id"]
+        for row in result.tables.processing_errors.to_pylist()
+    ] == ["first", "second"]
+
+    assert result.input_source_object_count == 2
+    assert result.successful_source_object_count == 0
+    assert result.failed_source_object_count == 2
+
+
+@pytest.mark.parametrize(
+    "download_concurrency",
+    [0, -1, True, 1.5, "4"],
+)
+def test_process_manifest_batch_rejects_invalid_download_concurrency(
+    download_concurrency,
+) -> None:
+    from pdbclean.quality_runner import (
+        QualityRunnerError,
+        process_manifest_batch,
+    )
+
+    with pytest.raises(
+        QualityRunnerError,
+        match="download_concurrency must be a positive integer",
+    ):
+        process_manifest_batch(
+            [],
+            bucket_url="https://example.invalid",
+            selection_config={
+                "models": {
+                    "policy": "first_model",
+                    "model_id": 1,
+                }
+            },
+            cleaning_protocol="Protocol_3.2_BRI_v1.2.2",
+            pipeline_git_commit="deadbeef",
+            download_concurrency=download_concurrency,
+        )
+
+
+@pytest.mark.parametrize(
+    "max_retries",
+    [-1, True, 1.5, "3"],
+)
+def test_process_manifest_batch_rejects_invalid_max_retries(
+    max_retries,
+) -> None:
+    from pdbclean.quality_runner import (
+        QualityRunnerError,
+        process_manifest_batch,
+    )
+
+    with pytest.raises(
+        QualityRunnerError,
+        match="max_retries must be a non-negative integer",
+    ):
+        process_manifest_batch(
+            [],
+            bucket_url="https://example.invalid",
+            selection_config={
+                "models": {
+                    "policy": "first_model",
+                    "model_id": 1,
+                }
+            },
+            cleaning_protocol="Protocol_3.2_BRI_v1.2.2",
+            pipeline_git_commit="deadbeef",
+            max_retries=max_retries,
         )

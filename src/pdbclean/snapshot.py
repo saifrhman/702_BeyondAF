@@ -18,7 +18,15 @@ S3_NAMESPACE = {"s3": "http://s3.amazonaws.com/doc/2006-03-01/"}
 
 
 class SnapshotError(RuntimeError):
-    """Raised when a PDB snapshot cannot be discovered safely."""
+    """Base error for PDB snapshot discovery and source handling."""
+
+
+class SnapshotTransportError(SnapshotError):
+    """Transient failure while transferring a snapshot source object."""
+
+
+class SnapshotVerificationError(SnapshotError):
+    """Immutable source metadata or downloaded bytes failed verification."""
 
 
 @dataclass(frozen=True)
@@ -378,14 +386,14 @@ def download_verified_s3_object_bytes(
     """Download one manifest object and verify immutable source metadata."""
 
     if expected_size_bytes <= 0:
-        raise SnapshotError(
+        raise SnapshotVerificationError(
             "Expected S3 object size must be positive"
         )
 
     expected_etag = expected_etag.strip().strip('"')
 
     if not expected_etag:
-        raise SnapshotError(
+        raise SnapshotVerificationError(
             "Expected S3 object ETag must be non-empty"
         )
 
@@ -403,28 +411,28 @@ def download_verified_s3_object_bytes(
             compressed_bytes = response.read()
             response_etag = response.headers.get("ETag")
     except OSError as exc:
-        raise SnapshotError(
+        raise SnapshotTransportError(
             f"Failed to download S3 object {s3_key}: {exc}"
         ) from exc
 
     actual_size_bytes = len(compressed_bytes)
 
     if actual_size_bytes != expected_size_bytes:
-        raise SnapshotError(
+        raise SnapshotVerificationError(
             f"S3 object size mismatch for {s3_key}: "
             f"expected {expected_size_bytes}, "
             f"received {actual_size_bytes}"
         )
 
     if response_etag is None:
-        raise SnapshotError(
+        raise SnapshotVerificationError(
             f"S3 object response has no ETag for {s3_key}"
         )
 
     actual_etag = response_etag.strip().strip('"')
 
     if actual_etag != expected_etag:
-        raise SnapshotError(
+        raise SnapshotVerificationError(
             f"S3 object ETag mismatch for {s3_key}: "
             f"expected {expected_etag!r}, "
             f"received {actual_etag!r}"

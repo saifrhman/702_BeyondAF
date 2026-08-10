@@ -157,6 +157,9 @@ def test_cli_derives_partition_count_from_manifest_runtime_size(
         "protocol3.2-comp702-v1"
     )
     assert kwargs["pipeline_git_commit"] == "a" * 40
+    assert kwargs["max_retries"] == 3
+    assert kwargs["download_concurrency"] == 4
+    assert kwargs["timeout_seconds"] == 60
 
     assert kwargs["output_root"] == (
         tmp_path

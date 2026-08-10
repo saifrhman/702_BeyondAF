@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import Callable, Iterable, Mapping
+from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
 from datetime import datetime, timezone
 import os
@@ -33,6 +34,7 @@ from pdbclean.mmcif_parser import (
 )
 from pdbclean.snapshot import (
     SnapshotError,
+    SnapshotTransportError,
     download_verified_s3_object_bytes,
 )
 
@@ -331,9 +333,19 @@ def process_manifest_source(
     cleaning_protocol: str,
     pipeline_git_commit: str,
     timeout_seconds: int = 60,
+    max_retries: int = 0,
     downloader: Callable[..., bytes] = download_verified_s3_object_bytes,
 ) -> SourceQualityResult:
     """Download, verify, parse, and quality-clean one manifest source row."""
+
+    if (
+        not isinstance(max_retries, int)
+        or isinstance(max_retries, bool)
+        or max_retries < 0
+    ):
+        raise QualityRunnerError(
+            "max_retries must be a non-negative integer"
+        )
 
     required_fields = (
         "snapshot",
@@ -400,15 +412,32 @@ def process_manifest_source(
         pipeline_git_commit=pipeline_git_commit,
     )
 
-    try:
-        compressed_bytes = downloader(
-            bucket_url=bucket_url,
-            s3_key=s3_key,
-            expected_size_bytes=size_bytes,
-            expected_etag=etag,
-            timeout_seconds=timeout_seconds,
-        )
-    except SnapshotError as exc:
+    compressed_bytes: bytes | None = None
+    source_error: SnapshotError | None = None
+
+    for attempt in range(max_retries + 1):
+        try:
+            compressed_bytes = downloader(
+                bucket_url=bucket_url,
+                s3_key=s3_key,
+                expected_size_bytes=size_bytes,
+                expected_etag=etag,
+                timeout_seconds=timeout_seconds,
+            )
+            source_error = None
+            break
+        except SnapshotTransportError as exc:
+            source_error = exc
+
+            if attempt == max_retries:
+                break
+        except SnapshotError as exc:
+            # Deterministic verification failures and other non-transport
+            # snapshot failures must not be retried.
+            source_error = exc
+            break
+
+    if source_error is not None:
         return SourceQualityResult(
             pdb_id=normalized_pdb_id,
             parsed_silver_chain_count=0,
@@ -422,14 +451,19 @@ def process_manifest_source(
                     "model_id": None,
                     "label_chain_id": None,
                     "processing_stage": "source_download_verify",
-                    "error_type": type(exc).__name__,
-                    "error_message": str(exc),
+                    "error_type": type(source_error).__name__,
+                    "error_message": str(source_error),
                     "source_mmcif_key": s3_key,
                     "source_etag": etag,
                     "pipeline_git_commit": pipeline_git_commit,
                 },
             ),
             source_failed=True,
+        )
+
+    if compressed_bytes is None:
+        raise QualityRunnerError(
+            "Downloader completed without bytes or a source error"
         )
 
     return process_verified_mmcif_bytes(
@@ -449,14 +483,40 @@ def process_manifest_batch(
     cleaning_protocol: str,
     pipeline_git_commit: str,
     timeout_seconds: int = 60,
-    source_processor: Callable[..., SourceQualityResult] = process_manifest_source,
+    max_retries: int = 0,
+    download_concurrency: int = 1,
+    source_processor: Callable[
+        ..., SourceQualityResult
+    ] = process_manifest_source,
 ) -> QualityBatchResult:
-    """Process and aggregate one manifest partition in memory."""
+    """Process and aggregate one manifest partition deterministically."""
+
+    if (
+        not isinstance(max_retries, int)
+        or isinstance(max_retries, bool)
+        or max_retries < 0
+    ):
+        raise QualityRunnerError(
+            "max_retries must be a non-negative integer"
+        )
+
+    if (
+        not isinstance(download_concurrency, int)
+        or isinstance(download_concurrency, bool)
+        or download_concurrency <= 0
+    ):
+        raise QualityRunnerError(
+            "download_concurrency must be a positive integer"
+        )
+
+    # Materialise the partition exactly once. Its existing validated
+    # manifest order defines deterministic aggregation order.
+    rows = list(manifest_rows)
 
     records: list[GoldChainRecords] = []
     processing_errors: list[dict[str, Any]] = []
 
-    input_source_object_count = 0
+    input_source_object_count = len(rows)
     successful_source_object_count = 0
     failed_source_object_count = 0
 
@@ -465,30 +525,50 @@ def process_manifest_batch(
     candidate_entry_count = 0
     candidate_chain_count = 0
 
-    for manifest_row in manifest_rows:
-        input_source_object_count += 1
-
-        result = source_processor(
+    def process_row(
+        manifest_row: Mapping[str, Any],
+    ) -> SourceQualityResult:
+        return source_processor(
             manifest_row,
             bucket_url=bucket_url,
             selection_config=selection_config,
             cleaning_protocol=cleaning_protocol,
             pipeline_git_commit=pipeline_git_commit,
             timeout_seconds=timeout_seconds,
+            max_retries=max_retries,
         )
 
-        if result.source_failed:
-            failed_source_object_count += 1
-        else:
-            successful_source_object_count += 1
+    # executor.map yields results in input order even when workers finish
+    # out of order. Therefore concurrency cannot reorder Gold records or
+    # processing-error lineage relative to the validated manifest.
+    with ThreadPoolExecutor(
+        max_workers=download_concurrency
+    ) as executor:
+        results = executor.map(process_row, rows)
 
-        parsed_silver_chain_count += result.parsed_silver_chain_count
-        selected_silver_chain_count += result.selected_silver_chain_count
-        candidate_entry_count += result.candidate_entry_count
-        candidate_chain_count += result.candidate_chain_count
+        for result in results:
+            if result.source_failed:
+                failed_source_object_count += 1
+            else:
+                successful_source_object_count += 1
 
-        records.extend(result.gold_records)
-        processing_errors.extend(result.processing_errors)
+            parsed_silver_chain_count += (
+                result.parsed_silver_chain_count
+            )
+            selected_silver_chain_count += (
+                result.selected_silver_chain_count
+            )
+            candidate_entry_count += (
+                result.candidate_entry_count
+            )
+            candidate_chain_count += (
+                result.candidate_chain_count
+            )
+
+            records.extend(result.gold_records)
+            processing_errors.extend(
+                result.processing_errors
+            )
 
     tables = gold_records_to_tables(
         records,
@@ -497,7 +577,9 @@ def process_manifest_batch(
 
     return QualityBatchResult(
         input_source_object_count=input_source_object_count,
-        successful_source_object_count=successful_source_object_count,
+        successful_source_object_count=(
+            successful_source_object_count
+        ),
         failed_source_object_count=failed_source_object_count,
         parsed_silver_chain_count=parsed_silver_chain_count,
         selected_silver_chain_count=selected_silver_chain_count,
@@ -505,8 +587,6 @@ def process_manifest_batch(
         candidate_chain_count=candidate_chain_count,
         tables=tables,
     )
-
-
 
 def publish_quality_batch(
     batch: QualityBatchResult,
@@ -677,6 +757,8 @@ def execute_quality_task(
     cleaning_protocol: str,
     pipeline_git_commit: str,
     timeout_seconds: int = 60,
+    max_retries: int = 0,
+    download_concurrency: int = 1,
     environ: Mapping[str, str] | None = None,
     batch_processor: Callable[..., QualityBatchResult] = process_manifest_batch,
     publisher: Callable[..., QualityTaskPublication] = publish_quality_batch,
@@ -698,6 +780,8 @@ def execute_quality_task(
         cleaning_protocol=cleaning_protocol,
         pipeline_git_commit=pipeline_git_commit,
         timeout_seconds=timeout_seconds,
+        max_retries=max_retries,
+        download_concurrency=download_concurrency,
     )
 
     # publish_quality_batch writes Parquet shards first, captures final
