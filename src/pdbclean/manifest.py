@@ -240,3 +240,75 @@ def write_manifest_parquet(
 
     temporary.replace(output)
     return output
+
+
+def manifest_partition_count(
+    row_count: int,
+    batch_size: int,
+) -> int:
+    """Return the number of zero-based manifest partitions required."""
+
+    if (
+        not isinstance(row_count, int)
+        or isinstance(row_count, bool)
+        or row_count < 0
+    ):
+        raise ManifestError(
+            "Manifest row_count must be a non-negative integer"
+        )
+
+    if (
+        not isinstance(batch_size, int)
+        or isinstance(batch_size, bool)
+        or batch_size <= 0
+    ):
+        raise ManifestError(
+            "Manifest batch_size must be a positive integer"
+        )
+
+    if row_count == 0:
+        return 0
+
+    return (row_count + batch_size - 1) // batch_size
+
+
+def select_manifest_partition(
+    table: pa.Table,
+    *,
+    task_id: int,
+    batch_size: int,
+) -> pa.Table:
+    """Select one deterministic zero-based manifest partition."""
+
+    if (
+        not isinstance(task_id, int)
+        or isinstance(task_id, bool)
+        or task_id < 0
+    ):
+        raise ManifestError(
+            "Manifest task_id must be a non-negative integer"
+        )
+
+    partition_count = manifest_partition_count(
+        table.num_rows,
+        batch_size,
+    )
+
+    if partition_count == 0:
+        raise ManifestError(
+            "Cannot select a task from an empty manifest"
+        )
+
+    if task_id >= partition_count:
+        raise ManifestError(
+            f"Manifest task_id {task_id} is out of range; "
+            f"valid task IDs are 0 through {partition_count - 1}"
+        )
+
+    start = task_id * batch_size
+    length = min(
+        batch_size,
+        table.num_rows - start,
+    )
+
+    return table.slice(start, length)

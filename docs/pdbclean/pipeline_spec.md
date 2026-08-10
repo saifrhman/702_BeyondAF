@@ -759,6 +759,39 @@ marked successful when either required accounting invariant is false.
 Task-summary JSON must be written to a temporary path and atomically renamed
 only after the summary has been fully serialized.
 
+### 7.6.2 Deterministic Manifest Partitioning
+
+Quality-cleaning task identifiers are zero-based integer partition indices.
+
+For a validated immutable source manifest with `N` rows and configured
+`batch_size = B`, task `t` owns the half-open manifest row interval:
+
+`[t * B, min((t + 1) * B, N))`
+
+Therefore:
+
+- valid task identifiers are `0` through `ceil(N / B) - 1`;
+- every manifest row belongs to exactly one task;
+- no two tasks overlap;
+- no source row is skipped;
+- the final task may contain fewer than `B` source objects;
+- an out-of-range task identifier is an execution error rather than an empty
+  successful task.
+
+Partitioning is performed against the deterministic row order of the
+validated immutable manifest. The canonical manifest generator sorts rows by
+`pdb_id` before publication, so rerunning the same snapshot/configuration
+produces the same task-to-source assignment.
+
+The number of quality partitions is derived at runtime from the validated
+manifest row count and configured `batch_size`:
+
+`partition_count = ceil(manifest_row_count / batch_size)`
+
+No snapshot-specific partition count is hard-coded. When a future snapshot
+contains a different number of coordinate mmCIF objects, its task count is
+recomputed automatically from that snapshot's validated manifest.
+
 ### 7.7.1 Task Publication Order and Completion
 
 A quality task must publish outputs in the following order:
