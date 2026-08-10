@@ -1269,3 +1269,65 @@ def publish_quality_merge(
         success_path=success_path,
         global_summary=global_summary,
     )
+
+
+def merge_quality_stage(
+    *,
+    quality_root: str | Path,
+    manifest: pa.Table,
+    manifest_row_count: int,
+    batch_size: int,
+    snapshot: str,
+    cleaning_protocol: str,
+    pipeline_git_commit: str,
+) -> QualityMergePublication:
+    """Validate and publish one complete distributed quality stage.
+
+    A pre-existing _SUCCESS marker is invalidated before any validation
+    begins. A fresh marker is written only after every validation and
+    publication step succeeds.
+    """
+
+    root = Path(quality_root)
+    success_path = root / "_SUCCESS"
+
+    if success_path.exists():
+        success_path.unlink()
+
+    expected_ids = expected_quality_task_ids(
+        manifest_row_count,
+        batch_size,
+    )
+
+    artifacts = discover_quality_task_artifacts(
+        root,
+        expected_task_ids=expected_ids,
+        expected_snapshot=snapshot,
+        expected_cleaning_protocol=cleaning_protocol,
+        expected_pipeline_git_commit=pipeline_git_commit,
+    )
+
+    validate_quality_task_accounting(
+        artifacts,
+        manifest_row_count=manifest_row_count,
+        batch_size=batch_size,
+    )
+
+    global_validation = validate_quality_global_state(
+        artifacts,
+        manifest=manifest,
+        expected_snapshot=snapshot,
+        expected_cleaning_protocol=cleaning_protocol,
+        expected_pipeline_git_commit=pipeline_git_commit,
+    )
+
+    return publish_quality_merge(
+        artifacts,
+        quality_root=root,
+        manifest_row_count=manifest_row_count,
+        batch_size=batch_size,
+        snapshot=snapshot,
+        cleaning_protocol=cleaning_protocol,
+        pipeline_git_commit=pipeline_git_commit,
+        global_validation=global_validation,
+    )

@@ -1317,3 +1317,117 @@ def test_failed_republish_removes_previous_success_marker(
         )
 
     assert not (tmp_path / "_SUCCESS").exists()
+
+
+def test_merge_quality_stage_end_to_end_success(
+    tmp_path: Path,
+) -> None:
+    from pdbclean.quality_merge import merge_quality_stage
+
+    key = (
+        "20260101/pub/pdb/data/structures/divided/"
+        "mmCIF/aa/1aaa.cif.gz"
+    )
+    etag = '"etag-a"'
+
+    _write_task(tmp_path, 0)
+    _write_accounting_summary(
+        tmp_path,
+        0,
+        input_sources=1,
+    )
+
+    publication = merge_quality_stage(
+        quality_root=tmp_path,
+        manifest=_manifest_table(
+            [("1aaa", key, etag)]
+        ),
+        manifest_row_count=1,
+        batch_size=500,
+        snapshot=SNAPSHOT,
+        cleaning_protocol=PROTOCOL,
+        pipeline_git_commit=GIT_COMMIT,
+    )
+
+    assert publication.success_path == tmp_path / "_SUCCESS"
+    assert publication.success_path.is_file()
+    assert publication.global_summary_path.is_file()
+
+    for path in publication.merged_paths.values():
+        assert path.is_file()
+
+    assert publication.global_summary[
+        "input_source_object_count"
+    ] == 1
+    assert publication.global_summary["task_count"] == 1
+
+
+def test_merge_quality_stage_removes_stale_success_before_discovery(
+    tmp_path: Path,
+) -> None:
+    from pdbclean.quality_merge import merge_quality_stage
+
+    key = (
+        "20260101/pub/pdb/data/structures/divided/"
+        "mmCIF/aa/1aaa.cif.gz"
+    )
+
+    success = tmp_path / "_SUCCESS"
+    success.write_text("stale\n", encoding="utf-8")
+
+    with pytest.raises(
+        QualityMergeError,
+        match="Invalid summary task set",
+    ):
+        merge_quality_stage(
+            quality_root=tmp_path,
+            manifest=_manifest_table(
+                [("1aaa", key, '"etag-a"')]
+            ),
+            manifest_row_count=1,
+            batch_size=500,
+            snapshot=SNAPSHOT,
+            cleaning_protocol=PROTOCOL,
+            pipeline_git_commit=GIT_COMMIT,
+        )
+
+    assert not success.exists()
+
+
+def test_merge_quality_stage_removes_stale_success_before_accounting(
+    tmp_path: Path,
+) -> None:
+    from pdbclean.quality_merge import merge_quality_stage
+
+    key = (
+        "20260101/pub/pdb/data/structures/divided/"
+        "mmCIF/aa/1aaa.cif.gz"
+    )
+
+    _write_task(tmp_path, 0)
+    _write_accounting_summary(
+        tmp_path,
+        0,
+        input_sources=0,
+    )
+
+    success = tmp_path / "_SUCCESS"
+    success.write_text("stale\n", encoding="utf-8")
+
+    with pytest.raises(
+        QualityMergeError,
+        match="input source count mismatch",
+    ):
+        merge_quality_stage(
+            quality_root=tmp_path,
+            manifest=_manifest_table(
+                [("1aaa", key, '"etag-a"')]
+            ),
+            manifest_row_count=1,
+            batch_size=500,
+            snapshot=SNAPSHOT,
+            cleaning_protocol=PROTOCOL,
+            pipeline_git_commit=GIT_COMMIT,
+        )
+
+    assert not success.exists()
