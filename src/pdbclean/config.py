@@ -154,6 +154,81 @@ def _validate_snapshot(config: dict[str, Any]) -> None:
             )
 
 
+def _validate_selection(config: dict[str, Any]) -> None:
+    selection = config["selection"]
+
+    if not isinstance(selection, dict):
+        raise ConfigError("selection must be a mapping")
+
+    models = selection.get("models")
+
+    if not isinstance(models, dict):
+        raise ConfigError("selection.models must be a mapping")
+
+    policy = models.get("policy")
+
+    if policy != "first_model":
+        raise ConfigError(
+            "selection.models.policy must be 'first_model'"
+        )
+
+    model_id = models.get("model_id")
+
+    if (
+        not isinstance(model_id, int)
+        or isinstance(model_id, bool)
+        or model_id <= 0
+    ):
+        raise ConfigError(
+            "selection.models.model_id must be a positive integer"
+        )
+
+
+def _validate_execution(config: dict[str, Any]) -> None:
+    execution = config["execution"]
+
+    if not isinstance(execution, dict):
+        raise ConfigError("execution must be a mapping")
+
+    positive_integer_fields = (
+        "batch_size",
+        "download_concurrency",
+        "connection_timeout_seconds",
+    )
+
+    for field in positive_integer_fields:
+        value = execution.get(field)
+
+        if (
+            not isinstance(value, int)
+            or isinstance(value, bool)
+            or value <= 0
+        ):
+            raise ConfigError(
+                f"execution.{field} must be a positive integer"
+            )
+
+    max_retries = execution.get("max_retries")
+
+    if (
+        not isinstance(max_retries, int)
+        or isinstance(max_retries, bool)
+        or max_retries < 0
+    ):
+        raise ConfigError(
+            "execution.max_retries must be a non-negative integer"
+        )
+
+    for field in (
+        "atomic_writes",
+        "write_success_markers",
+    ):
+        if not isinstance(execution.get(field), bool):
+            raise ConfigError(
+                f"execution.{field} must be a boolean"
+            )
+
+
 def load_config(path: str | Path) -> LoadedConfig:
     """Load, expand, validate, and checksum a YAML configuration."""
 
@@ -182,6 +257,8 @@ def load_config(path: str | Path) -> LoadedConfig:
 
     _validate_required_sections(expanded)
     _validate_snapshot(expanded)
+    _validate_selection(expanded)
+    _validate_execution(expanded)
 
     return LoadedConfig(
         path=config_path,
