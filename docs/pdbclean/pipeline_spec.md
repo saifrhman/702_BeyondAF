@@ -1471,7 +1471,11 @@ regression cases.
 
 Initial examples include:
 
-- 1AAM chain A for an internal missing residue.
+- 1AAM chain A for an internal gap in the Protocol 3.2 backbone
+  projection: deposited residue 246 is LLP recorded as `HETATM`, so
+  `get_feature("features", HETATM=False)` excludes its N/CA/C atoms and Q003
+  observes label sequence ID 246 as missing. This regression tests
+  backbone projection and continuity, not LLP -> K residue mapping.
 - 7CLR chain FA for a multi-residue internal gap.
 - 8RX0 chains for range and duplicate-source-record edge cases.
 - 7XYF chains E and F for DNA rejection.
