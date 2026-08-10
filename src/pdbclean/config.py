@@ -177,6 +177,18 @@ def _validate_snapshot(config: dict[str, Any]) -> None:
                 "latest_complete mode must not define snapshot_id"
             )
 
+        if "expected_mmcif_count" in snapshot:
+            raise ConfigError(
+                "latest_complete mode must not define "
+                "expected_mmcif_count"
+            )
+
+        if "expected_total_bytes" in snapshot:
+            raise ConfigError(
+                "latest_complete mode must not define "
+                "expected_total_bytes"
+            )
+
 
 def _validate_selection(config: dict[str, Any]) -> None:
     selection = config["selection"]

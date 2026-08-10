@@ -2,11 +2,8 @@ release:
   dataset_name: PDBClean
   protocol_version: protocol3.2-comp702-v1
 snapshot:
-  mode: fixed
-  snapshot_id: '20260101'
+  mode: latest_complete
   bucket_url: https://pdbsnapshots.s3.us-west-2.amazonaws.com
-  expected_mmcif_count: 246905
-  expected_total_bytes: 85079649893
 selection:
   models:
     policy: first_model

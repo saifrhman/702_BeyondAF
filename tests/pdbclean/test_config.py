@@ -20,8 +20,10 @@ def test_load_valid_project_config(
 
     loaded = load_config(CONFIG_PATH)
 
-    assert loaded.data["snapshot"]["mode"] == "fixed"
-    assert loaded.data["snapshot"]["snapshot_id"] == "20260101"
+    assert loaded.data["snapshot"]["mode"] == "latest_complete"
+    assert "snapshot_id" not in loaded.data["snapshot"]
+    assert "expected_mmcif_count" not in loaded.data["snapshot"]
+    assert "expected_total_bytes" not in loaded.data["snapshot"]
     assert (
         loaded.data["storage"]["temporary_root"]
         == "/tmp/test-user/pdbclean"
@@ -71,15 +73,13 @@ release:
 def test_invalid_snapshot_mode_is_rejected(
     tmp_path: Path,
 ) -> None:
-    original = CONFIG_PATH.read_text()
-    modified = original.replace(
-        "mode: fixed",
-        "mode: invalid",
-        1,
-    )
+    data = yaml.safe_load(CONFIG_PATH.read_text())
+    data["snapshot"]["mode"] = "invalid"
 
     config_path = tmp_path / "invalid_mode.yaml"
-    config_path.write_text(modified)
+    config_path.write_text(
+        yaml.safe_dump(data, sort_keys=False)
+    )
 
     with pytest.raises(
         ConfigError,
@@ -92,7 +92,8 @@ def test_fixed_mode_requires_snapshot_id(
     tmp_path: Path,
 ) -> None:
     data = yaml.safe_load(CONFIG_PATH.read_text())
-    data["snapshot"].pop("snapshot_id")
+    data["snapshot"]["mode"] = "fixed"
+    data["snapshot"].pop("snapshot_id", None)
 
     config_path = tmp_path / "missing_snapshot_id.yaml"
     config_path.write_text(
@@ -111,6 +112,7 @@ def test_latest_complete_rejects_snapshot_id(
 ) -> None:
     data = yaml.safe_load(CONFIG_PATH.read_text())
     data["snapshot"]["mode"] = "latest_complete"
+    data["snapshot"]["snapshot_id"] = "20260101"
 
     config_path = tmp_path / "latest_with_id.yaml"
     config_path.write_text(
@@ -120,6 +122,38 @@ def test_latest_complete_rejects_snapshot_id(
     with pytest.raises(
         ConfigError,
         match="latest_complete mode must not define snapshot_id",
+    ):
+        load_config(config_path)
+
+
+@pytest.mark.parametrize(
+    ("field", "value"),
+    [
+        ("expected_mmcif_count", 246905),
+        ("expected_total_bytes", 85079649893),
+    ],
+)
+def test_latest_complete_rejects_snapshot_specific_expectations(
+    tmp_path: Path,
+    field: str,
+    value: int,
+) -> None:
+    data = yaml.safe_load(CONFIG_PATH.read_text())
+    data["snapshot"]["mode"] = "latest_complete"
+    data["snapshot"].pop("snapshot_id", None)
+    data["snapshot"][field] = value
+
+    config_path = tmp_path / f"latest_with_{field}.yaml"
+    config_path.write_text(
+        yaml.safe_dump(data, sort_keys=False)
+    )
+
+    with pytest.raises(
+        ConfigError,
+        match=(
+            "latest_complete mode must not define "
+            + field
+        ),
     ):
         load_config(config_path)
 

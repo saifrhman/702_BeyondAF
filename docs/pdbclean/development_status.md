@@ -1496,3 +1496,47 @@ quality partitions per physical worker.
 This scheduling adaptation changes only orchestration. It does not change
 Protocol 3.2 semantics, manifest partitioning, Gold schemas, logical task
 identities, or scientific outputs.
+
+---
+
+# 34. Snapshot Selection Is Not Hard-Coded
+
+The production PDBClean configuration is no longer tied to the
+`20260101` PDB snapshot.
+
+The generic production configuration now uses:
+
+- `snapshot.mode: latest_complete`
+- the official PDB snapshots bucket
+- no fixed `snapshot_id`
+- no snapshot-specific expected mmCIF count
+- no snapshot-specific expected byte total
+
+The existing snapshot subsystem already supports both:
+
+- `fixed`: explicitly select a concrete `YYYYMMDD` snapshot
+- `latest_complete`: discover available snapshots and resolve the newest
+  complete coordinate snapshot
+
+A dynamically selected snapshot is resolved to a concrete snapshot ID before
+dataset construction. That concrete ID is recorded in the Bronze manifest and
+is then used by downstream quality/merge stages, preserving reproducibility.
+
+The existing `20260101` Bronze manifest remains a valid fixed historical
+dataset and must not be deleted or modified merely because the generic
+production configuration now uses `latest_complete`.
+
+Additional configuration validation now prevents `latest_complete` from
+carrying:
+
+- `snapshot_id`
+- `expected_mmcif_count`
+- `expected_total_bytes`
+
+This prevents snapshot-specific constants from being accidentally reintroduced
+into the generic production configuration.
+
+Regression status after this change:
+
+- targeted snapshot/manifest/quality/merge/submission tests: 75 passed
+- full repository test suite: 297 passed
