@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+import json
 from pathlib import Path
 
 import pyarrow.parquet as pq
@@ -14,7 +15,10 @@ from pdbclean.manifest import (
     validate_manifest_table,
 )
 from pdbclean.provenance import resolve_clean_git_commit
-from pdbclean.quality_merge import merge_quality_stage
+from pdbclean.quality_merge import (
+    QualityMergeError,
+    merge_quality_stage,
+)
 from pdbclean.quality_runner import quality_stage_output_root
 
 
@@ -42,6 +46,78 @@ def parse_args() -> argparse.Namespace:
     )
 
     return parser.parse_args()
+
+
+def resolve_quality_pipeline_git_commit(
+    quality_root: str | Path,
+) -> str:
+    """Resolve the unique Git commit that produced quality tasks."""
+
+    summary_dir = Path(quality_root) / "summaries"
+
+    if not summary_dir.is_dir():
+        raise QualityMergeError(
+            f"Quality summary directory does not exist: "
+            f"{summary_dir}"
+        )
+
+    summary_paths = sorted(
+        summary_dir.glob("task_*.json")
+    )
+
+    if not summary_paths:
+        raise QualityMergeError(
+            f"No quality-task summaries found in {summary_dir}"
+        )
+
+    commits: set[str] = set()
+
+    for summary_path in summary_paths:
+        try:
+            summary = json.loads(
+                summary_path.read_text(encoding="utf-8")
+            )
+        except (
+            OSError,
+            UnicodeError,
+            json.JSONDecodeError,
+        ) as exc:
+            raise QualityMergeError(
+                f"Cannot read quality-task summary "
+                f"{summary_path}: {exc}"
+            ) from exc
+
+        if not isinstance(summary, dict):
+            raise QualityMergeError(
+                f"Quality-task summary must contain a "
+                f"JSON object: {summary_path}"
+            )
+
+        commit = summary.get("pipeline_git_commit")
+
+        if (
+            not isinstance(commit, str)
+            or len(commit) != 40
+            or any(
+                character not in "0123456789abcdef"
+                for character in commit.lower()
+            )
+        ):
+            raise QualityMergeError(
+                f"Invalid pipeline_git_commit in "
+                f"{summary_path}"
+            )
+
+        commits.add(commit)
+
+    if len(commits) != 1:
+        raise QualityMergeError(
+            "Quality-task summaries were produced by "
+            "multiple Git commits: "
+            + ", ".join(sorted(commits))
+        )
+
+    return next(iter(commits))
 
 
 def main() -> None:
@@ -87,7 +163,7 @@ def main() -> None:
         expected_total_bytes=expected_total_bytes,
     )
 
-    pipeline_git_commit = resolve_clean_git_commit(
+    merge_pipeline_git_commit = resolve_clean_git_commit(
         REPOSITORY_ROOT
     )
 
@@ -106,6 +182,12 @@ def main() -> None:
         protocol_version=protocol_version,
     )
 
+    quality_pipeline_git_commit = (
+        resolve_quality_pipeline_git_commit(
+            quality_root
+        )
+    )
+
     publication = merge_quality_stage(
         quality_root=quality_root,
         manifest=manifest,
@@ -113,12 +195,24 @@ def main() -> None:
         batch_size=execution_config["batch_size"],
         snapshot=snapshot,
         cleaning_protocol=protocol_version,
-        pipeline_git_commit=pipeline_git_commit,
+        quality_pipeline_git_commit=(
+            quality_pipeline_git_commit
+        ),
+        merge_pipeline_git_commit=(
+            merge_pipeline_git_commit
+        ),
     )
 
     print(f"Snapshot: {snapshot}")
     print(f"Protocol: {protocol_version}")
-    print(f"Git commit: {pipeline_git_commit}")
+    print(
+        f"Quality producer Git commit: "
+        f"{quality_pipeline_git_commit}"
+    )
+    print(
+        f"Merge Git commit: "
+        f"{merge_pipeline_git_commit}"
+    )
     print(f"Config SHA256: {loaded.sha256}")
     print(f"Manifest rows: {manifest_summary.row_count:,}")
     print(f"Quality root: {quality_root}")

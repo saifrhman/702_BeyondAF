@@ -173,6 +173,12 @@ def test_cli_forwards_runtime_manifest_and_batch_size(
         lambda repository_root: "a" * 40,
     )
 
+    monkeypatch.setattr(
+        cli,
+        "resolve_quality_pipeline_git_commit",
+        lambda quality_root: "b" * 40,
+    )
+
     observed = {}
 
     def merge_quality_stage(**kwargs):
@@ -198,7 +204,9 @@ def test_cli_forwards_runtime_manifest_and_batch_size(
     assert observed["cleaning_protocol"] == (
         "protocol3.2-comp702-v1"
     )
-    assert observed["pipeline_git_commit"] == "a" * 40
+    assert observed["quality_pipeline_git_commit"] == "b" * 40
+    assert observed["merge_pipeline_git_commit"] == "a" * 40
+    assert "pipeline_git_commit" not in observed
 
     assert observed["quality_root"] == (
         tmp_path
@@ -260,6 +268,12 @@ def test_cli_passes_dynamic_manifest_size_to_merger(
         cli,
         "resolve_clean_git_commit",
         lambda repository_root: "b" * 40,
+    )
+
+    monkeypatch.setattr(
+        cli,
+        "resolve_quality_pipeline_git_commit",
+        lambda quality_root: "a" * 40,
     )
 
     observed = {}
@@ -347,3 +361,36 @@ def test_merge_cli_contains_no_hardcoded_production_task_count() -> None:
     source = SCRIPT_PATH.read_text()
 
     assert "494" not in source
+
+
+def test_resolve_quality_pipeline_git_commit_rejects_mixed_commits(
+    tmp_path: Path,
+) -> None:
+    import json
+
+    cli = _load_cli_module()
+
+    summary_dir = tmp_path / "quality" / "summaries"
+    summary_dir.mkdir(parents=True)
+
+    (summary_dir / "task_0.json").write_text(
+        json.dumps(
+            {"pipeline_git_commit": "a" * 40}
+        ),
+        encoding="utf-8",
+    )
+
+    (summary_dir / "task_1.json").write_text(
+        json.dumps(
+            {"pipeline_git_commit": "b" * 40}
+        ),
+        encoding="utf-8",
+    )
+
+    with pytest.raises(
+        cli.QualityMergeError,
+        match="multiple Git commits",
+    ):
+        cli.resolve_quality_pipeline_git_commit(
+            tmp_path / "quality"
+        )

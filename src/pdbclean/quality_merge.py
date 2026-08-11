@@ -1115,9 +1115,9 @@ def validate_quality_global_state(
 
 
 QUALITY_GLOBAL_SUMMARY_SCHEMA_NAME = "pdbclean_quality_global_summary"
-QUALITY_GLOBAL_SUMMARY_SCHEMA_VERSION = "1.0"
+QUALITY_GLOBAL_SUMMARY_SCHEMA_VERSION = "1.1"
 QUALITY_SUCCESS_SCHEMA_NAME = "pdbclean_quality_success"
-QUALITY_SUCCESS_SCHEMA_VERSION = "1.0"
+QUALITY_SUCCESS_SCHEMA_VERSION = "1.1"
 
 
 @dataclass(frozen=True)
@@ -1222,19 +1222,42 @@ def build_quality_global_summary(
     batch_size: int,
     snapshot: str,
     cleaning_protocol: str,
-    pipeline_git_commit: str,
+    pipeline_git_commit: str | None = None,
+    quality_pipeline_git_commit: str | None = None,
+    merge_pipeline_git_commit: str | None = None,
     global_validation: QualityGlobalValidation,
 ) -> dict[str, Any]:
     """Build deterministic global quality-stage accounting summary."""
 
     artifacts = tuple(artifacts)
 
+    if quality_pipeline_git_commit is None:
+        quality_pipeline_git_commit = pipeline_git_commit
+    elif (
+        pipeline_git_commit is not None
+        and pipeline_git_commit != quality_pipeline_git_commit
+    ):
+        raise QualityMergeError(
+            "Conflicting quality-pipeline Git commit values"
+        )
+
+    if not quality_pipeline_git_commit:
+        raise QualityMergeError(
+            "Quality-pipeline Git commit is required"
+        )
+
+    if merge_pipeline_git_commit is None:
+        merge_pipeline_git_commit = quality_pipeline_git_commit
+
     summary = {
         "summary_schema_name": QUALITY_GLOBAL_SUMMARY_SCHEMA_NAME,
         "summary_schema_version": QUALITY_GLOBAL_SUMMARY_SCHEMA_VERSION,
         "snapshot": snapshot,
         "cleaning_protocol": cleaning_protocol,
-        "pipeline_git_commit": pipeline_git_commit,
+        # Backward-compatible alias for the producer commit.
+        "pipeline_git_commit": quality_pipeline_git_commit,
+        "quality_pipeline_git_commit": quality_pipeline_git_commit,
+        "merge_pipeline_git_commit": merge_pipeline_git_commit,
         "manifest_row_count": manifest_row_count,
         "batch_size": batch_size,
         "task_count": len(artifacts),
@@ -1340,7 +1363,9 @@ def publish_quality_merge(
     batch_size: int,
     snapshot: str,
     cleaning_protocol: str,
-    pipeline_git_commit: str,
+    pipeline_git_commit: str | None = None,
+    quality_pipeline_git_commit: str | None = None,
+    merge_pipeline_git_commit: str | None = None,
     global_validation: QualityGlobalValidation,
 ) -> QualityMergePublication:
     """Publish merged quality outputs and stage completion marker last."""
@@ -1381,8 +1406,19 @@ def publish_quality_merge(
         snapshot=snapshot,
         cleaning_protocol=cleaning_protocol,
         pipeline_git_commit=pipeline_git_commit,
+        quality_pipeline_git_commit=(
+            quality_pipeline_git_commit
+        ),
+        merge_pipeline_git_commit=merge_pipeline_git_commit,
         global_validation=global_validation,
     )
+
+    quality_pipeline_git_commit = global_summary[
+        "quality_pipeline_git_commit"
+    ]
+    merge_pipeline_git_commit = global_summary[
+        "merge_pipeline_git_commit"
+    ]
 
     global_summary_path = _write_json_atomic(
         global_summary,
@@ -1394,7 +1430,12 @@ def publish_quality_merge(
         "success_schema_version": QUALITY_SUCCESS_SCHEMA_VERSION,
         "snapshot": snapshot,
         "cleaning_protocol": cleaning_protocol,
-        "pipeline_git_commit": pipeline_git_commit,
+        # Backward-compatible alias for the producer commit.
+        "pipeline_git_commit": quality_pipeline_git_commit,
+        "quality_pipeline_git_commit": (
+            quality_pipeline_git_commit
+        ),
+        "merge_pipeline_git_commit": merge_pipeline_git_commit,
         "manifest_row_count": manifest_row_count,
         "batch_size": batch_size,
         "task_count": len(artifacts),
@@ -1426,7 +1467,9 @@ def merge_quality_stage(
     batch_size: int,
     snapshot: str,
     cleaning_protocol: str,
-    pipeline_git_commit: str,
+    pipeline_git_commit: str | None = None,
+    quality_pipeline_git_commit: str | None = None,
+    merge_pipeline_git_commit: str | None = None,
 ) -> QualityMergePublication:
     """Validate and publish one complete distributed quality stage.
 
@@ -1434,6 +1477,24 @@ def merge_quality_stage(
     begins. A fresh marker is written only after every validation and
     publication step succeeds.
     """
+
+    if quality_pipeline_git_commit is None:
+        quality_pipeline_git_commit = pipeline_git_commit
+    elif (
+        pipeline_git_commit is not None
+        and pipeline_git_commit != quality_pipeline_git_commit
+    ):
+        raise QualityMergeError(
+            "Conflicting quality-pipeline Git commit values"
+        )
+
+    if not quality_pipeline_git_commit:
+        raise QualityMergeError(
+            "Quality-pipeline Git commit is required"
+        )
+
+    if merge_pipeline_git_commit is None:
+        merge_pipeline_git_commit = quality_pipeline_git_commit
 
     root = Path(quality_root)
     success_path = root / "_SUCCESS"
@@ -1451,7 +1512,7 @@ def merge_quality_stage(
         expected_task_ids=expected_ids,
         expected_snapshot=snapshot,
         expected_cleaning_protocol=cleaning_protocol,
-        expected_pipeline_git_commit=pipeline_git_commit,
+        expected_pipeline_git_commit=quality_pipeline_git_commit,
     )
 
     validate_quality_task_accounting(
@@ -1465,7 +1526,7 @@ def merge_quality_stage(
         manifest=manifest,
         expected_snapshot=snapshot,
         expected_cleaning_protocol=cleaning_protocol,
-        expected_pipeline_git_commit=pipeline_git_commit,
+        expected_pipeline_git_commit=quality_pipeline_git_commit,
     )
 
     return publish_quality_merge(
@@ -1475,6 +1536,7 @@ def merge_quality_stage(
         batch_size=batch_size,
         snapshot=snapshot,
         cleaning_protocol=cleaning_protocol,
-        pipeline_git_commit=pipeline_git_commit,
+        quality_pipeline_git_commit=quality_pipeline_git_commit,
+        merge_pipeline_git_commit=merge_pipeline_git_commit,
         global_validation=global_validation,
     )

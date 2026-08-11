@@ -1431,3 +1431,139 @@ def test_merge_quality_stage_removes_stale_success_before_accounting(
         )
 
     assert not success.exists()
+
+
+def test_merge_publication_records_quality_and_merge_git_commits(
+    tmp_path: Path,
+) -> None:
+    import json
+
+    from pdbclean.quality_merge import (
+        QualityGlobalValidation,
+        discover_quality_task_artifacts,
+        publish_quality_merge,
+    )
+
+    merge_git_commit = "b" * 40
+
+    _write_task(tmp_path, 0)
+    _write_accounting_summary(
+        tmp_path,
+        0,
+        input_sources=1,
+    )
+
+    artifacts = discover_quality_task_artifacts(
+        tmp_path,
+        expected_task_ids=(0,),
+        expected_snapshot=SNAPSHOT,
+        expected_cleaning_protocol=PROTOCOL,
+        expected_pipeline_git_commit=GIT_COMMIT,
+    )
+
+    publication = publish_quality_merge(
+        artifacts,
+        quality_root=tmp_path,
+        manifest_row_count=1,
+        batch_size=500,
+        snapshot=SNAPSHOT,
+        cleaning_protocol=PROTOCOL,
+        quality_pipeline_git_commit=GIT_COMMIT,
+        merge_pipeline_git_commit=merge_git_commit,
+        global_validation=QualityGlobalValidation(
+            accepted_chain_count=0,
+            rejected_chain_count=0,
+            non_candidate_chain_count=0,
+            dirty_residue_count=0,
+            processing_error_count=0,
+            unique_outcome_chain_count=0,
+        ),
+    )
+
+    assert publication.global_summary[
+        "quality_pipeline_git_commit"
+    ] == GIT_COMMIT
+    assert publication.global_summary[
+        "merge_pipeline_git_commit"
+    ] == merge_git_commit
+
+    success = json.loads(
+        publication.success_path.read_text(
+            encoding="utf-8"
+        )
+    )
+
+    assert success[
+        "quality_pipeline_git_commit"
+    ] == GIT_COMMIT
+    assert success[
+        "merge_pipeline_git_commit"
+    ] == merge_git_commit
+
+
+def test_merge_publication_records_quality_and_merge_git_commits(
+    tmp_path: Path,
+) -> None:
+    import json
+
+    from pdbclean.quality_merge import (
+        QualityGlobalValidation,
+        discover_quality_task_artifacts,
+        publish_quality_merge,
+    )
+
+    merge_git_commit = "b" * 40
+
+    _write_task(tmp_path, 0)
+    _write_accounting_summary(
+        tmp_path,
+        0,
+        input_sources=1,
+    )
+
+    artifacts = discover_quality_task_artifacts(
+        tmp_path,
+        expected_task_ids=(0,),
+        expected_snapshot=SNAPSHOT,
+        expected_cleaning_protocol=PROTOCOL,
+        expected_pipeline_git_commit=GIT_COMMIT,
+    )
+
+    publication = publish_quality_merge(
+        artifacts,
+        quality_root=tmp_path,
+        manifest_row_count=1,
+        batch_size=500,
+        snapshot=SNAPSHOT,
+        cleaning_protocol=PROTOCOL,
+        quality_pipeline_git_commit=GIT_COMMIT,
+        merge_pipeline_git_commit=merge_git_commit,
+        global_validation=QualityGlobalValidation(
+            accepted_chain_count=0,
+            rejected_chain_count=0,
+            non_candidate_chain_count=0,
+            dirty_residue_count=0,
+            processing_error_count=0,
+            unique_outcome_chain_count=0,
+        ),
+    )
+
+    assert publication.global_summary[
+        "quality_pipeline_git_commit"
+    ] == GIT_COMMIT
+    assert publication.global_summary[
+        "merge_pipeline_git_commit"
+    ] == merge_git_commit
+
+    success = json.loads(
+        publication.success_path.read_text(
+            encoding="utf-8"
+        )
+    )
+
+    assert success[
+        "quality_pipeline_git_commit"
+    ] == GIT_COMMIT
+    assert success[
+        "merge_pipeline_git_commit"
+    ] == merge_git_commit
