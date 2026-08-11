@@ -11,22 +11,24 @@
 
 set -euo pipefail
 
-if [[ $# -ne 2 ]]; then
-    echo "Usage: $0 CONFIG_PATH MANIFEST_PATH" >&2
+if [[ $# -ne 3 ]]; then
+    echo "Usage: $0 CONFIG_PATH MANIFEST_PATH REPOSITORY_ROOT" >&2
     exit 2
 fi
 
 CONFIG_PATH="$(realpath "$1")"
 MANIFEST_PATH="$(realpath "$2")"
+REPOSITORY_ROOT="$(realpath "$3")"
 
-SCRIPT_DIR="$(
-    cd -- "$(dirname -- "${BASH_SOURCE[0]}")" >/dev/null 2>&1
-    pwd
-)"
-REPOSITORY_ROOT="$(
-    cd "$SCRIPT_DIR/../.." >/dev/null 2>&1
-    pwd
-)"
+if [[ ! -d "$REPOSITORY_ROOT" ]]; then
+    echo "Repository root does not exist: $REPOSITORY_ROOT" >&2
+    exit 2
+fi
+
+if [[ ! -f "$REPOSITORY_ROOT/scripts/pdbclean/merge_quality_outputs.py" ]]; then
+    echo "PDBClean merge runner not found under repository root: $REPOSITORY_ROOT" >&2
+    exit 2
+fi
 
 if [[ ! -f "$CONFIG_PATH" ]]; then
     echo "Configuration does not exist: $CONFIG_PATH" >&2

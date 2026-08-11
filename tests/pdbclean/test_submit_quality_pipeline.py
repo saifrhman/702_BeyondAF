@@ -263,10 +263,18 @@ def test_submission_derives_array_and_afterok_dependency(
 
     assert "--parsable" in merge_args
     assert "--dependency=afterok:12345" in merge_args
-    assert any(
-        value.endswith("merge_quality_outputs.sbatch")
-        for value in merge_args
+
+    merge_script_index = next(
+        index
+        for index, value in enumerate(merge_args)
+        if value.endswith("merge_quality_outputs.sbatch")
     )
+
+    merge_repository_root = Path(
+        merge_args[merge_script_index + 3]
+    )
+    assert merge_repository_root.is_absolute()
+    assert merge_repository_root == repo.resolve()
 
     assert (
         f"Logical tasks:  {expected_logical_tasks}"
@@ -479,3 +487,120 @@ def test_physical_worker_striding_covers_logical_tasks_once() -> None:
 
     assert min(per_worker_counts) == 7
     assert max(per_worker_counts) == 8
+
+
+def test_merge_worker_ignores_slurm_spool_location(
+    tmp_path: Path,
+) -> None:
+    fake_bin = tmp_path / "fake-bin"
+    fake_bin.mkdir()
+
+    python_log = tmp_path / "python.log"
+
+    fake_python = fake_bin / "python"
+    fake_python.write_text(
+        """#!/bin/bash
+set -euo pipefail
+printf '%s\n' "$*" >> "$FAKE_PYTHON_LOG"
+""",
+        encoding="utf-8",
+    )
+    fake_python.chmod(0o755)
+
+    bash_env = tmp_path / "bash_env.sh"
+    bash_env.write_text(
+        """module() {
+    return 0
+}
+
+conda() {
+    if [[ "${1:-}" == "shell.bash" && "${2:-}" == "hook" ]]; then
+        printf ':\\n'
+    fi
+    return 0
+}
+""",
+        encoding="utf-8",
+    )
+
+    config = tmp_path / "config.yaml"
+    config.write_text("test\n", encoding="utf-8")
+
+    manifest = tmp_path / "manifest.parquet"
+    manifest.write_text("test\n", encoding="utf-8")
+
+    spool_dir = tmp_path / "var" / "spool" / "slurmd"
+    spool_dir.mkdir(parents=True)
+
+    spool_merge = spool_dir / "merge_quality_outputs.sbatch"
+    spool_merge.write_text(
+        MERGE_SCRIPT.read_text(encoding="utf-8"),
+        encoding="utf-8",
+    )
+    spool_merge.chmod(0o755)
+
+    repository_root = MERGE_SCRIPT.resolve().parents[2]
+
+    env = os.environ.copy()
+
+    for key in tuple(env):
+        if (
+            key.startswith("BASH_FUNC_conda")
+            or key.startswith("BASH_FUNC_module")
+        ):
+            env.pop(key)
+
+    env["BASH_ENV"] = str(bash_env)
+    env["PATH"] = (
+        str(fake_bin)
+        + os.pathsep
+        + env["PATH"]
+    )
+    env["FAKE_PYTHON_LOG"] = str(python_log)
+    env["SLURM_JOB_ID"] = "54321"
+
+    result = subprocess.run(
+        [
+            "bash",
+            str(spool_merge),
+            str(config),
+            str(manifest),
+            str(repository_root),
+        ],
+        env=env,
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+
+    assert result.returncode == 0, (
+        f"merge stdout:\n{result.stdout}\n"
+        f"merge stderr:\n{result.stderr}"
+    )
+
+    assert (
+        f"Repository: {repository_root}"
+        in result.stdout
+    )
+
+    calls = python_log.read_text(
+        encoding="utf-8"
+    ).splitlines()
+
+    assert len(calls) == 1
+
+    args = shlex.split(calls[0])
+
+    assert args[0] == (
+        "scripts/pdbclean/merge_quality_outputs.py"
+    )
+    assert args[1:3] == [
+        "--config",
+        str(config.resolve()),
+    ]
+    assert args[3:5] == [
+        "--manifest",
+        str(manifest.resolve()),
+    ]
+
+    assert str(spool_dir) not in calls[0]

@@ -169,7 +169,7 @@ fi
 
 echo "Quality array submitted: $ARRAY_JOB_ID"
 
-MERGE_RESULT="$(sbatch --parsable --dependency="afterok:${ARRAY_JOB_ID}" "$MERGE_SCRIPT" "$CONFIG_PATH" "$MANIFEST_PATH")"
+MERGE_RESULT="$(sbatch --parsable --dependency="afterok:${ARRAY_JOB_ID}" "$MERGE_SCRIPT" "$CONFIG_PATH" "$MANIFEST_PATH" "$REPOSITORY_ROOT")"
 MERGE_JOB_ID="${MERGE_RESULT%%;*}"
 
 if [[ ! "$MERGE_JOB_ID" =~ ^[0-9]+$ ]]; then
