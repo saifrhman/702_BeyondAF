@@ -173,7 +173,7 @@ def select_configured_model_chains(
     chains: Iterable[ChainObservation],
     selection_config: dict[str, Any],
 ) -> list[ChainObservation]:
-    """Select chains belonging to the configured structural model."""
+    """Select chains according to the configured structural-model policy."""
 
     models = selection_config.get("models")
 
@@ -183,6 +183,9 @@ def select_configured_model_chains(
         )
 
     policy = models.get("policy")
+
+    if policy == "all_models":
+        return list(chains)
 
     if policy != "first_model":
         raise QualityRunnerError(

@@ -203,10 +203,14 @@ def _validate_selection(config: dict[str, Any]) -> None:
 
     policy = models.get("policy")
 
-    if policy != "first_model":
+    if policy not in {"first_model", "all_models"}:
         raise ConfigError(
-            "selection.models.policy must be 'first_model'"
+            "selection.models.policy must be "
+            "'first_model' or 'all_models'"
         )
+
+    if policy == "all_models":
+        return
 
     model_id = models.get("model_id")
 

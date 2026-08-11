@@ -131,6 +131,34 @@ def test_select_configured_model_chains_respects_configured_model_id() -> None:
     assert selected[0].model_id == 2
 
 
+def test_select_configured_model_chains_all_models_keeps_every_model() -> None:
+    chains = [
+        _chain(1, "A"),
+        _chain(2, "A"),
+        _chain(1, "B"),
+        _chain(3, "C"),
+    ]
+
+    selected = select_configured_model_chains(
+        chains,
+        {
+            "models": {
+                "policy": "all_models",
+            }
+        },
+    )
+
+    assert [
+        (chain.model_id, chain.label_chain_id)
+        for chain in selected
+    ] == [
+        (1, "A"),
+        (2, "A"),
+        (1, "B"),
+        (3, "C"),
+    ]
+
+
 def test_select_configured_model_chains_rejects_unsupported_policy() -> None:
     with pytest.raises(
         QualityRunnerError,
@@ -140,11 +168,11 @@ def test_select_configured_model_chains_rejects_unsupported_policy() -> None:
             [_chain(1, "A")],
             {
                 "models": {
-                    "policy": "all_models",
-                    "model_id": 1,
+                    "policy": "unsupported",
                 }
             },
         )
+
 
 
 def test_candidate_accounting_counts_unique_entries_and_chains() -> None:
@@ -262,6 +290,38 @@ def test_process_verified_mmcif_selects_only_configured_model() -> None:
     assert gold.accepted_chain is not None
     assert gold.accepted_chain["model_id"] == 1
     assert gold.accepted_chain["retained_sequence"] == "A"
+
+
+def test_process_verified_mmcif_all_models_processes_every_model() -> None:
+    from pdbclean.quality_runner import process_verified_mmcif_bytes
+
+    result = process_verified_mmcif_bytes(
+        _multimodel_cif_bytes(),
+        pdb_id="TEST",
+        selection_config={
+            "models": {
+                "policy": "all_models",
+            }
+        },
+        provenance=_gold_provenance(),
+    )
+
+    # Parser and selection both preserve the two deposited models.
+    assert result.parsed_silver_chain_count == 2
+    assert result.selected_silver_chain_count == 2
+
+    assert result.candidate_entry_count == 1
+    assert result.candidate_chain_count == 2
+
+    assert result.source_failed is False
+    assert result.processing_errors == ()
+    assert len(result.gold_records) == 2
+
+    assert [
+        record.accepted_chain["model_id"]
+        for record in result.gold_records
+        if record.accepted_chain is not None
+    ] == [1, 2]
 
 
 def test_process_verified_mmcif_records_parse_failure() -> None:

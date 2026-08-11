@@ -181,11 +181,27 @@ def test_invalid_model_id_is_rejected(
         load_config(config_path)
 
 
+def test_all_models_policy_is_accepted(
+    tmp_path: Path,
+) -> None:
+    data = yaml.safe_load(CONFIG_PATH.read_text())
+    data["selection"]["models"] = {
+        "policy": "all_models",
+    }
+
+    config_path = tmp_path / "all_models.yaml"
+    config_path.write_text(
+        yaml.safe_dump(data, sort_keys=False)
+    )
+
+    load_config(config_path)
+
+
 def test_unsupported_model_policy_is_rejected(
     tmp_path: Path,
 ) -> None:
     data = yaml.safe_load(CONFIG_PATH.read_text())
-    data["selection"]["models"]["policy"] = "all_models"
+    data["selection"]["models"]["policy"] = "unsupported"
 
     config_path = tmp_path / "invalid_model_policy.yaml"
     config_path.write_text(
@@ -194,9 +210,10 @@ def test_unsupported_model_policy_is_rejected(
 
     with pytest.raises(
         ConfigError,
-        match="selection.models.policy must be 'first_model'",
+        match="selection.models.policy",
     ):
         load_config(config_path)
+
 
 
 @pytest.mark.parametrize(
