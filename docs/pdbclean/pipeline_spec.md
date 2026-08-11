@@ -160,30 +160,45 @@ Coordinate mmCIF parsing preserves all deposited models in Silver.
 Model selection is a separate, configuration-controlled processing step and
 must not be hard-coded into the parser.
 
-For `protocol3.2-comp702-v1`, the configured policy is:
+The pipeline currently supports two model-selection policies:
+
+- `first_model`: process only the explicitly configured
+  `selection.models.model_id`;
+- `all_models`: process chains from every deposited model preserved by the
+  Silver parser.
+
+For `first_model`, `selection.models.model_id` is required and must be a
+positive integer.
+
+For `all_models`, no individual model identifier is required for selection.
+
+The current `protocol3.2-comp702-v1` production release remains configured as:
 
 - `selection.models.policy: first_model`;
 - `selection.models.model_id: 1`.
 
-Therefore only parsed chains whose `model_id` equals the configured
-`selection.models.model_id` proceed to Protocol 3.2 candidate selection and
-quality cleaning.
+Therefore the current production Gold dataset contains only chains from model
+1. This is an intentional versioned release-scope choice; it is not a
+limitation of the parser or quality-cleaning implementation.
 
-Chains from other models are outside the processing scope of this release.
-Their parsed observations exist only in the in-memory Silver representation
-during source processing and remain reproducible from the immutable source
-mmCIF. They are not emitted as Protocol 3.2 non-candidates, rejections, or
-accepted chains.
+When `first_model` is used, chains from other deposited models remain
+represented in the reproducible in-memory Silver parse but are outside that
+release's quality-processing scope. They are not emitted as Protocol 3.2
+non-candidates, rejections, or accepted chains.
 
-The selected model identifier must remain part of the canonical chain key and
-all downstream Gold and BRI provenance.
+When `all_models` is used, every parsed model proceeds independently through
+candidate selection and Protocol 3.2 quality cleaning.
+
+The deposited `model_id` remains part of the canonical chain identity under
+both policies and must be preserved throughout Gold, BRI, duplicate-detection,
+and release provenance.
 
 ### 5.2 Candidate Accounting
 
 Candidate accounting is evaluated after configured model selection and before
 Q001.
 
-A selected-model chain is a Protocol 3.2 candidate when its BRI-style
+A selected chain is a Protocol 3.2 candidate when its BRI-style
 backbone projection is non-empty; that is, selecting `ATOM` rows whose atom
 names are `N`, `CA`, or `C` produces at least one row.
 
