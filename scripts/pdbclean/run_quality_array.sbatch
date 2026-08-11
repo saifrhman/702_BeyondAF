@@ -4,7 +4,7 @@
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=4
-#SBATCH --mem=8G
+#SBATCH --mem=16G
 #SBATCH --time=12:00:00
 #SBATCH --output=/users/%u/fastscratch/pdbclean_logs/quality_%A_%a.out
 #SBATCH --error=/users/%u/fastscratch/pdbclean_logs/quality_%A_%a.err

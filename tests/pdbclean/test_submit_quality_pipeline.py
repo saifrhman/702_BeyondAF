@@ -25,6 +25,14 @@ MERGE_SCRIPT = Path(
 )
 
 
+
+def test_quality_worker_requests_16g_memory() -> None:
+    text = QUALITY_SCRIPT.read_text(encoding="utf-8")
+
+    assert "#SBATCH --mem=16G" in text
+
+
+
 def _write_config(
     tmp_path: Path,
     *,

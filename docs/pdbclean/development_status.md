@@ -1585,3 +1585,67 @@ Regression status after the resolver fix:
 
 - snapshot tests: 19 passed
 - full repository suite: 297 passed
+
+---
+
+# 36. Production Quality-Worker Memory Requirement
+
+The first complete production quality run on the resolved `20260101` snapshot
+showed that the original 8 GiB Slurm memory request was insufficient for a
+small subset of physical workers.
+
+Production array job:
+
+- Slurm job: `10186820`
+- physical workers: `0-63`
+- concurrency: 4
+- requested memory per worker: 8 GiB
+
+Of the 64 physical workers, 59 completed successfully and five were terminated
+for out-of-memory conditions:
+
+- worker 20
+- worker 24
+- worker 31
+- worker 37
+- worker 41
+
+Those five workers left seven logical quality tasks incomplete:
+
+- 415
+- 425
+- 468
+- 472
+- 479
+- 485
+- 489
+
+The seven missing logical tasks were resubmitted in recovery job `10193699`
+with a 16 GiB memory request. All seven completed successfully with exit code
+`0:0`.
+
+After recovery, quality-task coverage was validated as:
+
+- completed logical tasks: 494
+- missing logical tasks: 0
+- unexpected logical tasks: 0
+
+The production quality-worker Slurm request has therefore been increased from:
+
+`#SBATCH --mem=8G`
+
+to:
+
+`#SBATCH --mem=16G`
+
+This is an execution-resource correction only. It does not change the Bronze
+manifest, logical task partitioning, Protocol 3.2 cleaning semantics, Gold
+schemas, provenance identities, or scientific results.
+
+A regression test now requires the production quality worker to request
+16 GiB, preventing an accidental return to the insufficient 8 GiB setting.
+
+Validation after the change:
+
+- Slurm submission/worker tests: 10 passed
+- full repository test suite: 304 passed
