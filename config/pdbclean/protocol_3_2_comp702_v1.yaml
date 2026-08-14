@@ -51,6 +51,10 @@ quality_rules:
     mapping_source: bri_v1.2.2_amino_acid_short
     accepted_mapped_codes: canonical_20_one_letter
 
+post_cleaning_geometric_validation:
+  enabled: true
+  minimum_triangle_angle_degrees: 3.0
+
 bri:
   enabled: true
   implementation: backbone_rigid_invariant

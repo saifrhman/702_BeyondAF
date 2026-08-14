@@ -1,14 +1,23 @@
 #!/usr/bin/env python3
-"""Run one deterministic PDBClean quality-cleaning manifest partition."""
+"""Run one post-cleaning geometric-validation manifest partition."""
 
 from __future__ import annotations
 
 import argparse
+import json
 from pathlib import Path
 
 import pyarrow.parquet as pq
 
 from pdbclean.config import load_config
+from pdbclean.geometric_validation import (
+    GeometricValidationConfig,
+)
+from pdbclean.geometric_validation_runner import (
+    GeometricValidationRunnerError,
+    execute_geometric_validation_task,
+    validate_upstream_quality_task,
+)
 from pdbclean.manifest import (
     manifest_partition_count,
     resolve_manifest_snapshot,
@@ -16,10 +25,7 @@ from pdbclean.manifest import (
     validate_manifest_table,
 )
 from pdbclean.provenance import resolve_clean_git_commit
-from pdbclean.quality_runner import (
-    execute_quality_task,
-    quality_stage_output_root,
-)
+from pdbclean.quality_runner import quality_stage_output_root
 
 
 REPOSITORY_ROOT = Path(__file__).resolve().parents[2]
@@ -44,8 +50,8 @@ def _non_negative_integer(value: str) -> int:
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         description=(
-            "Run one zero-based quality-cleaning partition from an "
-            "immutable PDBClean source manifest."
+            "Run one zero-based post-cleaning geometric-validation "
+            "partition from completed PDBClean quality outputs."
         )
     )
 
@@ -78,11 +84,15 @@ def main() -> None:
     snapshot_config = config["snapshot"]
     execution_config = config["execution"]
     storage_config = config["storage"]
-    minimum_backbone_distance_angstrom = (
-        config["quality_rules"]
-        ["backbone_distance"]
-        ["minimum_distance_angstrom"]
-    )
+    geometry_config = config[
+        "post_cleaning_geometric_validation"
+    ]
+
+    if geometry_config["enabled"] is not True:
+        raise GeometricValidationRunnerError(
+            "Post-cleaning geometric validation is disabled "
+            "by configuration"
+        )
 
     protocol_version = config["release"]["protocol_version"]
 
@@ -95,9 +105,6 @@ def main() -> None:
 
     manifest = pq.read_table(manifest_path)
 
-    # Resolve the actual snapshot represented by the immutable manifest.
-    # In fixed mode this must match snapshot.snapshot_id. In
-    # latest_complete mode the manifest itself supplies the resolved ID.
     snapshot = resolve_manifest_snapshot(
         manifest,
         snapshot_config,
@@ -134,39 +141,105 @@ def main() -> None:
         batch_size=batch_size,
     )
 
-    # Production provenance is always the full clean HEAD SHA.
-    pipeline_git_commit = resolve_clean_git_commit(
-        REPOSITORY_ROOT
-    )
-
     storage_output_root = Path(
         storage_config["output_root"]
     )
 
-    # Relative configured output paths are anchored to the repository,
-    # never to an arbitrary SLURM working directory.
     if not storage_output_root.is_absolute():
         storage_output_root = (
             REPOSITORY_ROOT / storage_output_root
         )
 
-    output_root = quality_stage_output_root(
+    quality_root = quality_stage_output_root(
         storage_output_root,
         snapshot=snapshot,
         protocol_version=protocol_version,
     )
 
-    publication = execute_quality_task(
+    task_id_text = str(args.task_id)
+
+    quality_summary_path = (
+        quality_root
+        / "summaries"
+        / f"task_{task_id_text}.json"
+    )
+    accepted_path = (
+        quality_root
+        / "accepted"
+        / f"task_{task_id_text}.parquet"
+    )
+
+    if not quality_summary_path.is_file():
+        raise FileNotFoundError(
+            "Upstream quality-task completion summary does not "
+            f"exist: {quality_summary_path}"
+        )
+
+    if not accepted_path.is_file():
+        raise FileNotFoundError(
+            "Upstream accepted-chain shard does not exist: "
+            f"{accepted_path}"
+        )
+
+    quality_summary = json.loads(
+        quality_summary_path.read_text(
+            encoding="utf-8"
+        )
+    )
+
+    accepted = pq.read_table(accepted_path)
+
+    upstream = validate_upstream_quality_task(
+        quality_summary,
+        accepted.to_pylist(),
+        expected_task_id=args.task_id,
+        expected_snapshot=snapshot,
+        expected_cleaning_protocol=protocol_version,
+        expected_manifest_source_object_count=(
+            partition.num_rows
+        ),
+    )
+
+    validation_config = GeometricValidationConfig(
+        minimum_backbone_distance_angstrom=(
+            config["quality_rules"]
+            ["backbone_distance"]
+            ["minimum_distance_angstrom"]
+        ),
+        minimum_triangle_angle_degrees=(
+            geometry_config[
+                "minimum_triangle_angle_degrees"
+            ]
+        ),
+    )
+
+    geometric_validation_pipeline_git_commit = (
+        resolve_clean_git_commit(
+            REPOSITORY_ROOT
+        )
+    )
+
+    # Step 2 is a sibling stage of quality under the same
+    # snapshot/protocol release root.
+    output_root = (
+        quality_root.parent
+        / "geometric_validation"
+    )
+
+    publication = execute_geometric_validation_task(
         partition.to_pylist(),
+        upstream.accepted_rows,
         output_root=output_root,
         task_id=args.task_id,
         snapshot=snapshot,
         bucket_url=snapshot_config["bucket_url"],
-        selection_config=config["selection"],
+        config=validation_config,
         cleaning_protocol=protocol_version,
-        pipeline_git_commit=pipeline_git_commit,
-        minimum_backbone_distance_angstrom=(
-            minimum_backbone_distance_angstrom
+        quality_pipeline_git_commit=(
+            upstream.quality_pipeline_git_commit
+        ),
+        geometric_validation_pipeline_git_commit=(
+            geometric_validation_pipeline_git_commit
         ),
         timeout_seconds=execution_config[
             "connection_timeout_seconds"
@@ -179,7 +252,14 @@ def main() -> None:
 
     print(f"Snapshot: {snapshot}")
     print(f"Protocol: {protocol_version}")
-    print(f"Git commit: {pipeline_git_commit}")
+    print(
+        "Quality producer Git commit: "
+        f"{upstream.quality_pipeline_git_commit}"
+    )
+    print(
+        "Geometric-validation Git commit: "
+        f"{geometric_validation_pipeline_git_commit}"
+    )
     print(
         f"Manifest rows: {manifest_summary.row_count:,}"
     )
@@ -187,9 +267,19 @@ def main() -> None:
         f"Partition: {args.task_id} / "
         f"{partition_count - 1}"
     )
-    print(f"Partition rows: {partition.num_rows:,}")
-    print(f"Quality output root: {output_root}")
-    print(f"Task summary: {publication.summary_path}")
+    print(
+        f"Partition rows: {partition.num_rows:,}"
+    )
+    print(
+        f"Accepted input chains: "
+        f"{len(upstream.accepted_rows):,}"
+    )
+    print(
+        f"Geometric-validation output root: {output_root}"
+    )
+    print(
+        f"Task summary: {publication.summary_path}"
+    )
 
 
 if __name__ == "__main__":

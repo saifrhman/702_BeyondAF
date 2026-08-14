@@ -380,3 +380,119 @@ def test_retain_downloaded_mmcif_must_be_boolean(
         match="storage.retain_downloaded_mmcif must be a boolean",
     ):
         load_config(config_path)
+
+
+def test_post_cleaning_geometric_validation_config_is_loaded(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("TMPDIR", "/tmp/test-user")
+
+    loaded = load_config(CONFIG_PATH)
+
+    assert (
+        loaded.data[
+            "post_cleaning_geometric_validation"
+        ]["enabled"]
+        is True
+    )
+
+    assert (
+        loaded.data[
+            "post_cleaning_geometric_validation"
+        ]["minimum_triangle_angle_degrees"]
+        == 3.0
+    )
+
+    assert (
+        loaded.data["quality_rules"]
+        ["backbone_distance"]
+        ["minimum_distance_angstrom"]
+        == 0.01
+    )
+
+
+@pytest.mark.parametrize(
+    "value",
+    [-1, 181, True, "3.0", None],
+)
+def test_invalid_post_cleaning_triangle_angle_is_rejected(
+    tmp_path: Path,
+    value,
+) -> None:
+    data = yaml.safe_load(CONFIG_PATH.read_text())
+
+    data[
+        "post_cleaning_geometric_validation"
+    ]["minimum_triangle_angle_degrees"] = value
+
+    config_path = tmp_path / "invalid_geometry_angle.yaml"
+    config_path.write_text(
+        yaml.safe_dump(data, sort_keys=False)
+    )
+
+    with pytest.raises(
+        ConfigError,
+        match="minimum_triangle_angle_degrees",
+    ):
+        load_config(config_path)
+
+
+@pytest.mark.parametrize(
+    "value",
+    [-0.001, True, "0.01", None],
+)
+def test_invalid_backbone_distance_threshold_is_rejected(
+    tmp_path: Path,
+    value,
+) -> None:
+    data = yaml.safe_load(CONFIG_PATH.read_text())
+
+    data["quality_rules"]["backbone_distance"][
+        "minimum_distance_angstrom"
+    ] = value
+
+    config_path = tmp_path / "invalid_backbone_distance.yaml"
+    config_path.write_text(
+        yaml.safe_dump(data, sort_keys=False)
+    )
+
+    with pytest.raises(
+        ConfigError,
+        match="minimum_distance_angstrom",
+    ):
+        load_config(config_path)
+
+
+def test_geometric_thresholds_can_be_changed_in_config(
+    tmp_path: Path,
+) -> None:
+    data = yaml.safe_load(CONFIG_PATH.read_text())
+
+    data["quality_rules"]["backbone_distance"][
+        "minimum_distance_angstrom"
+    ] = 0.02
+
+    data[
+        "post_cleaning_geometric_validation"
+    ]["minimum_triangle_angle_degrees"] = 5.0
+
+    config_path = tmp_path / "changed_geometry_thresholds.yaml"
+    config_path.write_text(
+        yaml.safe_dump(data, sort_keys=False)
+    )
+
+    loaded = load_config(config_path)
+
+    assert (
+        loaded.data["quality_rules"]
+        ["backbone_distance"]
+        ["minimum_distance_angstrom"]
+        == 0.02
+    )
+
+    assert (
+        loaded.data[
+            "post_cleaning_geometric_validation"
+        ]["minimum_triangle_angle_degrees"]
+        == 5.0
+    )

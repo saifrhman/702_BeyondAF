@@ -253,8 +253,15 @@ def is_protocol32_candidate(chain: ChainObservation) -> bool:
 
 def clean_protocol32_chain(
     chain: ChainObservation,
+    *,
+    minimum_backbone_distance_angstrom: float = 0.01,
 ) -> ChainCleaningResult:
-    """Apply pinned BRI v1.2.2 Protocol 3.2 statefully."""
+    """Apply pinned BRI v1.2.2 Protocol 3.2 statefully.
+
+    The default 0.01 A reproduces the pinned BRI v1.2.2 integrated
+    cleaning behaviour. Production callers may supply the validated
+    configuration value explicitly.
+    """
 
     working = protocol32_backbone_projection(chain)
 
@@ -417,7 +424,7 @@ def clean_protocol32_chain(
     clashes = find_q005_backbone_clashes(
         working,
         required_atoms=("N", "CA", "C"),
-        minimum_distance_angstrom=0.01,
+        minimum_distance_angstrom=minimum_backbone_distance_angstrom,
     )
 
     # BRI ultimately de-duplicates dirty rows by residue identity.

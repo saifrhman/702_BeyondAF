@@ -266,3 +266,137 @@ GOLD_PROCESSING_ERROR_SCHEMA = pa.schema(
     },
 )
 
+
+# ---------------------------------------------------------------------------
+# Step 2: post-cleaning geometric-validation audit outputs
+# ---------------------------------------------------------------------------
+
+GEOMETRIC_VALIDATION_AUDIT_SCHEMA_VERSION = "1.0"
+
+GEOMETRIC_VALIDATION_AUDIT_SCHEMA = pa.schema(
+    [
+        # Exact accepted-chain identity / retained lineage
+        pa.field("snapshot", pa.string(), nullable=False),
+        pa.field("pdb_id", pa.string(), nullable=False),
+        pa.field("model_id", pa.int32(), nullable=False),
+        pa.field("label_chain_id", pa.string(), nullable=False),
+        pa.field(
+            "retained_residue_count",
+            pa.int32(),
+            nullable=False,
+        ),
+        pa.field(
+            "retained_label_seq_ids",
+            pa.list_(pa.field("element", pa.int32())),
+            nullable=False,
+        ),
+
+        # Immutable source / cleaning lineage
+        pa.field("source_mmcif_key", pa.string(), nullable=False),
+        pa.field("source_etag", pa.string(), nullable=False),
+        pa.field("cleaning_protocol", pa.string(), nullable=False),
+        pa.field(
+            "quality_pipeline_git_commit",
+            pa.string(),
+            nullable=False,
+        ),
+        pa.field(
+            "geometric_validation_pipeline_git_commit",
+            pa.string(),
+            nullable=False,
+        ),
+
+        # Scientific configuration used for this audit
+        pa.field(
+            "configured_minimum_backbone_distance_angstrom",
+            pa.float64(),
+            nullable=False,
+        ),
+        pa.field(
+            "configured_minimum_triangle_angle_degrees",
+            pa.float64(),
+            nullable=False,
+        ),
+
+        # Scientific audit outcome
+        pa.field("passed", pa.bool_(), nullable=False),
+        pa.field(
+            "minimum_observed_backbone_distance_angstrom",
+            pa.float64(),
+            nullable=True,
+        ),
+        pa.field(
+            "minimum_observed_triangle_angle_degrees",
+            pa.float64(),
+            nullable=True,
+        ),
+        pa.field(
+            "minimum_observed_basis_h_norm_angstrom",
+            pa.float64(),
+            nullable=True,
+        ),
+        pa.field("violation_count", pa.int32(), nullable=False),
+        pa.field(
+            "violation_types",
+            pa.list_(pa.field("element", pa.string())),
+            nullable=False,
+        ),
+        pa.field(
+            "violation_residue_ids",
+            pa.list_(pa.field("element", pa.int32())),
+            nullable=False,
+        ),
+        pa.field(
+            "violation_details",
+            pa.list_(pa.field("element", pa.string())),
+            nullable=False,
+        ),
+    ],
+    metadata={
+        b"schema_name": b"pdbclean_geometric_validation_audit",
+        b"schema_version": (
+            GEOMETRIC_VALIDATION_AUDIT_SCHEMA_VERSION.encode()
+        ),
+    },
+)
+
+
+GEOMETRIC_VALIDATION_PROCESSING_ERROR_SCHEMA_VERSION = "1.0"
+
+GEOMETRIC_VALIDATION_PROCESSING_ERROR_SCHEMA = pa.schema(
+    [
+        # Every Step-2 error corresponds to one accepted Gold chain.
+        pa.field("snapshot", pa.string(), nullable=False),
+        pa.field("pdb_id", pa.string(), nullable=False),
+        pa.field("model_id", pa.int32(), nullable=False),
+        pa.field("label_chain_id", pa.string(), nullable=False),
+
+        pa.field("processing_stage", pa.string(), nullable=False),
+        pa.field("error_type", pa.string(), nullable=False),
+        pa.field("error_message", pa.string(), nullable=False),
+
+        # Source / upstream / Step-2 provenance
+        pa.field("source_mmcif_key", pa.string(), nullable=False),
+        pa.field("source_etag", pa.string(), nullable=False),
+        pa.field("cleaning_protocol", pa.string(), nullable=False),
+        pa.field(
+            "quality_pipeline_git_commit",
+            pa.string(),
+            nullable=False,
+        ),
+        pa.field(
+            "geometric_validation_pipeline_git_commit",
+            pa.string(),
+            nullable=False,
+        ),
+    ],
+    metadata={
+        b"schema_name": (
+            b"pdbclean_geometric_validation_processing_error"
+        ),
+        b"schema_version": (
+            GEOMETRIC_VALIDATION_PROCESSING_ERROR_SCHEMA_VERSION.encode()
+        ),
+    },
+)
+

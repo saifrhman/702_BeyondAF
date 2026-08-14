@@ -361,7 +361,7 @@ def test_process_verified_mmcif_records_chain_failure(
 ) -> None:
     from pdbclean.quality_runner import process_verified_mmcif_bytes
 
-    def fail_cleaning(chain):
+    def fail_cleaning(chain, **kwargs):
         raise RuntimeError("synthetic cleaning failure")
 
     monkeypatch.setattr(
@@ -1116,6 +1116,7 @@ def test_execute_quality_task_orchestrates_batch_then_publication(
             },
             "cleaning_protocol": "Protocol_3.2_BRI_v1.2.2",
             "pipeline_git_commit": "deadbeef",
+            "minimum_backbone_distance_angstrom": 0.01,
             "timeout_seconds": 37,
             "max_retries": 4,
             "download_concurrency": 3,

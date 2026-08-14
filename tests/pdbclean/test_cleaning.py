@@ -422,6 +422,43 @@ def test_q005_internal_clash_residue_creates_final_chain_break() -> None:
     assert records[0].rule_id == "Q005"
 
 
+def test_q005_threshold_can_be_configured() -> None:
+    atoms = [
+        _atom(atom_name=name, residue_id=1)
+        for name in ("N", "CA", "C")
+    ]
+
+    for index, atom in enumerate(atoms):
+        if atom.atom_name == "N":
+            atoms[index] = AtomObservation(
+                **{
+                    **atom.__dict__,
+                    "x": 0.0,
+                }
+            )
+        elif atom.atom_name == "CA":
+            atoms[index] = AtomObservation(
+                **{
+                    **atom.__dict__,
+                    "x": 0.01,
+                }
+            )
+
+    result = clean_protocol32_chain(
+        _chain(atoms),
+        minimum_backbone_distance_angstrom=0.02,
+    )
+
+    assert result.status == "rejected"
+    assert result.reason == "all_working_residues_removed"
+    assert result.terminal_stage == "Q005"
+    assert [
+        item
+        for item in result.dirty_residues
+        if item.rule_id == "Q005"
+    ]
+
+
 def test_q005_exact_threshold_is_not_a_clash() -> None:
     atoms = [
         _atom(atom_name=name, residue_id=1)

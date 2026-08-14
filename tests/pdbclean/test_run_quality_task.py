@@ -35,6 +35,7 @@ def _write_latest_complete_config(
     tmp_path: Path,
     *,
     batch_size: int,
+    minimum_backbone_distance_angstrom: float | None = None,
 ) -> Path:
     source = Path(
         "config/pdbclean/protocol_3_2_comp702_v1.yaml"
@@ -45,6 +46,12 @@ def _write_latest_complete_config(
     data["snapshot"].pop("snapshot_id", None)
 
     data["execution"]["batch_size"] = batch_size
+
+    if minimum_backbone_distance_angstrom is not None:
+        data["quality_rules"]["backbone_distance"][
+            "minimum_distance_angstrom"
+        ] = minimum_backbone_distance_angstrom
+
     data["storage"]["output_root"] = str(
         tmp_path / "pipeline-output"
     )
@@ -99,6 +106,7 @@ def test_cli_derives_partition_count_from_manifest_runtime_size(
     config_path = _write_latest_complete_config(
         tmp_path,
         batch_size=2,
+        minimum_backbone_distance_angstrom=0.02,
     )
     manifest_path = _write_manifest(
         tmp_path,
@@ -160,6 +168,7 @@ def test_cli_derives_partition_count_from_manifest_runtime_size(
     assert kwargs["max_retries"] == 3
     assert kwargs["download_concurrency"] == 4
     assert kwargs["timeout_seconds"] == 60
+    assert kwargs["minimum_backbone_distance_angstrom"] == 0.02
 
     assert kwargs["output_root"] == (
         tmp_path

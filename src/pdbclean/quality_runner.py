@@ -243,6 +243,7 @@ def process_verified_mmcif_bytes(
     pdb_id: str,
     selection_config: dict[str, Any],
     provenance: GoldProvenance,
+    minimum_backbone_distance_angstrom: float = 0.01,
 ) -> SourceQualityResult:
     """Parse and quality-clean one already verified source object."""
 
@@ -291,7 +292,12 @@ def process_verified_mmcif_bytes(
 
     for chain in selected_chains:
         try:
-            cleaning_result = clean_protocol32_chain(chain)
+            cleaning_result = clean_protocol32_chain(
+                chain,
+                minimum_backbone_distance_angstrom=(
+                    minimum_backbone_distance_angstrom
+                ),
+            )
             gold_records.append(
                 materialize_gold_chain(
                     chain,
@@ -335,6 +341,7 @@ def process_manifest_source(
     selection_config: dict[str, Any],
     cleaning_protocol: str,
     pipeline_git_commit: str,
+    minimum_backbone_distance_angstrom: float = 0.01,
     timeout_seconds: int = 60,
     max_retries: int = 0,
     downloader: Callable[..., bytes] = download_verified_s3_object_bytes,
@@ -474,6 +481,9 @@ def process_manifest_source(
         pdb_id=normalized_pdb_id,
         selection_config=selection_config,
         provenance=provenance,
+        minimum_backbone_distance_angstrom=(
+            minimum_backbone_distance_angstrom
+        ),
     )
 
 
@@ -485,6 +495,7 @@ def process_manifest_batch(
     selection_config: dict[str, Any],
     cleaning_protocol: str,
     pipeline_git_commit: str,
+    minimum_backbone_distance_angstrom: float = 0.01,
     timeout_seconds: int = 60,
     max_retries: int = 0,
     download_concurrency: int = 1,
@@ -537,6 +548,9 @@ def process_manifest_batch(
             selection_config=selection_config,
             cleaning_protocol=cleaning_protocol,
             pipeline_git_commit=pipeline_git_commit,
+            minimum_backbone_distance_angstrom=(
+                minimum_backbone_distance_angstrom
+            ),
             timeout_seconds=timeout_seconds,
             max_retries=max_retries,
         )
@@ -759,6 +773,7 @@ def execute_quality_task(
     selection_config: dict[str, Any],
     cleaning_protocol: str,
     pipeline_git_commit: str,
+    minimum_backbone_distance_angstrom: float = 0.01,
     timeout_seconds: int = 60,
     max_retries: int = 0,
     download_concurrency: int = 1,
@@ -782,6 +797,9 @@ def execute_quality_task(
         selection_config=selection_config,
         cleaning_protocol=cleaning_protocol,
         pipeline_git_commit=pipeline_git_commit,
+        minimum_backbone_distance_angstrom=(
+            minimum_backbone_distance_angstrom
+        ),
         timeout_seconds=timeout_seconds,
         max_retries=max_retries,
         download_concurrency=download_concurrency,

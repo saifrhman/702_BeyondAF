@@ -57,6 +57,7 @@ REQUIRED_TOP_LEVEL_SECTIONS = (
     "snapshot",
     "selection",
     "quality_rules",
+    "post_cleaning_geometric_validation",
     "bri",
     "geometric_search",
     "graph",
@@ -224,6 +225,64 @@ def _validate_selection(config: dict[str, Any]) -> None:
         )
 
 
+
+def _validate_post_cleaning_geometric_validation(
+    config: dict[str, Any],
+) -> None:
+    """Validate configurable post-cleaning BRI geometry checks."""
+
+    section = config["post_cleaning_geometric_validation"]
+
+    if not isinstance(section, dict):
+        raise ConfigError(
+            "post_cleaning_geometric_validation must be a mapping"
+        )
+
+    if not isinstance(section.get("enabled"), bool):
+        raise ConfigError(
+            "post_cleaning_geometric_validation.enabled must be a boolean"
+        )
+
+    angle = section.get("minimum_triangle_angle_degrees")
+
+    if (
+        not isinstance(angle, (int, float))
+        or isinstance(angle, bool)
+        or not 0 <= angle <= 180
+    ):
+        raise ConfigError(
+            "post_cleaning_geometric_validation."
+            "minimum_triangle_angle_degrees must be a number in [0, 180]"
+        )
+
+    quality_rules = config["quality_rules"]
+
+    if not isinstance(quality_rules, dict):
+        raise ConfigError("quality_rules must be a mapping")
+
+    backbone_distance = quality_rules.get("backbone_distance")
+
+    if not isinstance(backbone_distance, dict):
+        raise ConfigError(
+            "quality_rules.backbone_distance must be a mapping"
+        )
+
+    distance = backbone_distance.get(
+        "minimum_distance_angstrom"
+    )
+
+    if (
+        not isinstance(distance, (int, float))
+        or isinstance(distance, bool)
+        or distance < 0
+    ):
+        raise ConfigError(
+            "quality_rules.backbone_distance."
+            "minimum_distance_angstrom must be a non-negative number"
+        )
+
+
+
 def _validate_storage(config: dict[str, Any]) -> None:
     storage = config["storage"]
 
@@ -327,6 +386,7 @@ def load_config(path: str | Path) -> LoadedConfig:
     _validate_release(expanded)
     _validate_snapshot(expanded)
     _validate_selection(expanded)
+    _validate_post_cleaning_geometric_validation(expanded)
     _validate_storage(expanded)
     _validate_execution(expanded)
 
