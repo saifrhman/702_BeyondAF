@@ -11,18 +11,33 @@ from __future__ import annotations
 from dataclasses import dataclass
 import json
 from pathlib import Path
-from typing import Any
+from typing import Any, Callable, Iterable, Mapping
 
+import numpy as np
 import pyarrow as pa
 import pyarrow.parquet as pq
 
+from pdbclean.bri import compute_bri
+from pdbclean.geometric_validation import (
+    reconstruct_retained_backbone_chain,
+)
 from pdbclean.geometric_validation_finalize import (
     GEOMETRIC_VALIDATION_GLOBAL_SUMMARY_SCHEMA_NAME,
     GEOMETRIC_VALIDATION_GLOBAL_SUMMARY_SCHEMA_VERSION,
     GEOMETRIC_VALIDATION_SUCCESS_SCHEMA_NAME,
     GEOMETRIC_VALIDATION_SUCCESS_SCHEMA_VERSION,
 )
+from pdbclean.mmcif_parser import (
+    ChainObservation,
+    MMCIFParseError,
+    parse_coordinate_mmcif_bytes,
+)
 from pdbclean.schemas import STAGE3_ELIGIBLE_CHAIN_SCHEMA
+from pdbclean.snapshot import (
+    SnapshotError,
+    SnapshotTransportError,
+    download_verified_s3_object_bytes,
+)
 
 
 class BRIRunnerError(RuntimeError):
@@ -382,3 +397,621 @@ def validate_upstream_geometric_validation_stage(
             "finalizer_pipeline_git_commit"
         ],
     )
+
+
+@dataclass(frozen=True)
+class SourceBRIResult:
+    """Terminal Stage-3 outcomes for one immutable source object."""
+
+    pdb_id: str
+    input_eligible_chain_count: int
+
+    bri_records: tuple[dict[str, Any], ...] = ()
+    processing_errors: tuple[dict[str, Any], ...] = ()
+
+    source_downloaded: bool = False
+    source_parsed: bool = False
+
+    @property
+    def chain_accounting_valid(self) -> bool:
+        """Every eligible chain must have exactly one terminal outcome."""
+
+        return self.input_eligible_chain_count == (
+            len(self.bri_records)
+            + len(self.processing_errors)
+        )
+
+
+def _normalized_etag(value: str) -> str:
+    """Normalize optional HTTP/S3 ETag quoting."""
+
+    return value.strip().strip('"')
+
+
+def _validate_manifest_source_row(
+    manifest_row: Mapping[str, Any],
+    *,
+    expected_snapshot: str,
+) -> tuple[str, str, int, str]:
+    """Validate immutable source lineage required for BRI processing."""
+
+    required = (
+        "snapshot",
+        "pdb_id",
+        "s3_key",
+        "size_bytes",
+        "etag",
+    )
+
+    missing = [
+        field
+        for field in required
+        if field not in manifest_row
+    ]
+
+    if missing:
+        raise BRIRunnerError(
+            "Manifest row missing required field(s): "
+            + ", ".join(missing)
+        )
+
+    snapshot = manifest_row["snapshot"]
+    pdb_id = manifest_row["pdb_id"]
+    s3_key = manifest_row["s3_key"]
+    size_bytes = manifest_row["size_bytes"]
+    etag = manifest_row["etag"]
+
+    if snapshot != expected_snapshot:
+        raise BRIRunnerError(
+            "Manifest source snapshot does not match validated "
+            "Stage-2 completion"
+        )
+
+    if not isinstance(pdb_id, str) or not pdb_id:
+        raise BRIRunnerError(
+            "Manifest pdb_id must be a non-empty string"
+        )
+
+    if not isinstance(s3_key, str) or not s3_key:
+        raise BRIRunnerError(
+            "Manifest s3_key must be a non-empty string"
+        )
+
+    if (
+        not isinstance(size_bytes, int)
+        or isinstance(size_bytes, bool)
+        or size_bytes <= 0
+    ):
+        raise BRIRunnerError(
+            "Manifest size_bytes must be a positive integer"
+        )
+
+    if not isinstance(etag, str) or not _normalized_etag(etag):
+        raise BRIRunnerError(
+            "Manifest etag must be a non-empty string"
+        )
+
+    return (
+        pdb_id.lower(),
+        s3_key,
+        size_bytes,
+        _normalized_etag(etag),
+    )
+
+
+def _eligible_lineage_issue(
+    row: Mapping[str, Any],
+    *,
+    upstream: UpstreamGeometricValidation,
+    manifest_pdb_id: str,
+    manifest_s3_key: str,
+    manifest_etag: str,
+) -> str | None:
+    """Return an immutable-lineage problem for one Stage-3 input row."""
+
+    required = (
+        "snapshot",
+        "pdb_id",
+        "model_id",
+        "label_chain_id",
+        "retained_residue_count",
+        "retained_label_seq_ids",
+        "source_mmcif_key",
+        "source_etag",
+        "cleaning_protocol",
+        "pipeline_git_commit",
+    )
+
+    missing = [
+        field
+        for field in required
+        if field not in row
+    ]
+
+    if missing:
+        raise BRIRunnerError(
+            "Canonical eligible row missing required field(s): "
+            + ", ".join(missing)
+        )
+
+    if row["snapshot"] != upstream.snapshot:
+        return "Eligible row snapshot does not match Stage-2 completion"
+
+    pdb_id = row["pdb_id"]
+
+    if (
+        not isinstance(pdb_id, str)
+        or pdb_id.lower() != manifest_pdb_id
+    ):
+        return "Eligible row pdb_id does not match manifest source"
+
+    if row["source_mmcif_key"] != manifest_s3_key:
+        return (
+            "Eligible row source_mmcif_key does not match "
+            "manifest source"
+        )
+
+    source_etag = row["source_etag"]
+
+    if (
+        not isinstance(source_etag, str)
+        or _normalized_etag(source_etag) != manifest_etag
+    ):
+        return "Eligible row source_etag does not match manifest source"
+
+    if row["cleaning_protocol"] != upstream.cleaning_protocol:
+        return (
+            "Eligible row cleaning_protocol does not match "
+            "Stage-2 completion"
+        )
+
+    if (
+        row["pipeline_git_commit"]
+        != upstream.quality_pipeline_git_commit
+    ):
+        return (
+            "Eligible row quality producer does not match "
+            "Stage-2 completion"
+        )
+
+    model_id = row["model_id"]
+
+    if (
+        not isinstance(model_id, int)
+        or isinstance(model_id, bool)
+        or model_id <= 0
+    ):
+        return "Eligible row model_id must be a positive integer"
+
+    label_chain_id = row["label_chain_id"]
+
+    if not isinstance(label_chain_id, str) or not label_chain_id:
+        return "Eligible row label_chain_id must be non-empty"
+
+    retained_count = row["retained_residue_count"]
+    retained_ids = row["retained_label_seq_ids"]
+
+    if (
+        not isinstance(retained_count, int)
+        or isinstance(retained_count, bool)
+        or retained_count < 1
+    ):
+        return (
+            "Eligible row retained_residue_count must be "
+            "a positive integer"
+        )
+
+    if not isinstance(retained_ids, (list, tuple)):
+        return "Eligible row retained_label_seq_ids must be a sequence"
+
+    if len(retained_ids) != retained_count:
+        return (
+            "Eligible row retained_residue_count does not match "
+            "retained_label_seq_ids"
+        )
+
+    return None
+
+
+def _bri_processing_error(
+    row: Mapping[str, Any],
+    *,
+    processing_stage: str,
+    error_type: str,
+    error_message: str,
+    upstream: UpstreamGeometricValidation,
+    bri_pipeline_git_commit: str,
+) -> dict[str, Any]:
+    """Materialize one terminal Stage-3 processing error."""
+
+    return {
+        "snapshot": row["snapshot"],
+        "pdb_id": row["pdb_id"],
+        "model_id": row["model_id"],
+        "label_chain_id": row["label_chain_id"],
+        "retained_residue_count": row[
+            "retained_residue_count"
+        ],
+        "retained_label_seq_ids": list(
+            row["retained_label_seq_ids"]
+        ),
+        "processing_stage": processing_stage,
+        "error_type": error_type,
+        "error_message": error_message,
+        "source_mmcif_key": row["source_mmcif_key"],
+        "source_etag": row["source_etag"],
+        "cleaning_protocol": row["cleaning_protocol"],
+        "quality_pipeline_git_commit": (
+            upstream.quality_pipeline_git_commit
+        ),
+        "geometric_validation_pipeline_git_commit": (
+            upstream.geometric_validation_pipeline_git_commit
+        ),
+        "geometric_validation_finalizer_git_commit": (
+            upstream.geometric_validation_finalizer_git_commit
+        ),
+        "bri_pipeline_git_commit": bri_pipeline_git_commit,
+    }
+
+
+def _validated_bri_matrix(
+    value: object,
+    *,
+    expected_residue_count: int,
+) -> np.ndarray:
+    """Enforce the frozen Definition-3.4 production output contract."""
+
+    if not isinstance(value, np.ndarray):
+        raise BRIRunnerError(
+            "compute_bri() did not return a NumPy array"
+        )
+
+    if value.dtype != np.float64:
+        raise BRIRunnerError(
+            "compute_bri() did not return float64 coordinates"
+        )
+
+    if value.shape != (expected_residue_count, 9):
+        raise BRIRunnerError(
+            "compute_bri() returned an unexpected matrix shape"
+        )
+
+    if not np.isfinite(value).all():
+        raise BRIRunnerError(
+            "compute_bri() returned non-finite coordinates"
+        )
+
+    if not np.array_equal(value, np.around(value, 3)):
+        raise BRIRunnerError(
+            "compute_bri() returned non-canonical coordinates"
+        )
+
+    return value
+
+
+def _bri_record(
+    row: Mapping[str, Any],
+    *,
+    bri: np.ndarray,
+    upstream: UpstreamGeometricValidation,
+    bri_pipeline_git_commit: str,
+) -> dict[str, Any]:
+    """Attach canonical BRI and explicit producer provenance."""
+
+    record = {
+        field.name: row[field.name]
+        for field in STAGE3_ELIGIBLE_CHAIN_SCHEMA
+        if field.name != "pipeline_git_commit"
+    }
+
+    record.update(
+        {
+            "quality_pipeline_git_commit": (
+                upstream.quality_pipeline_git_commit
+            ),
+            "geometric_validation_pipeline_git_commit": (
+                upstream.geometric_validation_pipeline_git_commit
+            ),
+            "geometric_validation_finalizer_git_commit": (
+                upstream.geometric_validation_finalizer_git_commit
+            ),
+            "bri_pipeline_git_commit": (
+                bri_pipeline_git_commit
+            ),
+            "bri": bri.tolist(),
+        }
+    )
+
+    return record
+
+
+def process_bri_source(
+    manifest_row: Mapping[str, Any],
+    eligible_rows: Iterable[Mapping[str, Any]],
+    *,
+    upstream: UpstreamGeometricValidation,
+    bucket_url: str,
+    bri_pipeline_git_commit: str,
+    timeout_seconds: int = 60,
+    max_retries: int = 0,
+    downloader: Callable[..., bytes] = (
+        download_verified_s3_object_bytes
+    ),
+    parser: Callable[..., list[ChainObservation]] = (
+        parse_coordinate_mmcif_bytes
+    ),
+    bri_computer: Callable[[ChainObservation], np.ndarray] = compute_bri,
+) -> SourceBRIResult:
+    """Compute BRI for eligible chains belonging to one source object."""
+
+    if (
+        not isinstance(max_retries, int)
+        or isinstance(max_retries, bool)
+        or max_retries < 0
+    ):
+        raise BRIRunnerError(
+            "max_retries must be a non-negative integer"
+        )
+
+    bri_pipeline_git_commit = _validated_git_commit(
+        bri_pipeline_git_commit,
+        field="bri_pipeline_git_commit",
+    )
+
+    (
+        manifest_pdb_id,
+        manifest_s3_key,
+        manifest_size_bytes,
+        manifest_etag,
+    ) = _validate_manifest_source_row(
+        manifest_row,
+        expected_snapshot=upstream.snapshot,
+    )
+
+    rows = tuple(eligible_rows)
+
+    if not rows:
+        return SourceBRIResult(
+            pdb_id=manifest_pdb_id,
+            input_eligible_chain_count=0,
+        )
+
+    bri_records: list[dict[str, Any]] = []
+    processing_errors: list[dict[str, Any]] = []
+    valid_rows: list[Mapping[str, Any]] = []
+
+    for row in rows:
+        issue = _eligible_lineage_issue(
+            row,
+            upstream=upstream,
+            manifest_pdb_id=manifest_pdb_id,
+            manifest_s3_key=manifest_s3_key,
+            manifest_etag=manifest_etag,
+        )
+
+        if issue is None:
+            valid_rows.append(row)
+            continue
+
+        processing_errors.append(
+            _bri_processing_error(
+                row,
+                processing_stage="eligible_lineage_validation",
+                error_type="EligibleLineageError",
+                error_message=issue,
+                upstream=upstream,
+                bri_pipeline_git_commit=bri_pipeline_git_commit,
+            )
+        )
+
+    if not valid_rows:
+        result = SourceBRIResult(
+            pdb_id=manifest_pdb_id,
+            input_eligible_chain_count=len(rows),
+            bri_records=tuple(bri_records),
+            processing_errors=tuple(processing_errors),
+        )
+
+        if not result.chain_accounting_valid:
+            raise BRIRunnerError(
+                "Stage-3 source chain accounting failed"
+            )
+
+        return result
+
+    compressed_bytes: bytes | None = None
+    source_error: SnapshotError | None = None
+
+    for attempt in range(max_retries + 1):
+        try:
+            compressed_bytes = downloader(
+                bucket_url=bucket_url,
+                s3_key=manifest_s3_key,
+                expected_size_bytes=manifest_size_bytes,
+                expected_etag=manifest_etag,
+                timeout_seconds=timeout_seconds,
+            )
+            source_error = None
+            break
+        except SnapshotTransportError as exc:
+            source_error = exc
+
+            if attempt == max_retries:
+                break
+        except SnapshotError as exc:
+            source_error = exc
+            break
+
+    if source_error is not None:
+        for row in valid_rows:
+            processing_errors.append(
+                _bri_processing_error(
+                    row,
+                    processing_stage="source_download",
+                    error_type=type(source_error).__name__,
+                    error_message=str(source_error),
+                    upstream=upstream,
+                    bri_pipeline_git_commit=bri_pipeline_git_commit,
+                )
+            )
+
+        result = SourceBRIResult(
+            pdb_id=manifest_pdb_id,
+            input_eligible_chain_count=len(rows),
+            processing_errors=tuple(processing_errors),
+            source_downloaded=False,
+            source_parsed=False,
+        )
+
+        if not result.chain_accounting_valid:
+            raise BRIRunnerError(
+                "Stage-3 source chain accounting failed"
+            )
+
+        return result
+
+    if compressed_bytes is None:
+        raise BRIRunnerError(
+            "Source download completed without bytes or an error"
+        )
+
+    try:
+        parsed_chains = parser(
+            compressed_bytes,
+            pdb_id=manifest_pdb_id,
+        )
+    except MMCIFParseError as exc:
+        for row in valid_rows:
+            processing_errors.append(
+                _bri_processing_error(
+                    row,
+                    processing_stage="mmcif_parse",
+                    error_type=type(exc).__name__,
+                    error_message=str(exc),
+                    upstream=upstream,
+                    bri_pipeline_git_commit=bri_pipeline_git_commit,
+                )
+            )
+
+        result = SourceBRIResult(
+            pdb_id=manifest_pdb_id,
+            input_eligible_chain_count=len(rows),
+            processing_errors=tuple(processing_errors),
+            source_downloaded=True,
+            source_parsed=False,
+        )
+
+        if not result.chain_accounting_valid:
+            raise BRIRunnerError(
+                "Stage-3 source chain accounting failed"
+            )
+
+        return result
+
+    chain_index: dict[
+        tuple[int, str],
+        ChainObservation,
+    ] = {}
+
+    for chain in parsed_chains:
+        key = (
+            chain.model_id,
+            chain.label_chain_id,
+        )
+
+        if key in chain_index:
+            raise BRIRunnerError(
+                "Parsed source contains duplicate chain identity "
+                f"{key!r}"
+            )
+
+        chain_index[key] = chain
+
+    for row in valid_rows:
+        key = (
+            row["model_id"],
+            row["label_chain_id"],
+        )
+
+        chain = chain_index.get(key)
+
+        if chain is None:
+            processing_errors.append(
+                _bri_processing_error(
+                    row,
+                    processing_stage="source_chain_lookup",
+                    error_type="SourceChainNotFoundError",
+                    error_message=(
+                        "Canonical Stage-3 chain identity was not found "
+                        f"in parsed source: {key!r}"
+                    ),
+                    upstream=upstream,
+                    bri_pipeline_git_commit=bri_pipeline_git_commit,
+                )
+            )
+            continue
+
+        try:
+            retained = reconstruct_retained_backbone_chain(
+                chain,
+                row["retained_label_seq_ids"],
+            )
+        except ValueError as exc:
+            processing_errors.append(
+                _bri_processing_error(
+                    row,
+                    processing_stage="retained_chain_reconstruction",
+                    error_type=type(exc).__name__,
+                    error_message=str(exc),
+                    upstream=upstream,
+                    bri_pipeline_git_commit=bri_pipeline_git_commit,
+                )
+            )
+            continue
+
+        try:
+            bri = bri_computer(retained)
+        except ValueError as exc:
+            processing_errors.append(
+                _bri_processing_error(
+                    row,
+                    processing_stage="bri_computation",
+                    error_type=type(exc).__name__,
+                    error_message=str(exc),
+                    upstream=upstream,
+                    bri_pipeline_git_commit=bri_pipeline_git_commit,
+                )
+            )
+            continue
+
+        bri = _validated_bri_matrix(
+            bri,
+            expected_residue_count=row[
+                "retained_residue_count"
+            ],
+        )
+
+        bri_records.append(
+            _bri_record(
+                row,
+                bri=bri,
+                upstream=upstream,
+                bri_pipeline_git_commit=bri_pipeline_git_commit,
+            )
+        )
+
+    result = SourceBRIResult(
+        pdb_id=manifest_pdb_id,
+        input_eligible_chain_count=len(rows),
+        bri_records=tuple(bri_records),
+        processing_errors=tuple(processing_errors),
+        source_downloaded=True,
+        source_parsed=True,
+    )
+
+    if not result.chain_accounting_valid:
+        raise BRIRunnerError(
+            "Stage-3 source chain accounting failed"
+        )
+
+    return result
