@@ -436,3 +436,147 @@ STAGE3_QUARANTINED_CHAIN_SCHEMA = (
     )
 )
 
+
+
+# ---------------------------------------------------------------------------
+# Stage 3: Definition 3.4 BRI production artifacts
+# ---------------------------------------------------------------------------
+
+STAGE3_BRI_CHAIN_SCHEMA_VERSION = "1.0"
+
+# One BRI residue row always contains the nine strong coordinates from
+# MATCH Definition 3.4. The outer list has one row per retained residue.
+_STAGE3_BRI_ROW_TYPE = pa.list_(
+    pa.field(
+        "coordinate",
+        pa.float64(),
+        nullable=False,
+    ),
+    9,
+)
+
+_STAGE3_BRI_MATRIX_TYPE = pa.list_(
+    pa.field(
+        "row",
+        _STAGE3_BRI_ROW_TYPE,
+        nullable=False,
+    )
+)
+
+# Preserve all canonical Stage-3 input lineage. Rename the generic
+# Stage-1 producer field to make its role explicit once additional
+# producer commits are attached.
+_STAGE3_BRI_UPSTREAM_FIELDS = [
+    field
+    for field in STAGE3_ELIGIBLE_CHAIN_SCHEMA
+    if field.name != "pipeline_git_commit"
+]
+
+STAGE3_BRI_CHAIN_SCHEMA = pa.schema(
+    [
+        *_STAGE3_BRI_UPSTREAM_FIELDS,
+
+        # Upstream and Stage-3 producer provenance
+        pa.field(
+            "quality_pipeline_git_commit",
+            pa.string(),
+            nullable=False,
+        ),
+        pa.field(
+            "geometric_validation_pipeline_git_commit",
+            pa.string(),
+            nullable=False,
+        ),
+        pa.field(
+            "geometric_validation_finalizer_git_commit",
+            pa.string(),
+            nullable=False,
+        ),
+        pa.field(
+            "bri_pipeline_git_commit",
+            pa.string(),
+            nullable=False,
+        ),
+
+        # Canonical Definition 3.4 BRI: m rows x 9 coordinates
+        pa.field(
+            "bri",
+            _STAGE3_BRI_MATRIX_TYPE,
+            nullable=False,
+        ),
+    ],
+    metadata={
+        b"schema_name": b"pdbclean_stage3_bri_chain",
+        b"schema_version": (
+            STAGE3_BRI_CHAIN_SCHEMA_VERSION.encode()
+        ),
+        b"bri_definition": b"MATCH Definition 3.4",
+        b"bri_columns": (
+            b"x(N),y(N),z(N),x(A),y(A),z(A),x(C),y(C),z(C)"
+        ),
+        b"bri_decimal_places": b"3",
+        b"bri_canonicalization": b"numpy.around(decimal=3)",
+    },
+)
+
+
+STAGE3_BRI_PROCESSING_ERROR_SCHEMA_VERSION = "1.0"
+
+STAGE3_BRI_PROCESSING_ERROR_SCHEMA = pa.schema(
+    [
+        # Every error corresponds to exactly one canonical Stage-3
+        # eligible-chain identity.
+        pa.field("snapshot", pa.string(), nullable=False),
+        pa.field("pdb_id", pa.string(), nullable=False),
+        pa.field("model_id", pa.int32(), nullable=False),
+        pa.field("label_chain_id", pa.string(), nullable=False),
+        pa.field(
+            "retained_residue_count",
+            pa.int32(),
+            nullable=False,
+        ),
+        pa.field(
+            "retained_label_seq_ids",
+            pa.list_(pa.field("element", pa.int32())),
+            nullable=False,
+        ),
+
+        # Terminal processing failure
+        pa.field("processing_stage", pa.string(), nullable=False),
+        pa.field("error_type", pa.string(), nullable=False),
+        pa.field("error_message", pa.string(), nullable=False),
+
+        # Immutable source and complete producer lineage
+        pa.field("source_mmcif_key", pa.string(), nullable=False),
+        pa.field("source_etag", pa.string(), nullable=False),
+        pa.field("cleaning_protocol", pa.string(), nullable=False),
+        pa.field(
+            "quality_pipeline_git_commit",
+            pa.string(),
+            nullable=False,
+        ),
+        pa.field(
+            "geometric_validation_pipeline_git_commit",
+            pa.string(),
+            nullable=False,
+        ),
+        pa.field(
+            "geometric_validation_finalizer_git_commit",
+            pa.string(),
+            nullable=False,
+        ),
+        pa.field(
+            "bri_pipeline_git_commit",
+            pa.string(),
+            nullable=False,
+        ),
+    ],
+    metadata={
+        b"schema_name": (
+            b"pdbclean_stage3_bri_processing_error"
+        ),
+        b"schema_version": (
+            STAGE3_BRI_PROCESSING_ERROR_SCHEMA_VERSION.encode()
+        ),
+    },
+)
