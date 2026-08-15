@@ -400,3 +400,39 @@ GEOMETRIC_VALIDATION_PROCESSING_ERROR_SCHEMA = pa.schema(
     },
 )
 
+
+# ---------------------------------------------------------------------------
+# Stage 2 finalization: canonical Stage-3 input population
+# ---------------------------------------------------------------------------
+
+STAGE3_ELIGIBLE_CHAIN_SCHEMA_VERSION = "1.0"
+
+# Preserve the complete authoritative Stage-1 accepted-chain record.
+STAGE3_ELIGIBLE_CHAIN_SCHEMA = (
+    GOLD_ACCEPTED_CHAIN_SCHEMA.with_metadata(
+        {
+            b"schema_name": b"pdbclean_stage3_eligible_chain",
+            b"schema_version": (
+                STAGE3_ELIGIBLE_CHAIN_SCHEMA_VERSION.encode()
+            ),
+        }
+    )
+)
+
+
+STAGE3_QUARANTINED_CHAIN_SCHEMA_VERSION = "1.0"
+
+# Quarantined chains preserve the same authoritative Stage-1 lineage.
+# The geometric evidence explaining quarantine remains in the Step-2
+# audit dataset.
+STAGE3_QUARANTINED_CHAIN_SCHEMA = (
+    GOLD_ACCEPTED_CHAIN_SCHEMA.with_metadata(
+        {
+            b"schema_name": b"pdbclean_stage3_quarantined_chain",
+            b"schema_version": (
+                STAGE3_QUARANTINED_CHAIN_SCHEMA_VERSION.encode()
+            ),
+        }
+    )
+)
+
