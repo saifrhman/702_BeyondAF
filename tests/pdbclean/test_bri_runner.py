@@ -612,3 +612,466 @@ def test_process_bri_source_bri_failure_is_terminal_error() -> None:
         result.processing_errors[0]["processing_stage"]
         == "bri_computation"
     )
+
+
+def _successful_source_result(
+    rows,
+) -> SourceBRIResult:
+    from pdbclean.bri_runner import SourceBRIResult
+
+    single = _process_source(
+        rows,
+        downloader=lambda **kwargs: b"source",
+        parser=lambda *args, **kwargs: [
+            _source_chain()
+        ],
+    )
+
+    return single
+
+
+def test_process_bri_batch_materializes_frozen_schemas() -> None:
+    from pdbclean.bri_runner import process_bri_batch
+    from pdbclean.schemas import (
+        STAGE3_BRI_CHAIN_SCHEMA,
+        STAGE3_BRI_PROCESSING_ERROR_SCHEMA,
+    )
+
+    row = _source_eligible()
+
+    def processor(
+        manifest_row,
+        rows,
+        **kwargs,
+    ):
+        return _successful_source_result(rows)
+
+    batch = process_bri_batch(
+        [_source_manifest()],
+        [row],
+        upstream=_source_upstream(),
+        bucket_url="https://example.invalid",
+        bri_pipeline_git_commit="4" * 40,
+        source_processor=processor,
+    )
+
+    assert batch.chain_accounting_valid is True
+    assert batch.manifest_source_object_count == 1
+    assert batch.relevant_source_object_count == 1
+    assert batch.input_eligible_chain_count == 1
+    assert batch.downloaded_source_object_count == 1
+    assert batch.parsed_source_object_count == 1
+
+    assert batch.tables.chains.num_rows == 1
+    assert batch.tables.processing_errors.num_rows == 0
+
+    assert batch.tables.chains.schema.equals(
+        STAGE3_BRI_CHAIN_SCHEMA,
+        check_metadata=True,
+    )
+
+    assert batch.tables.processing_errors.schema.equals(
+        STAGE3_BRI_PROCESSING_ERROR_SCHEMA,
+        check_metadata=True,
+    )
+
+
+def test_process_bri_batch_skips_irrelevant_manifest_sources() -> None:
+    from pdbclean.bri_runner import process_bri_batch
+
+    second = _source_manifest().copy()
+    second["pdb_id"] = "NONE"
+    second["s3_key"] = (
+        f"{SNAPSHOT}/none.cif.gz"
+    )
+    second["etag"] = "etag-2"
+
+    calls = []
+
+    def processor(
+        manifest_row,
+        rows,
+        **kwargs,
+    ):
+        calls.append(manifest_row["s3_key"])
+        return _successful_source_result(rows)
+
+    batch = process_bri_batch(
+        [_source_manifest(), second],
+        [_source_eligible()],
+        upstream=_source_upstream(),
+        bucket_url="https://example.invalid",
+        bri_pipeline_git_commit="4" * 40,
+        source_processor=processor,
+    )
+
+    assert len(calls) == 1
+    assert batch.manifest_source_object_count == 2
+    assert batch.relevant_source_object_count == 1
+
+
+def test_process_bri_batch_rejects_source_outside_partition() -> None:
+    from pdbclean.bri_runner import (
+        BRIRunnerError,
+        process_bri_batch,
+    )
+
+    row = _source_eligible()
+    row["source_mmcif_key"] = (
+        f"{SNAPSHOT}/outside.cif.gz"
+    )
+
+    with pytest.raises(
+        BRIRunnerError,
+        match="outside the current manifest partition",
+    ):
+        process_bri_batch(
+            [_source_manifest()],
+            [row],
+            upstream=_source_upstream(),
+            bucket_url="https://example.invalid",
+            bri_pipeline_git_commit="4" * 40,
+        )
+
+
+def test_process_bri_batch_rejects_duplicate_chain_identity() -> None:
+    from pdbclean.bri_runner import (
+        BRIRunnerError,
+        process_bri_batch,
+    )
+
+    row = _source_eligible()
+
+    with pytest.raises(
+        BRIRunnerError,
+        match="duplicate eligible chain identity",
+    ):
+        process_bri_batch(
+            [_source_manifest()],
+            [row, row.copy()],
+            upstream=_source_upstream(),
+            bucket_url="https://example.invalid",
+            bri_pipeline_git_commit="4" * 40,
+        )
+
+
+def test_write_bri_shards_round_trip(
+    tmp_path: Path,
+) -> None:
+    import pyarrow.parquet as pq
+
+    from pdbclean.bri_runner import (
+        process_bri_batch,
+        write_bri_shards,
+    )
+    from pdbclean.schemas import (
+        STAGE3_BRI_CHAIN_SCHEMA,
+        STAGE3_BRI_PROCESSING_ERROR_SCHEMA,
+    )
+
+    def processor(
+        manifest_row,
+        rows,
+        **kwargs,
+    ):
+        return _successful_source_result(rows)
+
+    batch = process_bri_batch(
+        [_source_manifest()],
+        [_source_eligible()],
+        upstream=_source_upstream(),
+        bucket_url="https://example.invalid",
+        bri_pipeline_git_commit="4" * 40,
+        source_processor=processor,
+    )
+
+    paths = write_bri_shards(
+        batch.tables,
+        tmp_path,
+        "7",
+    )
+
+    assert paths["chains"] == (
+        tmp_path / "chains" / "task_7.parquet"
+    )
+
+    assert paths["processing_errors"] == (
+        tmp_path
+        / "processing_errors"
+        / "task_7.parquet"
+    )
+
+    assert pq.read_table(
+        paths["chains"]
+    ).num_rows == 1
+
+    assert pq.read_table(
+        paths["processing_errors"]
+    ).num_rows == 0
+
+    # Parquet may rename list child fields, so compare the
+    # in-memory canonical tables rather than requiring strict
+    # nested-child-name equality after Parquet round-trip.
+    assert batch.tables.chains.schema.equals(
+        STAGE3_BRI_CHAIN_SCHEMA,
+        check_metadata=True,
+    )
+
+    assert batch.tables.processing_errors.schema.equals(
+        STAGE3_BRI_PROCESSING_ERROR_SCHEMA,
+        check_metadata=True,
+    )
+
+
+def test_publish_bri_batch_writes_summary_last(
+    tmp_path: Path,
+) -> None:
+    from pdbclean.bri_runner import (
+        BRITaskContext,
+        process_bri_batch,
+        publish_bri_batch,
+    )
+
+    def processor(
+        manifest_row,
+        rows,
+        **kwargs,
+    ):
+        return _successful_source_result(rows)
+
+    batch = process_bri_batch(
+        [_source_manifest()],
+        [_source_eligible()],
+        upstream=_source_upstream(),
+        bucket_url="https://example.invalid",
+        bri_pipeline_git_commit="4" * 40,
+        source_processor=processor,
+    )
+
+    events = []
+
+    def shard_writer(
+        tables,
+        output_root,
+        task_id,
+    ):
+        events.append("shards")
+
+        return {
+            "chains": tmp_path / "chains.parquet",
+            "processing_errors": (
+                tmp_path / "errors.parquet"
+            ),
+        }
+
+    def summary_writer(
+        summary,
+        output_root,
+    ):
+        events.append("summary")
+        return tmp_path / "summary.json"
+
+    context = BRITaskContext(
+        task_id="7",
+        snapshot=SNAPSHOT,
+        cleaning_protocol=PROTOCOL,
+        quality_pipeline_git_commit=QUALITY_COMMIT,
+        geometric_validation_pipeline_git_commit=(
+            GEOMETRY_COMMIT
+        ),
+        geometric_validation_finalizer_git_commit=(
+            FINALIZER_COMMIT
+        ),
+        bri_pipeline_git_commit="4" * 40,
+        started_at_utc="2031-04-15T00:00:00Z",
+    )
+
+    publication = publish_bri_batch(
+        batch,
+        output_root=tmp_path,
+        context=context,
+        started_perf_counter=10.0,
+        shard_writer=shard_writer,
+        summary_writer=summary_writer,
+        utc_now=lambda: "2031-04-15T00:00:01Z",
+        perf_counter=lambda: 11.5,
+        peak_memory_reader=lambda: 1234,
+    )
+
+    assert events == ["shards", "summary"]
+
+    summary = publication.summary
+
+    assert summary["task_id"] == "7"
+    assert summary["input_eligible_chain_count"] == 1
+    assert summary["bri_chain_count"] == 1
+    assert summary["processing_error_count"] == 0
+    assert summary["chain_accounting_valid"] is True
+    assert summary["runtime_seconds"] == 1.5
+    assert summary["peak_memory_bytes"] == 1234
+
+
+def test_publish_bri_batch_invalidates_stale_summary(
+    tmp_path: Path,
+) -> None:
+    from pdbclean.bri_runner import (
+        BRIRunnerError,
+        BRITaskContext,
+        process_bri_batch,
+        publish_bri_batch,
+    )
+
+    def processor(
+        manifest_row,
+        rows,
+        **kwargs,
+    ):
+        return _successful_source_result(rows)
+
+    batch = process_bri_batch(
+        [_source_manifest()],
+        [_source_eligible()],
+        upstream=_source_upstream(),
+        bucket_url="https://example.invalid",
+        bri_pipeline_git_commit="4" * 40,
+        source_processor=processor,
+    )
+
+    stale = (
+        tmp_path
+        / "summaries"
+        / "task_7.json"
+    )
+
+    stale.parent.mkdir(parents=True)
+    stale.write_text(
+        "stale\n",
+        encoding="utf-8",
+    )
+
+    context = BRITaskContext(
+        task_id="7",
+        snapshot=SNAPSHOT,
+        cleaning_protocol=PROTOCOL,
+        quality_pipeline_git_commit=QUALITY_COMMIT,
+        geometric_validation_pipeline_git_commit=(
+            GEOMETRY_COMMIT
+        ),
+        geometric_validation_finalizer_git_commit=(
+            FINALIZER_COMMIT
+        ),
+        bri_pipeline_git_commit="4" * 40,
+        started_at_utc="2031-04-15T00:00:00Z",
+    )
+
+    def failing_shard_writer(*args, **kwargs):
+        raise BRIRunnerError("publication failed")
+
+    with pytest.raises(
+        BRIRunnerError,
+        match="publication failed",
+    ):
+        publish_bri_batch(
+            batch,
+            output_root=tmp_path,
+            context=context,
+            started_perf_counter=1.0,
+            shard_writer=failing_shard_writer,
+        )
+
+    assert not stale.exists()
+
+
+def test_execute_bri_task_propagates_validated_provenance(
+    tmp_path: Path,
+) -> None:
+    from pdbclean.bri_runner import (
+        BRIBatchResult,
+        BRITables,
+        BRITaskPublication,
+        execute_bri_task,
+    )
+    from pdbclean.schemas import (
+        STAGE3_BRI_CHAIN_SCHEMA,
+        STAGE3_BRI_PROCESSING_ERROR_SCHEMA,
+    )
+
+    empty_tables = BRITables(
+        chains=pa.Table.from_pylist(
+            [],
+            schema=STAGE3_BRI_CHAIN_SCHEMA,
+        ),
+        processing_errors=pa.Table.from_pylist(
+            [],
+            schema=STAGE3_BRI_PROCESSING_ERROR_SCHEMA,
+        ),
+    )
+
+    batch = BRIBatchResult(
+        manifest_source_object_count=1,
+        relevant_source_object_count=0,
+        input_eligible_chain_count=0,
+        downloaded_source_object_count=0,
+        parsed_source_object_count=0,
+        tables=empty_tables,
+    )
+
+    captured = {}
+
+    def batch_processor(
+        manifest_rows,
+        eligible_rows,
+        **kwargs,
+    ):
+        return batch
+
+    def publisher(
+        observed_batch,
+        *,
+        output_root,
+        context,
+        started_perf_counter,
+        **kwargs,
+    ):
+        captured["context"] = context
+
+        return BRITaskPublication(
+            shard_paths={},
+            summary_path=tmp_path / "summary.json",
+            summary={},
+        )
+
+    execute_bri_task(
+        [_source_manifest()],
+        [],
+        upstream=_source_upstream(),
+        output_root=tmp_path,
+        task_id=7,
+        bucket_url="https://example.invalid",
+        bri_pipeline_git_commit="4" * 40,
+        environ={
+            "SLURM_JOB_ID": "100",
+            "SLURM_ARRAY_TASK_ID": "7",
+        },
+        batch_processor=batch_processor,
+        publisher=publisher,
+        utc_now=lambda: "2031-04-15T00:00:00Z",
+        perf_counter=lambda: 10.0,
+    )
+
+    context = captured["context"]
+
+    assert context.task_id == "7"
+    assert context.snapshot == SNAPSHOT
+    assert context.quality_pipeline_git_commit == QUALITY_COMMIT
+    assert (
+        context.geometric_validation_pipeline_git_commit
+        == GEOMETRY_COMMIT
+    )
+    assert (
+        context.geometric_validation_finalizer_git_commit
+        == FINALIZER_COMMIT
+    )
+    assert context.bri_pipeline_git_commit == "4" * 40
+    assert context.slurm_job_id == "100"
+    assert context.slurm_array_task_id == "7"

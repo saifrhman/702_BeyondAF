@@ -8,9 +8,14 @@ The scientific BRI calculation itself lives in ``pdbclean.bri``.
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from collections import Counter
+from dataclasses import dataclass, replace
+from datetime import datetime, timezone
 import json
+import os
 from pathlib import Path
+import resource
+import time
 from typing import Any, Callable, Iterable, Mapping
 
 import numpy as np
@@ -32,7 +37,11 @@ from pdbclean.mmcif_parser import (
     MMCIFParseError,
     parse_coordinate_mmcif_bytes,
 )
-from pdbclean.schemas import STAGE3_ELIGIBLE_CHAIN_SCHEMA
+from pdbclean.schemas import (
+    STAGE3_BRI_CHAIN_SCHEMA,
+    STAGE3_BRI_PROCESSING_ERROR_SCHEMA,
+    STAGE3_ELIGIBLE_CHAIN_SCHEMA,
+)
 from pdbclean.snapshot import (
     SnapshotError,
     SnapshotTransportError,
@@ -1015,3 +1024,796 @@ def process_bri_source(
         )
 
     return result
+
+
+BRI_TASK_SUMMARY_SCHEMA_NAME = "pdbclean_stage3_bri_task_summary"
+BRI_TASK_SUMMARY_SCHEMA_VERSION = "1.0"
+
+
+@dataclass(frozen=True)
+class BRITables:
+    """Schema-enforced terminal Stage-3 task tables."""
+
+    chains: pa.Table
+    processing_errors: pa.Table
+
+
+@dataclass(frozen=True)
+class BRIBatchResult:
+    """Aggregated outcome for one logical Stage-3 manifest task."""
+
+    manifest_source_object_count: int
+    relevant_source_object_count: int
+
+    input_eligible_chain_count: int
+
+    downloaded_source_object_count: int
+    parsed_source_object_count: int
+
+    tables: BRITables
+
+    @property
+    def chain_accounting_valid(self) -> bool:
+        """Every canonical eligible chain has one terminal outcome."""
+
+        return self.input_eligible_chain_count == (
+            self.tables.chains.num_rows
+            + self.tables.processing_errors.num_rows
+        )
+
+
+@dataclass(frozen=True)
+class BRITaskContext:
+    """Execution and provenance context for one Stage-3 task."""
+
+    task_id: str
+    snapshot: str
+    cleaning_protocol: str
+
+    quality_pipeline_git_commit: str
+    geometric_validation_pipeline_git_commit: str
+    geometric_validation_finalizer_git_commit: str
+    bri_pipeline_git_commit: str
+
+    started_at_utc: str
+    completed_at_utc: str | None = None
+    runtime_seconds: float | None = None
+
+    slurm_job_id: str | None = None
+    slurm_array_task_id: str | None = None
+    peak_memory_bytes: int | None = None
+
+
+@dataclass(frozen=True)
+class BRITaskPublication:
+    """Published Stage-3 task shards and completion summary."""
+
+    shard_paths: dict[str, Path]
+    summary_path: Path
+    summary: dict[str, Any]
+
+
+def _safe_bri_task_id(task_id: str | int) -> str:
+    """Validate a task identifier before filesystem use."""
+
+    value = str(task_id)
+
+    if (
+        not value
+        or "/" in value
+        or "\\" in value
+        or value in {".", ".."}
+    ):
+        raise BRIRunnerError(
+            f"Unsafe Stage-3 BRI task_id: {value!r}"
+        )
+
+    return value
+
+
+def _utc_now_text() -> str:
+    """Return an explicit UTC timestamp for task provenance."""
+
+    return (
+        datetime.now(timezone.utc)
+        .isoformat(timespec="microseconds")
+        .replace("+00:00", "Z")
+    )
+
+
+def _linux_process_peak_memory_bytes() -> int | None:
+    """Return process peak resident memory on Linux."""
+
+    peak_kib = resource.getrusage(
+        resource.RUSAGE_SELF
+    ).ru_maxrss
+
+    if peak_kib < 0:
+        return None
+
+    return int(peak_kib) * 1024
+
+
+def _slurm_environment(
+    environ: Mapping[str, str] | None = None,
+) -> tuple[str | None, str | None]:
+    """Read optional Slurm identifiers without inventing defaults."""
+
+    source = os.environ if environ is None else environ
+
+    return (
+        source.get("SLURM_JOB_ID"),
+        source.get("SLURM_ARRAY_TASK_ID"),
+    )
+
+
+def _eligible_chain_identity(
+    row: Mapping[str, Any],
+) -> tuple[str, str, int, str]:
+    """Return the canonical Stage-3 chain identity."""
+
+    try:
+        return (
+            row["snapshot"],
+            row["pdb_id"],
+            row["model_id"],
+            row["label_chain_id"],
+        )
+    except KeyError as exc:
+        raise BRIRunnerError(
+            "Canonical eligible row is missing identity lineage"
+        ) from exc
+
+
+def _materialize_bri_tables(
+    bri_records: Iterable[Mapping[str, Any]],
+    processing_errors: Iterable[Mapping[str, Any]],
+) -> BRITables:
+    """Materialize terminal records against frozen Stage-3 schemas."""
+
+    try:
+        chains = pa.Table.from_pylist(
+            list(bri_records),
+            schema=STAGE3_BRI_CHAIN_SCHEMA,
+        )
+
+        errors = pa.Table.from_pylist(
+            list(processing_errors),
+            schema=STAGE3_BRI_PROCESSING_ERROR_SCHEMA,
+        )
+    except (pa.ArrowException, TypeError, ValueError) as exc:
+        raise BRIRunnerError(
+            f"Cannot materialize Stage-3 BRI tables: {exc}"
+        ) from exc
+
+    if not chains.schema.equals(
+        STAGE3_BRI_CHAIN_SCHEMA,
+        check_metadata=True,
+    ):
+        raise BRIRunnerError(
+            "Materialized BRI-chain table schema mismatch"
+        )
+
+    if not errors.schema.equals(
+        STAGE3_BRI_PROCESSING_ERROR_SCHEMA,
+        check_metadata=True,
+    ):
+        raise BRIRunnerError(
+            "Materialized BRI processing-error table schema mismatch"
+        )
+
+    return BRITables(
+        chains=chains,
+        processing_errors=errors,
+    )
+
+
+def process_bri_batch(
+    manifest_rows: Iterable[Mapping[str, Any]],
+    eligible_rows: Iterable[Mapping[str, Any]],
+    *,
+    upstream: UpstreamGeometricValidation,
+    bucket_url: str,
+    bri_pipeline_git_commit: str,
+    timeout_seconds: int = 60,
+    max_retries: int = 0,
+    source_processor: Callable[..., SourceBRIResult] = process_bri_source,
+) -> BRIBatchResult:
+    """Process one deterministic manifest partition for Stage-3 BRI."""
+
+    manifest = tuple(manifest_rows)
+    eligible = tuple(eligible_rows)
+
+    bri_pipeline_git_commit = _validated_git_commit(
+        bri_pipeline_git_commit,
+        field="bri_pipeline_git_commit",
+    )
+
+    manifest_by_source: dict[
+        str,
+        Mapping[str, Any],
+    ] = {}
+
+    manifest_source_order: list[str] = []
+
+    for manifest_row in manifest:
+        (
+            _,
+            source_key,
+            _,
+            _,
+        ) = _validate_manifest_source_row(
+            manifest_row,
+            expected_snapshot=upstream.snapshot,
+        )
+
+        if source_key in manifest_by_source:
+            raise BRIRunnerError(
+                "Manifest task contains duplicate source_mmcif key: "
+                f"{source_key!r}"
+            )
+
+        manifest_by_source[source_key] = manifest_row
+        manifest_source_order.append(source_key)
+
+    eligible_by_source: dict[
+        str,
+        list[Mapping[str, Any]],
+    ] = {}
+
+    seen_identities: set[
+        tuple[str, str, int, str]
+    ] = set()
+
+    for row in eligible:
+        identity = _eligible_chain_identity(row)
+
+        if identity in seen_identities:
+            raise BRIRunnerError(
+                "Stage-3 task contains duplicate eligible chain "
+                f"identity: {identity!r}"
+            )
+
+        seen_identities.add(identity)
+
+        source_key = row.get("source_mmcif_key")
+
+        if (
+            not isinstance(source_key, str)
+            or not source_key
+        ):
+            raise BRIRunnerError(
+                "Canonical eligible row has invalid source_mmcif_key"
+            )
+
+        if source_key not in manifest_by_source:
+            raise BRIRunnerError(
+                "Canonical eligible row belongs to a source outside "
+                "the current manifest partition"
+            )
+
+        eligible_by_source.setdefault(
+            source_key,
+            [],
+        ).append(row)
+
+    bri_records: list[dict[str, Any]] = []
+    processing_errors: list[dict[str, Any]] = []
+
+    relevant_source_object_count = 0
+    downloaded_source_object_count = 0
+    parsed_source_object_count = 0
+
+    for source_key in manifest_source_order:
+        source_rows = eligible_by_source.get(source_key)
+
+        if not source_rows:
+            continue
+
+        relevant_source_object_count += 1
+
+        result = source_processor(
+            manifest_by_source[source_key],
+            source_rows,
+            upstream=upstream,
+            bucket_url=bucket_url,
+            bri_pipeline_git_commit=bri_pipeline_git_commit,
+            timeout_seconds=timeout_seconds,
+            max_retries=max_retries,
+        )
+
+        if (
+            result.input_eligible_chain_count
+            != len(source_rows)
+        ):
+            raise BRIRunnerError(
+                "Per-source BRI input count does not match "
+                "task-selected eligible rows"
+            )
+
+        if not result.chain_accounting_valid:
+            raise BRIRunnerError(
+                "Per-source BRI chain accounting failed"
+            )
+
+        if result.source_downloaded:
+            downloaded_source_object_count += 1
+
+        if result.source_parsed:
+            parsed_source_object_count += 1
+
+        bri_records.extend(result.bri_records)
+        processing_errors.extend(
+            result.processing_errors
+        )
+
+    tables = _materialize_bri_tables(
+        bri_records,
+        processing_errors,
+    )
+
+    batch = BRIBatchResult(
+        manifest_source_object_count=len(manifest),
+        relevant_source_object_count=(
+            relevant_source_object_count
+        ),
+        input_eligible_chain_count=len(eligible),
+        downloaded_source_object_count=(
+            downloaded_source_object_count
+        ),
+        parsed_source_object_count=(
+            parsed_source_object_count
+        ),
+        tables=tables,
+    )
+
+    if not batch.chain_accounting_valid:
+        raise BRIRunnerError(
+            "Task-level Stage-3 BRI chain accounting failed"
+        )
+
+    return batch
+
+
+def _write_bri_parquet_atomic(
+    table: pa.Table,
+    output_path: str | Path,
+) -> Path:
+    """Write one Stage-3 Parquet artifact atomically."""
+
+    output = Path(output_path)
+    output.parent.mkdir(
+        parents=True,
+        exist_ok=True,
+    )
+
+    temporary = output.with_suffix(
+        output.suffix + ".tmp"
+    )
+
+    try:
+        pq.write_table(
+            table,
+            temporary,
+            compression="zstd",
+            version="2.6",
+        )
+        temporary.replace(output)
+    except Exception:
+        if temporary.exists():
+            temporary.unlink()
+
+        raise
+
+    return output
+
+
+def write_bri_shards(
+    tables: BRITables,
+    output_root: str | Path,
+    task_id: str | int,
+) -> dict[str, Path]:
+    """Write deterministic schema-enforced Stage-3 task shards."""
+
+    task_id_text = _safe_bri_task_id(task_id)
+    root = Path(output_root)
+
+    if not tables.chains.schema.equals(
+        STAGE3_BRI_CHAIN_SCHEMA,
+        check_metadata=True,
+    ):
+        raise BRIRunnerError(
+            "Cannot publish BRI chains with unexpected schema"
+        )
+
+    if not tables.processing_errors.schema.equals(
+        STAGE3_BRI_PROCESSING_ERROR_SCHEMA,
+        check_metadata=True,
+    ):
+        raise BRIRunnerError(
+            "Cannot publish BRI errors with unexpected schema"
+        )
+
+    paths = {
+        "chains": (
+            root
+            / "chains"
+            / f"task_{task_id_text}.parquet"
+        ),
+        "processing_errors": (
+            root
+            / "processing_errors"
+            / f"task_{task_id_text}.parquet"
+        ),
+    }
+
+    _write_bri_parquet_atomic(
+        tables.chains,
+        paths["chains"],
+    )
+    _write_bri_parquet_atomic(
+        tables.processing_errors,
+        paths["processing_errors"],
+    )
+
+    return paths
+
+
+def _sorted_counts(
+    values: Iterable[str],
+) -> dict[str, int]:
+    """Return deterministic lexical-key counts."""
+
+    counts = Counter(values)
+
+    return {
+        key: counts[key]
+        for key in sorted(counts)
+    }
+
+
+def build_bri_task_summary(
+    batch: BRIBatchResult,
+    context: BRITaskContext,
+) -> dict[str, Any]:
+    """Build deterministic Stage-3 BRI task completion metadata."""
+
+    if context.completed_at_utc is None:
+        raise BRIRunnerError(
+            "BRI task summary requires completed_at_utc"
+        )
+
+    if context.runtime_seconds is None:
+        raise BRIRunnerError(
+            "BRI task summary requires runtime_seconds"
+        )
+
+    if context.runtime_seconds < 0:
+        raise BRIRunnerError(
+            "BRI task runtime cannot be negative"
+        )
+
+    error_rows = (
+        batch.tables.processing_errors.to_pylist()
+    )
+
+    chain_accounting_valid = (
+        batch.input_eligible_chain_count
+        == batch.tables.chains.num_rows
+        + len(error_rows)
+    )
+
+    return {
+        "summary_schema_name": (
+            BRI_TASK_SUMMARY_SCHEMA_NAME
+        ),
+        "summary_schema_version": (
+            BRI_TASK_SUMMARY_SCHEMA_VERSION
+        ),
+        "task_id": context.task_id,
+        "snapshot": context.snapshot,
+        "cleaning_protocol": context.cleaning_protocol,
+        "quality_pipeline_git_commit": (
+            context.quality_pipeline_git_commit
+        ),
+        "geometric_validation_pipeline_git_commit": (
+            context.geometric_validation_pipeline_git_commit
+        ),
+        "geometric_validation_finalizer_git_commit": (
+            context.geometric_validation_finalizer_git_commit
+        ),
+        "bri_pipeline_git_commit": (
+            context.bri_pipeline_git_commit
+        ),
+        "started_at_utc": context.started_at_utc,
+        "completed_at_utc": context.completed_at_utc,
+        "runtime_seconds": context.runtime_seconds,
+        "slurm_job_id": context.slurm_job_id,
+        "slurm_array_task_id": (
+            context.slurm_array_task_id
+        ),
+        "peak_memory_bytes": context.peak_memory_bytes,
+        "manifest_source_object_count": (
+            batch.manifest_source_object_count
+        ),
+        "relevant_source_object_count": (
+            batch.relevant_source_object_count
+        ),
+        "downloaded_source_object_count": (
+            batch.downloaded_source_object_count
+        ),
+        "parsed_source_object_count": (
+            batch.parsed_source_object_count
+        ),
+        "input_eligible_chain_count": (
+            batch.input_eligible_chain_count
+        ),
+        "bri_chain_count": (
+            batch.tables.chains.num_rows
+        ),
+        "processing_error_count": len(error_rows),
+        "processing_errors_by_stage": _sorted_counts(
+            row["processing_stage"]
+            for row in error_rows
+        ),
+        "processing_errors_by_type": _sorted_counts(
+            row["error_type"]
+            for row in error_rows
+        ),
+        "chain_accounting_valid": (
+            chain_accounting_valid
+        ),
+    }
+
+
+def write_bri_task_summary_atomic(
+    summary: dict[str, Any],
+    output_root: str | Path,
+) -> Path:
+    """Write the Stage-3 task completion marker atomically."""
+
+    if (
+        summary.get("summary_schema_name")
+        != BRI_TASK_SUMMARY_SCHEMA_NAME
+    ):
+        raise BRIRunnerError(
+            "Unexpected BRI task-summary schema name"
+        )
+
+    if (
+        summary.get("summary_schema_version")
+        != BRI_TASK_SUMMARY_SCHEMA_VERSION
+    ):
+        raise BRIRunnerError(
+            "Unexpected BRI task-summary schema version"
+        )
+
+    if summary.get("chain_accounting_valid") is not True:
+        raise BRIRunnerError(
+            "Cannot publish BRI task summary: "
+            "chain accounting failed"
+        )
+
+    task_id = _safe_bri_task_id(
+        summary.get("task_id", "")
+    )
+
+    output = (
+        Path(output_root)
+        / "summaries"
+        / f"task_{task_id}.json"
+    )
+
+    output.parent.mkdir(
+        parents=True,
+        exist_ok=True,
+    )
+
+    temporary = output.with_suffix(
+        output.suffix + ".tmp"
+    )
+
+    payload = json.dumps(
+        summary,
+        sort_keys=True,
+        indent=2,
+        ensure_ascii=True,
+    )
+
+    temporary.write_text(
+        payload + "\n",
+        encoding="utf-8",
+    )
+
+    temporary.replace(output)
+
+    return output
+
+
+def publish_bri_batch(
+    batch: BRIBatchResult,
+    *,
+    output_root: str | Path,
+    context: BRITaskContext,
+    started_perf_counter: float,
+    shard_writer: Callable[
+        ...,
+        dict[str, Path],
+    ] = write_bri_shards,
+    summary_writer: Callable[
+        ...,
+        Path,
+    ] = write_bri_task_summary_atomic,
+    utc_now: Callable[[], str] = _utc_now_text,
+    perf_counter: Callable[[], float] = time.perf_counter,
+    peak_memory_reader: Callable[
+        [],
+        int | None,
+    ] = _linux_process_peak_memory_bytes,
+) -> BRITaskPublication:
+    """Publish terminal shards first and task summary strictly last."""
+
+    if not batch.chain_accounting_valid:
+        raise BRIRunnerError(
+            "Cannot publish Stage-3 BRI task: "
+            "chain accounting failed"
+        )
+
+    if (
+        not isinstance(
+            started_perf_counter,
+            (int, float),
+        )
+        or isinstance(started_perf_counter, bool)
+    ):
+        raise BRIRunnerError(
+            "started_perf_counter must be numeric"
+        )
+
+    task_id = _safe_bri_task_id(
+        context.task_id
+    )
+
+    # A stale completion marker must not survive an attempted
+    # re-publication.
+    existing_summary = (
+        Path(output_root)
+        / "summaries"
+        / f"task_{task_id}.json"
+    )
+
+    if existing_summary.exists():
+        existing_summary.unlink()
+
+    # Terminal Parquet artifacts are published first.
+    shard_paths = shard_writer(
+        batch.tables,
+        output_root,
+        task_id,
+    )
+
+    completed_at_utc = utc_now()
+    runtime_seconds = (
+        perf_counter()
+        - started_perf_counter
+    )
+
+    if runtime_seconds < 0:
+        raise BRIRunnerError(
+            "Monotonic Stage-3 BRI runtime cannot be negative"
+        )
+
+    completed_context = replace(
+        context,
+        completed_at_utc=completed_at_utc,
+        runtime_seconds=runtime_seconds,
+        peak_memory_bytes=peak_memory_reader(),
+    )
+
+    summary = build_bri_task_summary(
+        batch,
+        completed_context,
+    )
+
+    # This is deliberately the final publication operation and
+    # therefore acts as the task completion marker.
+    summary_path = summary_writer(
+        summary,
+        output_root,
+    )
+
+    return BRITaskPublication(
+        shard_paths=shard_paths,
+        summary_path=summary_path,
+        summary=summary,
+    )
+
+
+def execute_bri_task(
+    manifest_rows: Iterable[Mapping[str, Any]],
+    eligible_rows: Iterable[Mapping[str, Any]],
+    *,
+    upstream: UpstreamGeometricValidation,
+    output_root: str | Path,
+    task_id: str | int,
+    bucket_url: str,
+    bri_pipeline_git_commit: str,
+    timeout_seconds: int = 60,
+    max_retries: int = 0,
+    environ: Mapping[str, str] | None = None,
+    batch_processor: Callable[
+        ...,
+        BRIBatchResult,
+    ] = process_bri_batch,
+    publisher: Callable[
+        ...,
+        BRITaskPublication,
+    ] = publish_bri_batch,
+    utc_now: Callable[[], str] = _utc_now_text,
+    perf_counter: Callable[[], float] = time.perf_counter,
+) -> BRITaskPublication:
+    """Execute one complete logical Stage-3 BRI task."""
+
+    task_id_text = _safe_bri_task_id(
+        task_id
+    )
+
+    bri_pipeline_git_commit = _validated_git_commit(
+        bri_pipeline_git_commit,
+        field="bri_pipeline_git_commit",
+    )
+
+    slurm_job_id, slurm_array_task_id = (
+        _slurm_environment(environ)
+    )
+
+    started_at_utc = utc_now()
+    started_perf_counter = perf_counter()
+
+    batch = batch_processor(
+        manifest_rows,
+        eligible_rows,
+        upstream=upstream,
+        bucket_url=bucket_url,
+        bri_pipeline_git_commit=(
+            bri_pipeline_git_commit
+        ),
+        timeout_seconds=timeout_seconds,
+        max_retries=max_retries,
+    )
+
+    context = BRITaskContext(
+        task_id=task_id_text,
+        snapshot=upstream.snapshot,
+        cleaning_protocol=(
+            upstream.cleaning_protocol
+        ),
+        quality_pipeline_git_commit=(
+            upstream.quality_pipeline_git_commit
+        ),
+        geometric_validation_pipeline_git_commit=(
+            upstream.geometric_validation_pipeline_git_commit
+        ),
+        geometric_validation_finalizer_git_commit=(
+            upstream.geometric_validation_finalizer_git_commit
+        ),
+        bri_pipeline_git_commit=(
+            bri_pipeline_git_commit
+        ),
+        started_at_utc=started_at_utc,
+        slurm_job_id=slurm_job_id,
+        slurm_array_task_id=(
+            slurm_array_task_id
+        ),
+    )
+
+    return publisher(
+        batch,
+        output_root=output_root,
+        context=context,
+        started_perf_counter=(
+            started_perf_counter
+        ),
+        utc_now=utc_now,
+        perf_counter=perf_counter,
+    )
