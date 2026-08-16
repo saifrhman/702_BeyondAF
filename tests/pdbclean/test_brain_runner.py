@@ -1097,3 +1097,287 @@ def test_process_brain_partition_preserves_canonical_input_order(
         "2abc",
         "9abc",
     ]
+
+
+def _brain_publication_batch(
+    tmp_path: Path,
+):
+    from pdbclean.brain_runner import (
+        brain_task_partition,
+        process_brain_partition,
+    )
+
+    defined = _stage3_bri_row(
+        m=2,
+        bri=[
+            [0.0] * 9,
+            [0.1] * 9,
+        ],
+    )
+
+    undefined = _stage3_bri_row(
+        m=1,
+        bri=[[0.0] * 9],
+    )
+    undefined["pdb_id"] = "2abc"
+
+    upstream = _write_stage3_bri_partition_fixture(
+        tmp_path,
+        [defined, undefined],
+    )
+
+    partition = brain_task_partition(
+        (1, 1),
+        task_id=0,
+        row_groups_per_task=2,
+    )
+
+    batch = process_brain_partition(
+        upstream=upstream,
+        partition=partition,
+        brain_pipeline_git_commit="f" * 40,
+    )
+
+    return upstream, partition, batch
+
+
+def test_write_brain_shards_round_trip(
+    tmp_path: Path,
+) -> None:
+    from pdbclean.brain_runner import (
+        write_brain_shards,
+    )
+
+    _, _, batch = _brain_publication_batch(
+        tmp_path / "input"
+    )
+
+    paths = write_brain_shards(
+        batch.tables,
+        tmp_path / "output",
+        0,
+    )
+
+    assert pq.read_table(
+        paths["chains"]
+    ).num_rows == 1
+
+    assert pq.read_table(
+        paths["undefined"]
+    ).num_rows == 1
+
+    assert pq.read_table(
+        paths["processing_errors"]
+    ).num_rows == 0
+
+
+def test_publish_brain_batch_writes_summary_last(
+    tmp_path: Path,
+) -> None:
+    from pdbclean.brain_runner import (
+        BrainTaskContext,
+        publish_brain_batch,
+    )
+
+    upstream, partition, batch = (
+        _brain_publication_batch(
+            tmp_path / "input"
+        )
+    )
+
+    events = []
+
+    def shard_writer(
+        tables,
+        output_root,
+        task_id,
+    ):
+        events.append("shards")
+        return {}
+
+    def summary_writer(
+        summary,
+        output_root,
+    ):
+        events.append("summary")
+        return tmp_path / "summary.json"
+
+    context = BrainTaskContext(
+        task_id="0",
+        snapshot=SNAPSHOT,
+        cleaning_protocol=PROTOCOL,
+        quality_pipeline_git_commit=QUALITY_COMMIT,
+        geometric_validation_pipeline_git_commit=(
+            GEOMETRY_COMMIT
+        ),
+        geometric_validation_finalizer_git_commit=(
+            GEOMETRY_FINALIZER_COMMIT
+        ),
+        bri_pipeline_git_commit=BRI_COMMIT,
+        bri_finalizer_git_commit=(
+            BRI_FINALIZER_COMMIT
+        ),
+        brain_pipeline_git_commit="f" * 40,
+        started_at_utc="2031-04-15T00:00:00Z",
+    )
+
+    publication = publish_brain_batch(
+        batch,
+        output_root=tmp_path / "output",
+        context=context,
+        started_perf_counter=10.0,
+        shard_writer=shard_writer,
+        summary_writer=summary_writer,
+        utc_now=lambda: (
+            "2031-04-15T00:00:01Z"
+        ),
+        perf_counter=lambda: 11.5,
+        peak_memory_reader=lambda: 1234,
+    )
+
+    assert events == [
+        "shards",
+        "summary",
+    ]
+
+    summary = publication.summary
+
+    assert summary["task_id"] == "0"
+    assert summary["task_count"] == 1
+    assert summary["start_row_group"] == 0
+    assert summary["stop_row_group"] == 2
+    assert summary["input_bri_chain_count"] == 2
+    assert summary["brain_chain_count"] == 1
+    assert summary["undefined_chain_count"] == 1
+    assert summary["processing_error_count"] == 0
+    assert summary["chain_accounting_valid"] is True
+    assert summary["runtime_seconds"] == 1.5
+    assert summary["peak_memory_bytes"] == 1234
+
+
+def test_publish_brain_batch_invalidates_stale_summary(
+    tmp_path: Path,
+) -> None:
+    from pdbclean.brain_runner import (
+        BrainRunnerError,
+        BrainTaskContext,
+        publish_brain_batch,
+    )
+
+    _, _, batch = _brain_publication_batch(
+        tmp_path / "input"
+    )
+
+    stale = (
+        tmp_path
+        / "output"
+        / "summaries"
+        / "task_0.json"
+    )
+    stale.parent.mkdir(parents=True)
+    stale.write_text(
+        "stale\n",
+        encoding="utf-8",
+    )
+
+    context = BrainTaskContext(
+        task_id="0",
+        snapshot=SNAPSHOT,
+        cleaning_protocol=PROTOCOL,
+        quality_pipeline_git_commit=QUALITY_COMMIT,
+        geometric_validation_pipeline_git_commit=(
+            GEOMETRY_COMMIT
+        ),
+        geometric_validation_finalizer_git_commit=(
+            GEOMETRY_FINALIZER_COMMIT
+        ),
+        bri_pipeline_git_commit=BRI_COMMIT,
+        bri_finalizer_git_commit=(
+            BRI_FINALIZER_COMMIT
+        ),
+        brain_pipeline_git_commit="f" * 40,
+        started_at_utc="2031-04-15T00:00:00Z",
+    )
+
+    def fail(*args, **kwargs):
+        raise BrainRunnerError(
+            "synthetic publication failure"
+        )
+
+    with pytest.raises(
+        BrainRunnerError,
+        match="synthetic publication failure",
+    ):
+        publish_brain_batch(
+            batch,
+            output_root=tmp_path / "output",
+            context=context,
+            started_perf_counter=1.0,
+            shard_writer=fail,
+        )
+
+    assert not stale.exists()
+
+
+def test_execute_brain_task_propagates_full_provenance(
+    tmp_path: Path,
+) -> None:
+    from pdbclean.brain_runner import (
+        BrainTaskPublication,
+        execute_brain_task,
+    )
+
+    upstream, partition, batch = (
+        _brain_publication_batch(
+            tmp_path / "input"
+        )
+    )
+
+    captured = {}
+
+    def processor(**kwargs):
+        return batch
+
+    def publisher(
+        observed_batch,
+        *,
+        output_root,
+        context,
+        started_perf_counter,
+        **kwargs,
+    ):
+        captured["context"] = context
+
+        return BrainTaskPublication(
+            shard_paths={},
+            summary_path=tmp_path / "summary.json",
+            summary={},
+        )
+
+    execute_brain_task(
+        upstream=upstream,
+        partition=partition,
+        output_root=tmp_path / "output",
+        brain_pipeline_git_commit="f" * 40,
+        environ={
+            "SLURM_JOB_ID": "123",
+            "SLURM_ARRAY_TASK_ID": "0",
+        },
+        batch_processor=processor,
+        publisher=publisher,
+        utc_now=lambda: (
+            "2031-04-15T00:00:00Z"
+        ),
+        perf_counter=lambda: 10.0,
+    )
+
+    context = captured["context"]
+
+    assert context.task_id == "0"
+    assert context.bri_pipeline_git_commit == BRI_COMMIT
+    assert context.bri_finalizer_git_commit == (
+        BRI_FINALIZER_COMMIT
+    )
+    assert context.brain_pipeline_git_commit == "f" * 40
+    assert context.slurm_job_id == "123"
+    assert context.slurm_array_task_id == "0"

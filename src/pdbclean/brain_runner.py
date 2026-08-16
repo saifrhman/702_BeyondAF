@@ -1369,3 +1369,607 @@ def process_brain_partition(
         )
 
     return batch_result
+
+
+# ---------------------------------------------------------------------------
+# Stage-5 task artifact publication
+# ---------------------------------------------------------------------------
+
+from collections import Counter
+from dataclasses import replace
+from datetime import datetime, timezone
+import os
+import resource
+import time
+
+
+BRAIN_TASK_SUMMARY_SCHEMA_NAME = (
+    "pdbclean_stage5_brain_task_summary"
+)
+BRAIN_TASK_SUMMARY_SCHEMA_VERSION = "1.0"
+
+
+@dataclass(frozen=True)
+class BrainTaskContext:
+    """Execution/provenance context for one Stage-5 task."""
+
+    task_id: str
+    snapshot: str
+    cleaning_protocol: str
+
+    quality_pipeline_git_commit: str
+    geometric_validation_pipeline_git_commit: str
+    geometric_validation_finalizer_git_commit: str
+    bri_pipeline_git_commit: str
+    bri_finalizer_git_commit: str
+    brain_pipeline_git_commit: str
+
+    started_at_utc: str
+    completed_at_utc: str | None = None
+    runtime_seconds: float | None = None
+
+    slurm_job_id: str | None = None
+    slurm_array_task_id: str | None = None
+    peak_memory_bytes: int | None = None
+
+
+@dataclass(frozen=True)
+class BrainTaskPublication:
+    """Published Stage-5 shards and completion marker."""
+
+    shard_paths: dict[str, Path]
+    summary_path: Path
+    summary: dict[str, Any]
+
+
+def _safe_brain_task_id(
+    task_id: str | int,
+) -> str:
+    value = str(task_id)
+
+    if (
+        not value
+        or "/" in value
+        or "\\" in value
+        or value in {".", ".."}
+    ):
+        raise BrainRunnerError(
+            f"Unsafe Stage-5 Brain task_id: {value!r}"
+        )
+
+    return value
+
+
+def _brain_utc_now_text() -> str:
+    return (
+        datetime.now(timezone.utc)
+        .isoformat(timespec="microseconds")
+        .replace("+00:00", "Z")
+    )
+
+
+def _brain_peak_memory_bytes() -> int | None:
+    peak_kib = resource.getrusage(
+        resource.RUSAGE_SELF
+    ).ru_maxrss
+
+    if peak_kib < 0:
+        return None
+
+    return int(peak_kib) * 1024
+
+
+def _brain_slurm_environment(
+    environ: Mapping[str, str] | None = None,
+) -> tuple[str | None, str | None]:
+    source = os.environ if environ is None else environ
+
+    return (
+        source.get("SLURM_JOB_ID"),
+        source.get("SLURM_ARRAY_TASK_ID"),
+    )
+
+
+def _write_brain_parquet_atomic(
+    table: pa.Table,
+    output_path: str | Path,
+) -> Path:
+    output = Path(output_path)
+    output.parent.mkdir(
+        parents=True,
+        exist_ok=True,
+    )
+
+    temporary = output.with_suffix(
+        output.suffix + ".tmp"
+    )
+
+    try:
+        pq.write_table(
+            table,
+            temporary,
+            compression="zstd",
+            version="2.6",
+        )
+        temporary.replace(output)
+    except Exception:
+        if temporary.exists():
+            temporary.unlink()
+        raise
+
+    return output
+
+
+def write_brain_shards(
+    tables: BrainTables,
+    output_root: str | Path,
+    task_id: str | int,
+) -> dict[str, Path]:
+    """Publish the three Stage-5 terminal tables."""
+
+    task_id_text = _safe_brain_task_id(
+        task_id
+    )
+    root = Path(output_root)
+
+    checks = (
+        (
+            tables.chains,
+            STAGE5_BRAIN_CHAIN_SCHEMA,
+            "Brain-defined",
+        ),
+        (
+            tables.undefined,
+            STAGE5_BRAIN_UNDEFINED_CHAIN_SCHEMA,
+            "Brain-undefined",
+        ),
+        (
+            tables.processing_errors,
+            STAGE5_BRAIN_PROCESSING_ERROR_SCHEMA,
+            "Brain processing-error",
+        ),
+    )
+
+    for table, schema, name in checks:
+        if not table.schema.equals(
+            schema,
+            check_metadata=True,
+        ):
+            raise BrainRunnerError(
+                f"Cannot publish {name} table with "
+                "unexpected schema"
+            )
+
+    paths = {
+        "chains": (
+            root / "chains"
+            / f"task_{task_id_text}.parquet"
+        ),
+        "undefined": (
+            root / "undefined"
+            / f"task_{task_id_text}.parquet"
+        ),
+        "processing_errors": (
+            root / "processing_errors"
+            / f"task_{task_id_text}.parquet"
+        ),
+    }
+
+    _write_brain_parquet_atomic(
+        tables.chains,
+        paths["chains"],
+    )
+    _write_brain_parquet_atomic(
+        tables.undefined,
+        paths["undefined"],
+    )
+    _write_brain_parquet_atomic(
+        tables.processing_errors,
+        paths["processing_errors"],
+    )
+
+    return paths
+
+
+def _brain_sorted_counts(
+    values: list[str],
+) -> dict[str, int]:
+    counts = Counter(values)
+
+    return {
+        key: counts[key]
+        for key in sorted(counts)
+    }
+
+
+def build_brain_task_summary(
+    batch: BrainBatchResult,
+    context: BrainTaskContext,
+) -> dict[str, Any]:
+    """Build deterministic Stage-5 task completion metadata."""
+
+    if context.completed_at_utc is None:
+        raise BrainRunnerError(
+            "Brain task summary requires completed_at_utc"
+        )
+
+    if context.runtime_seconds is None:
+        raise BrainRunnerError(
+            "Brain task summary requires runtime_seconds"
+        )
+
+    if context.runtime_seconds < 0:
+        raise BrainRunnerError(
+            "Brain task runtime cannot be negative"
+        )
+
+    if context.task_id != str(
+        batch.partition.task_id
+    ):
+        raise BrainRunnerError(
+            "Brain task context does not match partition task_id"
+        )
+
+    undefined_rows = (
+        batch.tables.undefined.to_pylist()
+    )
+    error_rows = (
+        batch.tables.processing_errors.to_pylist()
+    )
+
+    return {
+        "summary_schema_name": (
+            BRAIN_TASK_SUMMARY_SCHEMA_NAME
+        ),
+        "summary_schema_version": (
+            BRAIN_TASK_SUMMARY_SCHEMA_VERSION
+        ),
+
+        "task_id": context.task_id,
+        "task_count": batch.partition.task_count,
+
+        "partition_scheme": (
+            "contiguous_parquet_row_groups"
+        ),
+        "start_row_group": (
+            batch.partition.start_row_group
+        ),
+        "stop_row_group": (
+            batch.partition.stop_row_group
+        ),
+        "row_group_count": (
+            batch.partition.row_group_count
+        ),
+
+        "snapshot": context.snapshot,
+        "cleaning_protocol": (
+            context.cleaning_protocol
+        ),
+
+        "quality_pipeline_git_commit": (
+            context.quality_pipeline_git_commit
+        ),
+        "geometric_validation_pipeline_git_commit": (
+            context.geometric_validation_pipeline_git_commit
+        ),
+        "geometric_validation_finalizer_git_commit": (
+            context.geometric_validation_finalizer_git_commit
+        ),
+        "bri_pipeline_git_commit": (
+            context.bri_pipeline_git_commit
+        ),
+        "bri_finalizer_git_commit": (
+            context.bri_finalizer_git_commit
+        ),
+        "brain_pipeline_git_commit": (
+            context.brain_pipeline_git_commit
+        ),
+
+        "started_at_utc": context.started_at_utc,
+        "completed_at_utc": (
+            context.completed_at_utc
+        ),
+        "runtime_seconds": (
+            context.runtime_seconds
+        ),
+
+        "slurm_job_id": context.slurm_job_id,
+        "slurm_array_task_id": (
+            context.slurm_array_task_id
+        ),
+        "peak_memory_bytes": (
+            context.peak_memory_bytes
+        ),
+
+        "input_bri_chain_count": (
+            batch.input_bri_chain_count
+        ),
+        "brain_chain_count": (
+            batch.brain_chain_count
+        ),
+        "undefined_chain_count": (
+            batch.undefined_chain_count
+        ),
+        "processing_error_count": (
+            batch.processing_error_count
+        ),
+
+        "undefined_reasons": _brain_sorted_counts(
+            [
+                row["undefined_reason"]
+                for row in undefined_rows
+            ]
+        ),
+        "processing_errors_by_stage": (
+            _brain_sorted_counts(
+                [
+                    row["processing_stage"]
+                    for row in error_rows
+                ]
+            )
+        ),
+        "processing_errors_by_type": (
+            _brain_sorted_counts(
+                [
+                    row["error_type"]
+                    for row in error_rows
+                ]
+            )
+        ),
+
+        "chain_accounting_valid": (
+            batch.chain_accounting_valid
+        ),
+    }
+
+
+def write_brain_task_summary_atomic(
+    summary: dict[str, Any],
+    output_root: str | Path,
+) -> Path:
+    """Publish Stage-5 task completion marker atomically."""
+
+    if (
+        summary.get("summary_schema_name")
+        != BRAIN_TASK_SUMMARY_SCHEMA_NAME
+    ):
+        raise BrainRunnerError(
+            "Unexpected Brain task-summary schema name"
+        )
+
+    if (
+        summary.get("summary_schema_version")
+        != BRAIN_TASK_SUMMARY_SCHEMA_VERSION
+    ):
+        raise BrainRunnerError(
+            "Unexpected Brain task-summary schema version"
+        )
+
+    if summary.get("chain_accounting_valid") is not True:
+        raise BrainRunnerError(
+            "Cannot publish Brain task summary: "
+            "chain accounting failed"
+        )
+
+    task_id = _safe_brain_task_id(
+        summary.get("task_id", "")
+    )
+
+    output = (
+        Path(output_root)
+        / "summaries"
+        / f"task_{task_id}.json"
+    )
+
+    output.parent.mkdir(
+        parents=True,
+        exist_ok=True,
+    )
+
+    temporary = output.with_suffix(
+        output.suffix + ".tmp"
+    )
+
+    payload = json.dumps(
+        summary,
+        sort_keys=True,
+        indent=2,
+        ensure_ascii=True,
+    )
+
+    temporary.write_text(
+        payload + "\n",
+        encoding="utf-8",
+    )
+    temporary.replace(output)
+
+    return output
+
+
+def publish_brain_batch(
+    batch: BrainBatchResult,
+    *,
+    output_root: str | Path,
+    context: BrainTaskContext,
+    started_perf_counter: float,
+    shard_writer: Callable[
+        ...,
+        dict[str, Path],
+    ] = write_brain_shards,
+    summary_writer: Callable[
+        ...,
+        Path,
+    ] = write_brain_task_summary_atomic,
+    utc_now: Callable[[], str] = (
+        _brain_utc_now_text
+    ),
+    perf_counter: Callable[[], float] = (
+        time.perf_counter
+    ),
+    peak_memory_reader: Callable[
+        [],
+        int | None,
+    ] = _brain_peak_memory_bytes,
+) -> BrainTaskPublication:
+    """Publish shards first; summary strictly last."""
+
+    if not batch.chain_accounting_valid:
+        raise BrainRunnerError(
+            "Cannot publish Stage-5 Brain task: "
+            "chain accounting failed"
+        )
+
+    if (
+        not isinstance(
+            started_perf_counter,
+            (int, float),
+        )
+        or isinstance(started_perf_counter, bool)
+    ):
+        raise BrainRunnerError(
+            "started_perf_counter must be numeric"
+        )
+
+    task_id = _safe_brain_task_id(
+        context.task_id
+    )
+
+    stale_summary = (
+        Path(output_root)
+        / "summaries"
+        / f"task_{task_id}.json"
+    )
+
+    if stale_summary.exists():
+        stale_summary.unlink()
+
+    shard_paths = shard_writer(
+        batch.tables,
+        output_root,
+        task_id,
+    )
+
+    completed_at = utc_now()
+    runtime = (
+        perf_counter()
+        - started_perf_counter
+    )
+
+    if runtime < 0:
+        raise BrainRunnerError(
+            "Monotonic Brain runtime cannot be negative"
+        )
+
+    completed_context = replace(
+        context,
+        completed_at_utc=completed_at,
+        runtime_seconds=runtime,
+        peak_memory_bytes=peak_memory_reader(),
+    )
+
+    summary = build_brain_task_summary(
+        batch,
+        completed_context,
+    )
+
+    summary_path = summary_writer(
+        summary,
+        output_root,
+    )
+
+    return BrainTaskPublication(
+        shard_paths=shard_paths,
+        summary_path=summary_path,
+        summary=summary,
+    )
+
+
+def execute_brain_task(
+    *,
+    upstream: UpstreamBRI,
+    partition: BrainTaskPartition,
+    output_root: str | Path,
+    brain_pipeline_git_commit: str,
+    environ: Mapping[str, str] | None = None,
+    batch_processor: Callable[
+        ...,
+        BrainBatchResult,
+    ] = process_brain_partition,
+    publisher: Callable[
+        ...,
+        BrainTaskPublication,
+    ] = publish_brain_batch,
+    utc_now: Callable[[], str] = (
+        _brain_utc_now_text
+    ),
+    perf_counter: Callable[[], float] = (
+        time.perf_counter
+    ),
+) -> BrainTaskPublication:
+    """Execute and publish one complete Stage-5 physical task."""
+
+    brain_pipeline_git_commit = (
+        _validated_git_commit(
+            brain_pipeline_git_commit,
+            field="brain_pipeline_git_commit",
+        )
+    )
+
+    slurm_job_id, slurm_array_task_id = (
+        _brain_slurm_environment(
+            environ
+        )
+    )
+
+    started_at = utc_now()
+    started_counter = perf_counter()
+
+    batch = batch_processor(
+        upstream=upstream,
+        partition=partition,
+        brain_pipeline_git_commit=(
+            brain_pipeline_git_commit
+        ),
+    )
+
+    context = BrainTaskContext(
+        task_id=str(partition.task_id),
+        snapshot=upstream.snapshot,
+        cleaning_protocol=(
+            upstream.cleaning_protocol
+        ),
+        quality_pipeline_git_commit=(
+            upstream.quality_pipeline_git_commit
+        ),
+        geometric_validation_pipeline_git_commit=(
+            upstream.geometric_validation_pipeline_git_commit
+        ),
+        geometric_validation_finalizer_git_commit=(
+            upstream.geometric_validation_finalizer_git_commit
+        ),
+        bri_pipeline_git_commit=(
+            upstream.bri_pipeline_git_commit
+        ),
+        bri_finalizer_git_commit=(
+            upstream.bri_finalizer_git_commit
+        ),
+        brain_pipeline_git_commit=(
+            brain_pipeline_git_commit
+        ),
+        started_at_utc=started_at,
+        slurm_job_id=slurm_job_id,
+        slurm_array_task_id=(
+            slurm_array_task_id
+        ),
+    )
+
+    return publisher(
+        batch,
+        output_root=output_root,
+        context=context,
+        started_perf_counter=(
+            started_counter
+        ),
+        utc_now=utc_now,
+        perf_counter=perf_counter,
+    )
