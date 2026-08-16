@@ -352,3 +352,493 @@ def test_task_accounting_recomputes_terminal_invariant(
         validate_bri_task_accounting(
             artifacts
         )
+
+
+def _eligible_row(
+    *,
+    pdb_id: str = "1abc",
+    chain_id: str = "A",
+    retained_ids: list[int] | None = None,
+) -> dict:
+    if retained_ids is None:
+        retained_ids = [1, 2]
+
+    return {
+        "snapshot": SNAPSHOT,
+        "pdb_id": pdb_id,
+        "model_id": 1,
+        "label_chain_id": chain_id,
+        "auth_chain_id": chain_id,
+        "entity_id": "1",
+        "original_start_label_seq_id": retained_ids[0],
+        "original_end_label_seq_id": retained_ids[-1],
+        "retained_start_label_seq_id": retained_ids[0],
+        "retained_end_label_seq_id": retained_ids[-1],
+        "retained_residue_count": len(retained_ids),
+        "retained_label_seq_ids": retained_ids,
+        "retained_sequence": "A" * len(retained_ids),
+        "terminal_trimmed": False,
+        "dirty_residue_count": 0,
+        "dirty_rule_ids": [],
+        "source_mmcif_key": (
+            f"{SNAPSHOT}/{pdb_id}.cif.gz"
+        ),
+        "source_etag": f"etag-{pdb_id}",
+        "cleaning_protocol": PROTOCOL,
+        "pipeline_git_commit": QUALITY_COMMIT,
+    }
+
+
+def _bri_row(
+    eligible: dict,
+    *,
+    bri: list[list[float]] | None = None,
+) -> dict:
+    if bri is None:
+        m = eligible["retained_residue_count"]
+
+        bri = [
+            [
+                1.0,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                1.0,
+                1.0,
+                0.0,
+            ]
+        ]
+
+        for _ in range(1, m):
+            bri.append(
+                [
+                    1.001,
+                    2.002,
+                    3.003,
+                    4.004,
+                    5.005,
+                    6.006,
+                    7.007,
+                    8.008,
+                    9.009,
+                ]
+            )
+
+    return {
+        **{
+            key: value
+            for key, value in eligible.items()
+            if key != "pipeline_git_commit"
+        },
+        "quality_pipeline_git_commit":
+            QUALITY_COMMIT,
+        "geometric_validation_pipeline_git_commit":
+            GEOMETRY_COMMIT,
+        "geometric_validation_finalizer_git_commit":
+            GEOMETRY_FINALIZER_COMMIT,
+        "bri_pipeline_git_commit":
+            BRI_COMMIT,
+        "bri": bri,
+    }
+
+
+def _write_global_task(
+    bri_root: Path,
+    *,
+    task_id: int,
+    chain_rows: list[dict],
+) -> None:
+    chains_path = (
+        bri_root
+        / "chains"
+        / f"task_{task_id}.parquet"
+    )
+
+    errors_path = (
+        bri_root
+        / "processing_errors"
+        / f"task_{task_id}.parquet"
+    )
+
+    summary_path = (
+        bri_root
+        / "summaries"
+        / f"task_{task_id}.json"
+    )
+
+    for path in (
+        chains_path,
+        errors_path,
+        summary_path,
+    ):
+        path.parent.mkdir(
+            parents=True,
+            exist_ok=True,
+        )
+
+    pq.write_table(
+        pa.Table.from_pylist(
+            chain_rows,
+            schema=STAGE3_BRI_CHAIN_SCHEMA,
+        ),
+        chains_path,
+    )
+
+    pq.write_table(
+        pa.Table.from_pylist(
+            [],
+            schema=STAGE3_BRI_PROCESSING_ERROR_SCHEMA,
+        ),
+        errors_path,
+    )
+
+    summary_path.write_text(
+        json.dumps(
+            _summary(
+                task_id,
+                input_count=len(chain_rows),
+                bri_count=len(chain_rows),
+                error_count=0,
+            )
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
+
+def _write_eligible_population(
+    path: Path,
+    rows: list[dict],
+) -> None:
+    from pdbclean.schemas import (
+        STAGE3_ELIGIBLE_CHAIN_SCHEMA,
+    )
+
+    path.parent.mkdir(
+        parents=True,
+        exist_ok=True,
+    )
+
+    pq.write_table(
+        pa.Table.from_pylist(
+            rows,
+            schema=STAGE3_ELIGIBLE_CHAIN_SCHEMA,
+        ),
+        path,
+    )
+
+
+def _validate_global(
+    artifacts,
+    eligible_path: Path,
+):
+    from pdbclean.bri_finalize import (
+        validate_bri_global_state,
+    )
+
+    return validate_bri_global_state(
+        artifacts,
+        eligible_path=eligible_path,
+        expected_quality_pipeline_git_commit=(
+            QUALITY_COMMIT
+        ),
+        expected_geometric_validation_pipeline_git_commit=(
+            GEOMETRY_COMMIT
+        ),
+        expected_geometric_validation_finalizer_git_commit=(
+            GEOMETRY_FINALIZER_COMMIT
+        ),
+        expected_bri_pipeline_git_commit=(
+            BRI_COMMIT
+        ),
+    )
+
+
+def test_global_validation_accepts_exact_population(
+    tmp_path: Path,
+) -> None:
+    bri_root = tmp_path / "bri"
+    eligible_path = tmp_path / "eligible.parquet"
+
+    eligible_a = _eligible_row(
+        pdb_id="1aaa",
+        retained_ids=[1],
+    )
+
+    eligible_b = _eligible_row(
+        pdb_id="1bbb",
+        retained_ids=[4, 5],
+    )
+
+    _write_eligible_population(
+        eligible_path,
+        [eligible_a, eligible_b],
+    )
+
+    _write_global_task(
+        bri_root,
+        task_id=0,
+        chain_rows=[_bri_row(eligible_a)],
+    )
+
+    _write_global_task(
+        bri_root,
+        task_id=1,
+        chain_rows=[_bri_row(eligible_b)],
+    )
+
+    artifacts = _discover(
+        bri_root,
+        expected_task_ids=(0, 1),
+    )
+
+    result = _validate_global(
+        artifacts,
+        eligible_path,
+    )
+
+    assert result.eligible_chain_count == 2
+    assert result.bri_chain_count == 2
+    assert result.processing_error_count == 0
+    assert result.unique_eligible_identity_count == 2
+    assert result.unique_bri_identity_count == 2
+    assert result.minimum_retained_residue_count == 1
+    assert result.maximum_retained_residue_count == 2
+
+
+def test_global_validation_rejects_missing_identity(
+    tmp_path: Path,
+) -> None:
+    bri_root = tmp_path / "bri"
+    eligible_path = tmp_path / "eligible.parquet"
+
+    eligible_a = _eligible_row(
+        pdb_id="1aaa",
+    )
+
+    eligible_b = _eligible_row(
+        pdb_id="1bbb",
+    )
+
+    _write_eligible_population(
+        eligible_path,
+        [eligible_a, eligible_b],
+    )
+
+    _write_global_task(
+        bri_root,
+        task_id=0,
+        chain_rows=[_bri_row(eligible_a)],
+    )
+
+    artifacts = _discover(
+        bri_root,
+        expected_task_ids=(0,),
+    )
+
+    with pytest.raises(
+        BRIFinalizeError,
+        match="identity population mismatch",
+    ):
+        _validate_global(
+            artifacts,
+            eligible_path,
+        )
+
+
+def test_global_validation_rejects_retained_lineage_change(
+    tmp_path: Path,
+) -> None:
+    bri_root = tmp_path / "bri"
+    eligible_path = tmp_path / "eligible.parquet"
+
+    eligible = _eligible_row()
+
+    _write_eligible_population(
+        eligible_path,
+        [eligible],
+    )
+
+    bri_row = _bri_row(eligible)
+    bri_row["retained_label_seq_ids"] = [1, 3]
+
+    _write_global_task(
+        bri_root,
+        task_id=0,
+        chain_rows=[bri_row],
+    )
+
+    artifacts = _discover(
+        bri_root,
+        expected_task_ids=(0,),
+    )
+
+    with pytest.raises(
+        BRIFinalizeError,
+        match="Retained residue-ID lineage mismatch",
+    ):
+        _validate_global(
+            artifacts,
+            eligible_path,
+        )
+
+
+def test_global_validation_rejects_wrong_bri_shape(
+    tmp_path: Path,
+) -> None:
+    bri_root = tmp_path / "bri"
+    eligible_path = tmp_path / "eligible.parquet"
+
+    eligible = _eligible_row(
+        retained_ids=[1, 2],
+    )
+
+    _write_eligible_population(
+        eligible_path,
+        [eligible],
+    )
+
+    bri_row = _bri_row(
+        eligible,
+        bri=[
+            [
+                1.0,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                1.0,
+                1.0,
+                0.0,
+            ]
+        ],
+    )
+
+    _write_global_task(
+        bri_root,
+        task_id=0,
+        chain_rows=[bri_row],
+    )
+
+    artifacts = _discover(
+        bri_root,
+        expected_task_ids=(0,),
+    )
+
+    with pytest.raises(
+        BRIFinalizeError,
+        match="BRI shape mismatch",
+    ):
+        _validate_global(
+            artifacts,
+            eligible_path,
+        )
+
+
+def test_global_validation_rejects_noncanonical_precision(
+    tmp_path: Path,
+) -> None:
+    bri_root = tmp_path / "bri"
+    eligible_path = tmp_path / "eligible.parquet"
+
+    eligible = _eligible_row(
+        retained_ids=[1],
+    )
+
+    _write_eligible_population(
+        eligible_path,
+        [eligible],
+    )
+
+    bri_row = _bri_row(
+        eligible,
+        bri=[
+            [
+                1.0004,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                1.0,
+                1.0,
+                0.0,
+            ]
+        ],
+    )
+
+    _write_global_task(
+        bri_root,
+        task_id=0,
+        chain_rows=[bri_row],
+    )
+
+    artifacts = _discover(
+        bri_root,
+        expected_task_ids=(0,),
+    )
+
+    with pytest.raises(
+        BRIFinalizeError,
+        match="Non-canonical Definition 3.4 BRI precision",
+    ):
+        _validate_global(
+            artifacts,
+            eligible_path,
+        )
+
+
+def test_global_validation_rejects_first_row_xa_nonzero(
+    tmp_path: Path,
+) -> None:
+    bri_root = tmp_path / "bri"
+    eligible_path = tmp_path / "eligible.parquet"
+
+    eligible = _eligible_row(
+        retained_ids=[1],
+    )
+
+    _write_eligible_population(
+        eligible_path,
+        [eligible],
+    )
+
+    bri_row = _bri_row(
+        eligible,
+        bri=[
+            [
+                1.0,
+                0.0,
+                0.0,
+                0.001,
+                0.0,
+                0.0,
+                1.0,
+                1.0,
+                0.0,
+            ]
+        ],
+    )
+
+    _write_global_task(
+        bri_root,
+        task_id=0,
+        chain_rows=[bri_row],
+    )
+
+    artifacts = _discover(
+        bri_root,
+        expected_task_ids=(0,),
+    )
+
+    with pytest.raises(
+        BRIFinalizeError,
+        match="first-row zero structure mismatch",
+    ):
+        _validate_global(
+            artifacts,
+            eligible_path,
+        )

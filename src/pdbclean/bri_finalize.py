@@ -6,8 +6,9 @@ from dataclasses import dataclass
 import json
 from pathlib import Path
 import re
-from typing import Any, Iterable
+from typing import Any, Iterable, Mapping
 
+import numpy as np
 import pyarrow as pa
 import pyarrow.parquet as pq
 
@@ -17,6 +18,7 @@ from pdbclean.bri_runner import (
 )
 from pdbclean.schemas import (
     STAGE3_BRI_CHAIN_SCHEMA,
+    STAGE3_ELIGIBLE_CHAIN_SCHEMA,
     STAGE3_BRI_PROCESSING_ERROR_SCHEMA,
 )
 
@@ -532,3 +534,393 @@ def validate_bri_task_accounting(
                 "Terminal chain accounting mismatch for "
                 f"Stage-3 BRI task {task_id}"
             )
+
+
+@dataclass(frozen=True)
+class BRIGlobalValidation:
+    """Globally recomputed Stage-3 BRI identity and scientific state."""
+
+    eligible_chain_count: int
+    bri_chain_count: int
+    processing_error_count: int
+
+    unique_eligible_identity_count: int
+    unique_bri_identity_count: int
+
+    minimum_retained_residue_count: int
+    maximum_retained_residue_count: int
+
+
+def _chain_identity(
+    row: Mapping[str, Any],
+) -> tuple[str, str, int, str]:
+    """Return the canonical Stage-3 chain identity."""
+
+    try:
+        return (
+            row["snapshot"],
+            row["pdb_id"],
+            row["model_id"],
+            row["label_chain_id"],
+        )
+    except KeyError as exc:
+        raise BRIFinalizeError(
+            "Stage-3 row is missing canonical identity lineage"
+        ) from exc
+
+
+def validate_bri_global_state(
+    artifacts: Iterable[BRITaskArtifacts],
+    *,
+    eligible_path: str | Path,
+    expected_quality_pipeline_git_commit: str,
+    expected_geometric_validation_pipeline_git_commit: str,
+    expected_geometric_validation_finalizer_git_commit: str,
+    expected_bri_pipeline_git_commit: str,
+) -> BRIGlobalValidation:
+    """Validate global Stage-2-to-BRI identity, lineage, and BRI state."""
+
+    artifacts = tuple(
+        sorted(
+            artifacts,
+            key=lambda artifact: artifact.task_id,
+        )
+    )
+
+    validate_bri_task_accounting(artifacts)
+
+    eligible_path = Path(eligible_path)
+
+    _validate_shard_schema(
+        eligible_path,
+        STAGE3_ELIGIBLE_CHAIN_SCHEMA,
+    )
+
+    eligible = pq.read_table(
+        eligible_path,
+        columns=[
+            "snapshot",
+            "pdb_id",
+            "model_id",
+            "label_chain_id",
+            "retained_residue_count",
+            "retained_label_seq_ids",
+            "source_mmcif_key",
+            "source_etag",
+            "cleaning_protocol",
+            "pipeline_git_commit",
+        ],
+    )
+
+    eligible_identity_to_index: dict[
+        tuple[str, str, int, str],
+        int,
+    ] = {}
+
+    absolute_index = 0
+
+    for batch in eligible.select(
+        [
+            "snapshot",
+            "pdb_id",
+            "model_id",
+            "label_chain_id",
+        ]
+    ).to_batches(max_chunksize=65_536):
+        for row in batch.to_pylist():
+            identity = _chain_identity(row)
+
+            if identity in eligible_identity_to_index:
+                raise BRIFinalizeError(
+                    "Duplicate canonical Stage-2 eligible identity: "
+                    f"{identity!r}"
+                )
+
+            eligible_identity_to_index[
+                identity
+            ] = absolute_index
+
+            absolute_index += 1
+
+    if absolute_index != eligible.num_rows:
+        raise BRIFinalizeError(
+            "Canonical eligible identity indexing failed"
+        )
+
+    eligible_m = eligible["retained_residue_count"]
+    eligible_ids = eligible["retained_label_seq_ids"]
+    eligible_source = eligible["source_mmcif_key"]
+    eligible_etag = eligible["source_etag"]
+    eligible_protocol = eligible["cleaning_protocol"]
+    eligible_quality_commit = eligible["pipeline_git_commit"]
+
+    seen_bri: set[
+        tuple[str, str, int, str]
+    ] = set()
+
+    bri_count = 0
+    processing_error_count = 0
+
+    minimum_m: int | None = None
+    maximum_m: int | None = None
+
+    for artifact in artifacts:
+        task_id = artifact.task_id
+
+        task_error_count = pq.read_metadata(
+            artifact.processing_errors_path
+        ).num_rows
+
+        processing_error_count += task_error_count
+
+        if task_error_count != 0:
+            raise BRIFinalizeError(
+                "Cannot globally validate Stage-3 BRI while "
+                f"processing errors remain in task {task_id}: "
+                f"{task_error_count}"
+            )
+
+        parquet_file = pq.ParquetFile(
+            artifact.chains_path
+        )
+
+        for batch in parquet_file.iter_batches(
+            batch_size=64,
+        ):
+            for row in batch.to_pylist():
+                identity = _chain_identity(row)
+
+                if identity in seen_bri:
+                    raise BRIFinalizeError(
+                        "Duplicate BRI-chain identity across "
+                        f"Stage-3 tasks: {identity!r}"
+                    )
+
+                seen_bri.add(identity)
+
+                eligible_index = (
+                    eligible_identity_to_index.get(
+                        identity
+                    )
+                )
+
+                if eligible_index is None:
+                    raise BRIFinalizeError(
+                        "Unexpected BRI-chain identity not present "
+                        "in canonical Stage-2 eligible population: "
+                        f"{identity!r}"
+                    )
+
+                expected_m = eligible_m[
+                    eligible_index
+                ].as_py()
+
+                if row["retained_residue_count"] != expected_m:
+                    raise BRIFinalizeError(
+                        "Retained residue-count lineage mismatch "
+                        f"for {identity!r}"
+                    )
+
+                if expected_m < 1:
+                    raise BRIFinalizeError(
+                        "Canonical retained residue count must be "
+                        f"positive for {identity!r}"
+                    )
+
+                expected_ids = eligible_ids[
+                    eligible_index
+                ].as_py()
+
+                if row["retained_label_seq_ids"] != expected_ids:
+                    raise BRIFinalizeError(
+                        "Retained residue-ID lineage mismatch "
+                        f"for {identity!r}"
+                    )
+
+                lineage_comparisons = (
+                    (
+                        "source_mmcif_key",
+                        eligible_source[
+                            eligible_index
+                        ].as_py(),
+                    ),
+                    (
+                        "source_etag",
+                        eligible_etag[
+                            eligible_index
+                        ].as_py(),
+                    ),
+                    (
+                        "cleaning_protocol",
+                        eligible_protocol[
+                            eligible_index
+                        ].as_py(),
+                    ),
+                )
+
+                for field, expected in lineage_comparisons:
+                    if row[field] != expected:
+                        raise BRIFinalizeError(
+                            "Stage-2/Stage-3 lineage mismatch for "
+                            f"{identity!r}: {field}"
+                        )
+
+                upstream_quality_commit = (
+                    eligible_quality_commit[
+                        eligible_index
+                    ].as_py()
+                )
+
+                if (
+                    upstream_quality_commit
+                    != expected_quality_pipeline_git_commit
+                ):
+                    raise BRIFinalizeError(
+                        "Canonical Stage-2 eligible quality "
+                        f"provenance mismatch for {identity!r}"
+                    )
+
+                provenance_comparisons = (
+                    (
+                        "quality_pipeline_git_commit",
+                        expected_quality_pipeline_git_commit,
+                    ),
+                    (
+                        "geometric_validation_pipeline_git_commit",
+                        expected_geometric_validation_pipeline_git_commit,
+                    ),
+                    (
+                        "geometric_validation_finalizer_git_commit",
+                        expected_geometric_validation_finalizer_git_commit,
+                    ),
+                    (
+                        "bri_pipeline_git_commit",
+                        expected_bri_pipeline_git_commit,
+                    ),
+                )
+
+                for field, expected in provenance_comparisons:
+                    if row[field] != expected:
+                        raise BRIFinalizeError(
+                            "Stage-3 BRI row provenance mismatch "
+                            f"for {identity!r}: {field}"
+                        )
+
+                matrix = np.asarray(
+                    row["bri"],
+                    dtype=np.float64,
+                )
+
+                if matrix.shape != (expected_m, 9):
+                    raise BRIFinalizeError(
+                        "Definition 3.4 BRI shape mismatch for "
+                        f"{identity!r}: observed={matrix.shape!r}, "
+                        f"expected={(expected_m, 9)!r}"
+                    )
+
+                if not np.isfinite(matrix).all():
+                    raise BRIFinalizeError(
+                        "Non-finite Definition 3.4 BRI coordinate "
+                        f"for {identity!r}"
+                    )
+
+                if not np.array_equal(
+                    matrix,
+                    np.around(matrix, 3),
+                ):
+                    raise BRIFinalizeError(
+                        "Non-canonical Definition 3.4 BRI "
+                        f"precision for {identity!r}"
+                    )
+
+                # Definition 3.4 row 1 is represented in its own
+                # residue basis. Only x(N), x(C), and y(C) can be
+                # non-zero. Therefore these six coordinates are
+                # exactly zero:
+                #
+                # y(N), z(N), x(A), y(A), z(A), z(C)
+                first_row_zero_indices = (
+                    1,
+                    2,
+                    3,
+                    4,
+                    5,
+                    8,
+                )
+
+                if not np.array_equal(
+                    matrix[
+                        0,
+                        first_row_zero_indices,
+                    ],
+                    np.zeros(
+                        len(first_row_zero_indices),
+                        dtype=np.float64,
+                    ),
+                ):
+                    raise BRIFinalizeError(
+                        "Definition 3.4 first-row zero structure "
+                        f"mismatch for {identity!r}"
+                    )
+
+                bri_count += 1
+
+                minimum_m = (
+                    expected_m
+                    if minimum_m is None
+                    else min(minimum_m, expected_m)
+                )
+
+                maximum_m = (
+                    expected_m
+                    if maximum_m is None
+                    else max(maximum_m, expected_m)
+                )
+
+    eligible_count = eligible.num_rows
+
+    if bri_count != len(seen_bri):
+        raise BRIFinalizeError(
+            "Global BRI identity uniqueness accounting failed"
+        )
+
+    if len(seen_bri) != eligible_count:
+        missing = []
+
+        for identity in eligible_identity_to_index:
+            if identity not in seen_bri:
+                missing.append(identity)
+
+                if len(missing) == 10:
+                    break
+
+        raise BRIFinalizeError(
+            "Canonical Stage-2 eligible / Stage-3 BRI identity "
+            "population mismatch: "
+            f"eligible={eligible_count}, "
+            f"BRI={len(seen_bri)}, "
+            f"first_missing={missing!r}"
+        )
+
+    if processing_error_count != 0:
+        raise BRIFinalizeError(
+            "Cannot globally validate Stage-3 BRI with "
+            "processing errors"
+        )
+
+    if minimum_m is None or maximum_m is None:
+        raise BRIFinalizeError(
+            "Stage-3 BRI population is unexpectedly empty"
+        )
+
+    return BRIGlobalValidation(
+        eligible_chain_count=eligible_count,
+        bri_chain_count=bri_count,
+        processing_error_count=processing_error_count,
+        unique_eligible_identity_count=len(
+            eligible_identity_to_index
+        ),
+        unique_bri_identity_count=len(seen_bri),
+        minimum_retained_residue_count=minimum_m,
+        maximum_retained_residue_count=maximum_m,
+    )
