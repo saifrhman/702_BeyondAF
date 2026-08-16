@@ -1106,3 +1106,266 @@ def brain_task_partition(
         row_group_count=len(selected),
         input_bri_chain_count=sum(selected),
     )
+
+
+# ---------------------------------------------------------------------------
+# Stage-5 task-level Brain processing
+# ---------------------------------------------------------------------------
+
+
+@dataclass(frozen=True)
+class BrainTables:
+    """Schema-enforced terminal tables for one Stage-5 task."""
+
+    chains: pa.Table
+    undefined: pa.Table
+    processing_errors: pa.Table
+
+
+@dataclass(frozen=True)
+class BrainBatchResult:
+    """Terminal Stage-5 outcomes for one physical BRI partition."""
+
+    partition: BrainTaskPartition
+    tables: BrainTables
+
+    @property
+    def input_bri_chain_count(self) -> int:
+        return self.partition.input_bri_chain_count
+
+    @property
+    def brain_chain_count(self) -> int:
+        return self.tables.chains.num_rows
+
+    @property
+    def undefined_chain_count(self) -> int:
+        return self.tables.undefined.num_rows
+
+    @property
+    def processing_error_count(self) -> int:
+        return self.tables.processing_errors.num_rows
+
+    @property
+    def chain_accounting_valid(self) -> bool:
+        return self.input_bri_chain_count == (
+            self.brain_chain_count
+            + self.undefined_chain_count
+            + self.processing_error_count
+        )
+
+
+def _materialize_brain_tables(
+    brain_records: list[Mapping[str, Any]],
+    undefined_records: list[Mapping[str, Any]],
+    processing_errors: list[Mapping[str, Any]],
+) -> BrainTables:
+    """Materialize Stage-5 terminal records against frozen schemas."""
+
+    try:
+        chains = pa.Table.from_pylist(
+            list(brain_records),
+            schema=STAGE5_BRAIN_CHAIN_SCHEMA,
+        )
+        undefined = pa.Table.from_pylist(
+            list(undefined_records),
+            schema=STAGE5_BRAIN_UNDEFINED_CHAIN_SCHEMA,
+        )
+        errors = pa.Table.from_pylist(
+            list(processing_errors),
+            schema=STAGE5_BRAIN_PROCESSING_ERROR_SCHEMA,
+        )
+    except (
+        pa.ArrowException,
+        TypeError,
+        ValueError,
+    ) as exc:
+        raise BrainRunnerError(
+            f"Cannot materialize Stage-5 Brain tables: {exc}"
+        ) from exc
+
+    expected = (
+        (
+            "Brain-defined",
+            chains,
+            STAGE5_BRAIN_CHAIN_SCHEMA,
+        ),
+        (
+            "Brain-undefined",
+            undefined,
+            STAGE5_BRAIN_UNDEFINED_CHAIN_SCHEMA,
+        ),
+        (
+            "Brain processing-error",
+            errors,
+            STAGE5_BRAIN_PROCESSING_ERROR_SCHEMA,
+        ),
+    )
+
+    for name, table, schema in expected:
+        if not table.schema.equals(
+            schema,
+            check_metadata=True,
+        ):
+            raise BrainRunnerError(
+                f"Materialized {name} table schema mismatch"
+            )
+
+    return BrainTables(
+        chains=chains,
+        undefined=undefined,
+        processing_errors=errors,
+    )
+
+
+def process_brain_partition(
+    *,
+    upstream: UpstreamBRI,
+    partition: BrainTaskPartition,
+    brain_pipeline_git_commit: str,
+    record_processor: Callable[
+        ...,
+        BrainRecordResult,
+    ] = process_brain_record,
+) -> BrainBatchResult:
+    """Process exactly one physical partition of canonical Stage-3 BRI."""
+
+    brain_pipeline_git_commit = _validated_git_commit(
+        brain_pipeline_git_commit,
+        field="brain_pipeline_git_commit",
+    )
+
+    try:
+        parquet = pq.ParquetFile(
+            upstream.bri_path
+        )
+    except Exception as exc:
+        raise BrainRunnerError(
+            f"Cannot open canonical Stage-3 BRI population: {exc}"
+        ) from exc
+
+    total_row_groups = parquet.metadata.num_row_groups
+
+    if (
+        partition.start_row_group < 0
+        or partition.stop_row_group
+        > total_row_groups
+        or partition.start_row_group
+        >= partition.stop_row_group
+    ):
+        raise BrainRunnerError(
+            "Stage-5 Brain partition is incompatible with "
+            "canonical Stage-3 BRI row groups"
+        )
+
+    observed_partition_rows = sum(
+        parquet.metadata.row_group(index).num_rows
+        for index in range(
+            partition.start_row_group,
+            partition.stop_row_group,
+        )
+    )
+
+    if (
+        observed_partition_rows
+        != partition.input_bri_chain_count
+    ):
+        raise BrainRunnerError(
+            "Stage-5 Brain partition row accounting does not match "
+            "canonical Stage-3 BRI metadata"
+        )
+
+    brain_records: list[Mapping[str, Any]] = []
+    undefined_records: list[Mapping[str, Any]] = []
+    processing_errors: list[Mapping[str, Any]] = []
+
+    seen_identities: set[
+        tuple[str, str, int, str]
+    ] = set()
+
+    input_row_count = 0
+
+    try:
+        batches = parquet.iter_batches(
+            batch_size=64,
+            row_groups=list(
+                range(
+                    partition.start_row_group,
+                    partition.stop_row_group,
+                )
+            ),
+        )
+
+        for batch in batches:
+            for row in batch.to_pylist():
+                input_row_count += 1
+
+                identity = _brain_row_identity(
+                    row
+                )
+
+                if identity in seen_identities:
+                    raise BrainRunnerError(
+                        "Stage-5 Brain task contains duplicate "
+                        f"canonical BRI identity: {identity!r}"
+                    )
+
+                seen_identities.add(
+                    identity
+                )
+
+                result = record_processor(
+                    row,
+                    upstream=upstream,
+                    brain_pipeline_git_commit=(
+                        brain_pipeline_git_commit
+                    ),
+                )
+
+                if (
+                    result.input_bri_chain_count != 1
+                    or not result.chain_accounting_valid
+                ):
+                    raise BrainRunnerError(
+                        "Stage-5 per-record Brain accounting failed"
+                    )
+
+                brain_records.extend(
+                    result.brain_records
+                )
+                undefined_records.extend(
+                    result.undefined_records
+                )
+                processing_errors.extend(
+                    result.processing_errors
+                )
+
+    except BrainRunnerError:
+        raise
+    except Exception as exc:
+        raise BrainRunnerError(
+            f"Cannot read Stage-5 canonical BRI partition: {exc}"
+        ) from exc
+
+    if input_row_count != partition.input_bri_chain_count:
+        raise BrainRunnerError(
+            "Stage-5 Brain task consumed an unexpected number "
+            "of canonical BRI rows"
+        )
+
+    tables = _materialize_brain_tables(
+        brain_records,
+        undefined_records,
+        processing_errors,
+    )
+
+    batch_result = BrainBatchResult(
+        partition=partition,
+        tables=tables,
+    )
+
+    if not batch_result.chain_accounting_valid:
+        raise BrainRunnerError(
+            "Stage-5 Brain task chain accounting failed"
+        )
+
+    return batch_result

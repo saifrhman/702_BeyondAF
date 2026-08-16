@@ -15,7 +15,12 @@ from pdbclean.brain_runner import (
     BrainRunnerError,
     validate_upstream_bri_stage,
 )
-from pdbclean.schemas import STAGE3_BRI_CHAIN_SCHEMA
+from pdbclean.schemas import (
+    STAGE3_BRI_CHAIN_SCHEMA,
+    STAGE5_BRAIN_CHAIN_SCHEMA,
+    STAGE5_BRAIN_PROCESSING_ERROR_SCHEMA,
+    STAGE5_BRAIN_UNDEFINED_CHAIN_SCHEMA,
+)
 
 
 SNAPSHOT = "20310415"
@@ -356,10 +361,16 @@ def _stage3_bri_row(
             "label_chain_id": "A",
             "auth_chain_id": None,
             "entity_id": None,
+            "retained_start_label_seq_id": 1,
+            "retained_end_label_seq_id": m,
             "retained_residue_count": m,
             "retained_label_seq_ids": list(
                 range(1, m + 1)
             ),
+            "retained_sequence": "A" * m,
+            "terminal_trimmed": False,
+            "dirty_residue_count": 0,
+            "dirty_rule_ids": [],
             "source_mmcif_key": (
                 f"{SNAPSHOT}/coordinates/1abc.cif.gz"
             ),
@@ -783,3 +794,306 @@ def test_brain_task_partition_rejects_invalid_row_group_counts() -> None:
             task_id=0,
             row_groups_per_task=64,
         )
+
+
+def _write_stage3_bri_partition_fixture(
+    tmp_path: Path,
+    rows: list[dict],
+) -> UpstreamBRI:
+    root = tmp_path / "bri"
+    finalized = root / "finalized"
+    finalized.mkdir(parents=True)
+
+    path = finalized / "bri.parquet"
+
+    table = pa.Table.from_pylist(
+        rows,
+        schema=STAGE3_BRI_CHAIN_SCHEMA,
+    )
+
+    # One row per row group makes physical partition tests exact.
+    pq.write_table(
+        table,
+        path,
+        row_group_size=1,
+    )
+
+    return UpstreamBRI(
+        bri_root=root,
+        bri_path=path,
+        snapshot=SNAPSHOT,
+        cleaning_protocol=PROTOCOL,
+        task_count=1,
+        bri_chain_count=len(rows),
+        minimum_retained_residue_count=min(
+            row["retained_residue_count"]
+            for row in rows
+        ),
+        maximum_retained_residue_count=max(
+            row["retained_residue_count"]
+            for row in rows
+        ),
+        quality_pipeline_git_commit=QUALITY_COMMIT,
+        geometric_validation_pipeline_git_commit=GEOMETRY_COMMIT,
+        geometric_validation_finalizer_git_commit=(
+            GEOMETRY_FINALIZER_COMMIT
+        ),
+        bri_pipeline_git_commit=BRI_COMMIT,
+        bri_finalizer_git_commit=BRI_FINALIZER_COMMIT,
+    )
+
+
+def test_process_brain_partition_materializes_all_three_outcomes(
+    tmp_path: Path,
+) -> None:
+    from pdbclean.brain_runner import (
+        brain_task_partition,
+        process_brain_partition,
+    )
+
+    defined = _stage3_bri_row(
+        m=2,
+        bri=[
+            [0.0] * 9,
+            [0.1] * 9,
+        ],
+    )
+
+    undefined = _stage3_bri_row(
+        m=1,
+        bri=[[0.0] * 9],
+    )
+    undefined["pdb_id"] = "2abc"
+
+    invalid = _stage3_bri_row(
+        m=2,
+        bri=[
+            [0.0] * 9,
+            [0.1] * 9,
+        ],
+    )
+    invalid["pdb_id"] = "3abc"
+    invalid["bri_pipeline_git_commit"] = "0" * 40
+
+    upstream = _write_stage3_bri_partition_fixture(
+        tmp_path,
+        [defined, undefined, invalid],
+    )
+
+    partition = brain_task_partition(
+        (1, 1, 1),
+        task_id=0,
+        row_groups_per_task=3,
+    )
+
+    result = process_brain_partition(
+        upstream=upstream,
+        partition=partition,
+        brain_pipeline_git_commit="f" * 40,
+    )
+
+    assert result.input_bri_chain_count == 3
+    assert result.brain_chain_count == 1
+    assert result.undefined_chain_count == 1
+    assert result.processing_error_count == 1
+    assert result.chain_accounting_valid
+
+    assert result.tables.chains.schema.equals(
+        STAGE5_BRAIN_CHAIN_SCHEMA,
+        check_metadata=True,
+    )
+    assert result.tables.undefined.schema.equals(
+        STAGE5_BRAIN_UNDEFINED_CHAIN_SCHEMA,
+        check_metadata=True,
+    )
+    assert result.tables.processing_errors.schema.equals(
+        STAGE5_BRAIN_PROCESSING_ERROR_SCHEMA,
+        check_metadata=True,
+    )
+
+
+def test_process_brain_partition_reads_only_assigned_row_groups(
+    tmp_path: Path,
+) -> None:
+    from pdbclean.brain_runner import (
+        brain_task_partition,
+        process_brain_partition,
+    )
+
+    rows = []
+
+    for index in range(4):
+        row = _stage3_bri_row(
+            m=2,
+            bri=[
+                [0.0] * 9,
+                [float(index + 1)] * 9,
+            ],
+        )
+        row["pdb_id"] = f"{index + 1}abc"
+        rows.append(row)
+
+    upstream = _write_stage3_bri_partition_fixture(
+        tmp_path,
+        rows,
+    )
+
+    partition = brain_task_partition(
+        (1, 1, 1, 1),
+        task_id=1,
+        row_groups_per_task=2,
+    )
+
+    result = process_brain_partition(
+        upstream=upstream,
+        partition=partition,
+        brain_pipeline_git_commit="f" * 40,
+    )
+
+    assert result.input_bri_chain_count == 2
+    assert result.brain_chain_count == 2
+
+    observed_ids = (
+        result.tables.chains
+        .column("pdb_id")
+        .to_pylist()
+    )
+
+    assert observed_ids == [
+        "3abc",
+        "4abc",
+    ]
+
+
+def test_process_brain_partition_rejects_duplicate_identity(
+    tmp_path: Path,
+) -> None:
+    from pdbclean.brain_runner import (
+        BrainRunnerError,
+        brain_task_partition,
+        process_brain_partition,
+    )
+
+    row = _stage3_bri_row(
+        m=2,
+        bri=[
+            [0.0] * 9,
+            [0.1] * 9,
+        ],
+    )
+
+    upstream = _write_stage3_bri_partition_fixture(
+        tmp_path,
+        [row, dict(row)],
+    )
+
+    partition = brain_task_partition(
+        (1, 1),
+        task_id=0,
+        row_groups_per_task=2,
+    )
+
+    with pytest.raises(
+        BrainRunnerError,
+        match="duplicate canonical BRI identity",
+    ):
+        process_brain_partition(
+            upstream=upstream,
+            partition=partition,
+            brain_pipeline_git_commit="f" * 40,
+        )
+
+
+def test_process_brain_partition_rejects_metadata_accounting_mismatch(
+    tmp_path: Path,
+) -> None:
+    from pdbclean.brain_runner import (
+        BrainRunnerError,
+        BrainTaskPartition,
+        process_brain_partition,
+    )
+
+    row = _stage3_bri_row(
+        m=2,
+        bri=[
+            [0.0] * 9,
+            [0.1] * 9,
+        ],
+    )
+
+    upstream = _write_stage3_bri_partition_fixture(
+        tmp_path,
+        [row],
+    )
+
+    bad_partition = BrainTaskPartition(
+        task_id=0,
+        task_count=1,
+        start_row_group=0,
+        stop_row_group=1,
+        row_group_count=1,
+        input_bri_chain_count=2,
+    )
+
+    with pytest.raises(
+        BrainRunnerError,
+        match="partition row accounting",
+    ):
+        process_brain_partition(
+            upstream=upstream,
+            partition=bad_partition,
+            brain_pipeline_git_commit="f" * 40,
+        )
+
+
+def test_process_brain_partition_preserves_canonical_input_order(
+    tmp_path: Path,
+) -> None:
+    from pdbclean.brain_runner import (
+        brain_task_partition,
+        process_brain_partition,
+    )
+
+    rows = []
+
+    for pdb_id in (
+        "4abc",
+        "2abc",
+        "9abc",
+    ):
+        row = _stage3_bri_row(
+            m=2,
+            bri=[
+                [0.0] * 9,
+                [0.5] * 9,
+            ],
+        )
+        row["pdb_id"] = pdb_id
+        rows.append(row)
+
+    upstream = _write_stage3_bri_partition_fixture(
+        tmp_path,
+        rows,
+    )
+
+    partition = brain_task_partition(
+        (1, 1, 1),
+        task_id=0,
+        row_groups_per_task=3,
+    )
+
+    result = process_brain_partition(
+        upstream=upstream,
+        partition=partition,
+        brain_pipeline_git_commit="f" * 40,
+    )
+
+    assert (
+        result.tables.chains
+        .column("pdb_id")
+        .to_pylist()
+    ) == [
+        "4abc",
+        "2abc",
+        "9abc",
+    ]
