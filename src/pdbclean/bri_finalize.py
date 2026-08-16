@@ -924,3 +924,528 @@ def validate_bri_global_state(
         minimum_retained_residue_count=minimum_m,
         maximum_retained_residue_count=maximum_m,
     )
+
+
+BRI_GLOBAL_SUMMARY_SCHEMA_NAME = (
+    "pdbclean_stage3_bri_global_summary"
+)
+BRI_GLOBAL_SUMMARY_SCHEMA_VERSION = "1.0"
+
+BRI_SUCCESS_SCHEMA_NAME = "pdbclean_stage3_bri_success"
+BRI_SUCCESS_SCHEMA_VERSION = "1.0"
+
+
+@dataclass(frozen=True)
+class BRIFinalizePublication:
+    """Canonical finalized BRI population and completion metadata."""
+
+    bri_path: Path
+    global_summary_path: Path
+    success_path: Path
+    global_summary: dict[str, Any]
+
+
+def _write_json_atomic(
+    payload: dict[str, Any],
+    output_path: str | Path,
+) -> Path:
+    """Write deterministic JSON atomically."""
+
+    output = Path(output_path)
+    output.parent.mkdir(
+        parents=True,
+        exist_ok=True,
+    )
+
+    temporary = output.with_suffix(
+        output.suffix + ".tmp"
+    )
+
+    text = json.dumps(
+        payload,
+        sort_keys=True,
+        indent=2,
+        ensure_ascii=True,
+    )
+
+    temporary.write_text(
+        text + "\n",
+        encoding="utf-8",
+    )
+
+    temporary.replace(output)
+
+    return output
+
+
+def _write_finalized_bri_population_atomic(
+    artifacts: Iterable[BRITaskArtifacts],
+    *,
+    finalized_root: str | Path,
+    expected_row_count: int,
+) -> Path:
+    """Stream validated task shards into one canonical BRI population."""
+
+    artifacts = tuple(
+        sorted(
+            artifacts,
+            key=lambda artifact: artifact.task_id,
+        )
+    )
+
+    root = Path(finalized_root)
+    root.mkdir(
+        parents=True,
+        exist_ok=True,
+    )
+
+    bri_path = root / "bri.parquet"
+    temporary = bri_path.with_suffix(
+        bri_path.suffix + ".tmp"
+    )
+
+    if temporary.exists():
+        temporary.unlink()
+
+    writer: pq.ParquetWriter | None = None
+    rows_written = 0
+
+    try:
+        writer = pq.ParquetWriter(
+            temporary,
+            STAGE3_BRI_CHAIN_SCHEMA,
+            compression="zstd",
+            version="2.6",
+        )
+
+        for artifact in artifacts:
+            parquet_file = pq.ParquetFile(
+                artifact.chains_path
+            )
+
+            for batch in parquet_file.iter_batches(
+                batch_size=64,
+            ):
+                # Rematerialize against the frozen schema so Parquet
+                # list-child field naming cannot alter the canonical
+                # finalized Arrow schema.
+                table = pa.Table.from_pylist(
+                    batch.to_pylist(),
+                    schema=STAGE3_BRI_CHAIN_SCHEMA,
+                )
+
+                writer.write_table(table)
+                rows_written += table.num_rows
+
+        writer.close()
+        writer = None
+
+        if rows_written != expected_row_count:
+            raise BRIFinalizeError(
+                "Finalized BRI row-count mismatch while writing: "
+                f"written={rows_written}, "
+                f"expected={expected_row_count}"
+            )
+
+        _validate_shard_schema(
+            temporary,
+            STAGE3_BRI_CHAIN_SCHEMA,
+        )
+
+        observed_rows = pq.read_metadata(
+            temporary
+        ).num_rows
+
+        if observed_rows != expected_row_count:
+            raise BRIFinalizeError(
+                "Finalized BRI Parquet row-count mismatch: "
+                f"parquet={observed_rows}, "
+                f"expected={expected_row_count}"
+            )
+
+        temporary.replace(bri_path)
+
+    except Exception:
+        if writer is not None:
+            try:
+                writer.close()
+            except Exception:
+                pass
+
+        if temporary.exists():
+            temporary.unlink()
+
+        raise
+
+    return bri_path
+
+
+def build_bri_global_summary(
+    artifacts: Iterable[BRITaskArtifacts],
+    *,
+    snapshot: str,
+    cleaning_protocol: str,
+    quality_pipeline_git_commit: str,
+    geometric_validation_pipeline_git_commit: str,
+    geometric_validation_finalizer_git_commit: str,
+    bri_pipeline_git_commit: str,
+    finalizer_pipeline_git_commit: str,
+    global_validation: BRIGlobalValidation,
+) -> dict[str, Any]:
+    """Build deterministic Stage-3 finalization accounting."""
+
+    artifacts = tuple(artifacts)
+
+    manifest_sources = sum(
+        _nonnegative_int(
+            artifact.summary,
+            "manifest_source_object_count",
+            task_id=artifact.task_id,
+        )
+        for artifact in artifacts
+    )
+
+    relevant_sources = sum(
+        _nonnegative_int(
+            artifact.summary,
+            "relevant_source_object_count",
+            task_id=artifact.task_id,
+        )
+        for artifact in artifacts
+    )
+
+    downloaded_sources = sum(
+        _nonnegative_int(
+            artifact.summary,
+            "downloaded_source_object_count",
+            task_id=artifact.task_id,
+        )
+        for artifact in artifacts
+    )
+
+    parsed_sources = sum(
+        _nonnegative_int(
+            artifact.summary,
+            "parsed_source_object_count",
+            task_id=artifact.task_id,
+        )
+        for artifact in artifacts
+    )
+
+    if relevant_sources > manifest_sources:
+        raise BRIFinalizeError(
+            "Global relevant source count exceeds manifest "
+            "source count"
+        )
+
+    if not (
+        relevant_sources
+        == downloaded_sources
+        == parsed_sources
+    ):
+        raise BRIFinalizeError(
+            "Global relevant/downloaded/parsed source accounting "
+            "does not match"
+        )
+
+    result = global_validation
+
+    chain_accounting_valid = (
+        result.eligible_chain_count
+        == result.bri_chain_count
+        + result.processing_error_count
+        and result.unique_eligible_identity_count
+        == result.eligible_chain_count
+        and result.unique_bri_identity_count
+        == result.bri_chain_count
+    )
+
+    return {
+        "summary_schema_name": (
+            BRI_GLOBAL_SUMMARY_SCHEMA_NAME
+        ),
+        "summary_schema_version": (
+            BRI_GLOBAL_SUMMARY_SCHEMA_VERSION
+        ),
+        "snapshot": snapshot,
+        "cleaning_protocol": cleaning_protocol,
+        "quality_pipeline_git_commit": (
+            quality_pipeline_git_commit
+        ),
+        "geometric_validation_pipeline_git_commit": (
+            geometric_validation_pipeline_git_commit
+        ),
+        "geometric_validation_finalizer_git_commit": (
+            geometric_validation_finalizer_git_commit
+        ),
+        "bri_pipeline_git_commit": (
+            bri_pipeline_git_commit
+        ),
+        "finalizer_pipeline_git_commit": (
+            finalizer_pipeline_git_commit
+        ),
+        "task_count": len(artifacts),
+        "manifest_source_object_count": (
+            manifest_sources
+        ),
+        "relevant_source_object_count": (
+            relevant_sources
+        ),
+        "downloaded_source_object_count": (
+            downloaded_sources
+        ),
+        "parsed_source_object_count": (
+            parsed_sources
+        ),
+        "input_eligible_chain_count": (
+            result.eligible_chain_count
+        ),
+        "bri_chain_count": (
+            result.bri_chain_count
+        ),
+        "processing_error_count": (
+            result.processing_error_count
+        ),
+        "unique_eligible_identity_count": (
+            result.unique_eligible_identity_count
+        ),
+        "unique_bri_identity_count": (
+            result.unique_bri_identity_count
+        ),
+        "minimum_retained_residue_count": (
+            result.minimum_retained_residue_count
+        ),
+        "maximum_retained_residue_count": (
+            result.maximum_retained_residue_count
+        ),
+        "chain_accounting_valid": (
+            chain_accounting_valid
+        ),
+    }
+
+
+def publish_bri_finalization(
+    artifacts: Iterable[BRITaskArtifacts],
+    *,
+    bri_root: str | Path,
+    snapshot: str,
+    cleaning_protocol: str,
+    quality_pipeline_git_commit: str,
+    geometric_validation_pipeline_git_commit: str,
+    geometric_validation_finalizer_git_commit: str,
+    bri_pipeline_git_commit: str,
+    finalizer_pipeline_git_commit: str,
+    global_validation: BRIGlobalValidation,
+) -> BRIFinalizePublication:
+    """Publish canonical Stage-3 BRI population and _SUCCESS last."""
+
+    artifacts = tuple(
+        sorted(
+            artifacts,
+            key=lambda artifact: artifact.task_id,
+        )
+    )
+
+    root = Path(bri_root)
+
+    # Any attempted republish invalidates previous completion.
+    success_path = root / "_SUCCESS"
+
+    if success_path.exists():
+        success_path.unlink()
+
+    bri_path = _write_finalized_bri_population_atomic(
+        artifacts,
+        finalized_root=root / "finalized",
+        expected_row_count=(
+            global_validation.bri_chain_count
+        ),
+    )
+
+    summary = build_bri_global_summary(
+        artifacts,
+        snapshot=snapshot,
+        cleaning_protocol=cleaning_protocol,
+        quality_pipeline_git_commit=(
+            quality_pipeline_git_commit
+        ),
+        geometric_validation_pipeline_git_commit=(
+            geometric_validation_pipeline_git_commit
+        ),
+        geometric_validation_finalizer_git_commit=(
+            geometric_validation_finalizer_git_commit
+        ),
+        bri_pipeline_git_commit=(
+            bri_pipeline_git_commit
+        ),
+        finalizer_pipeline_git_commit=(
+            finalizer_pipeline_git_commit
+        ),
+        global_validation=global_validation,
+    )
+
+    if summary["chain_accounting_valid"] is not True:
+        raise BRIFinalizeError(
+            "Global Stage-3 BRI finalization accounting failed"
+        )
+
+    global_summary_path = _write_json_atomic(
+        summary,
+        root / "global_summary.json",
+    )
+
+    success_payload = {
+        "success_schema_name": (
+            BRI_SUCCESS_SCHEMA_NAME
+        ),
+        "success_schema_version": (
+            BRI_SUCCESS_SCHEMA_VERSION
+        ),
+        "snapshot": snapshot,
+        "cleaning_protocol": cleaning_protocol,
+        "quality_pipeline_git_commit": (
+            quality_pipeline_git_commit
+        ),
+        "geometric_validation_pipeline_git_commit": (
+            geometric_validation_pipeline_git_commit
+        ),
+        "geometric_validation_finalizer_git_commit": (
+            geometric_validation_finalizer_git_commit
+        ),
+        "bri_pipeline_git_commit": (
+            bri_pipeline_git_commit
+        ),
+        "finalizer_pipeline_git_commit": (
+            finalizer_pipeline_git_commit
+        ),
+        "task_count": len(artifacts),
+        "global_summary": "global_summary.json",
+        "finalized_directory": "finalized",
+        "bri_population": "finalized/bri.parquet",
+    }
+
+    # Presence of _SUCCESS means all validation and publication
+    # succeeded. This must be the final publication operation.
+    success_path = _write_json_atomic(
+        success_payload,
+        success_path,
+    )
+
+    return BRIFinalizePublication(
+        bri_path=bri_path,
+        global_summary_path=global_summary_path,
+        success_path=success_path,
+        global_summary=summary,
+    )
+
+
+def finalize_bri_stage(
+    *,
+    bri_root: str | Path,
+    eligible_path: str | Path,
+    manifest_row_count: int,
+    batch_size: int,
+    snapshot: str,
+    cleaning_protocol: str,
+    quality_pipeline_git_commit: str,
+    geometric_validation_pipeline_git_commit: str,
+    geometric_validation_finalizer_git_commit: str,
+    bri_pipeline_git_commit: str,
+    finalizer_pipeline_git_commit: str,
+) -> BRIFinalizePublication:
+    """Validate and publish one complete distributed Stage-3 BRI stage."""
+
+    if (
+        not isinstance(manifest_row_count, int)
+        or isinstance(manifest_row_count, bool)
+        or manifest_row_count < 1
+    ):
+        raise BRIFinalizeError(
+            "manifest_row_count must be a positive integer"
+        )
+
+    if (
+        not isinstance(batch_size, int)
+        or isinstance(batch_size, bool)
+        or batch_size < 1
+    ):
+        raise BRIFinalizeError(
+            "batch_size must be a positive integer"
+        )
+
+    root = Path(bri_root)
+    success_path = root / "_SUCCESS"
+
+    if success_path.exists():
+        success_path.unlink()
+
+    task_count = (
+        manifest_row_count + batch_size - 1
+    ) // batch_size
+
+    expected_task_ids = tuple(
+        range(task_count)
+    )
+
+    artifacts = discover_bri_task_artifacts(
+        root,
+        expected_task_ids=expected_task_ids,
+        expected_snapshot=snapshot,
+        expected_cleaning_protocol=cleaning_protocol,
+        expected_quality_pipeline_git_commit=(
+            quality_pipeline_git_commit
+        ),
+        expected_geometric_validation_pipeline_git_commit=(
+            geometric_validation_pipeline_git_commit
+        ),
+        expected_geometric_validation_finalizer_git_commit=(
+            geometric_validation_finalizer_git_commit
+        ),
+        expected_bri_pipeline_git_commit=(
+            bri_pipeline_git_commit
+        ),
+    )
+
+    validate_bri_task_accounting(
+        artifacts
+    )
+
+    global_validation = validate_bri_global_state(
+        artifacts,
+        eligible_path=eligible_path,
+        expected_quality_pipeline_git_commit=(
+            quality_pipeline_git_commit
+        ),
+        expected_geometric_validation_pipeline_git_commit=(
+            geometric_validation_pipeline_git_commit
+        ),
+        expected_geometric_validation_finalizer_git_commit=(
+            geometric_validation_finalizer_git_commit
+        ),
+        expected_bri_pipeline_git_commit=(
+            bri_pipeline_git_commit
+        ),
+    )
+
+    return publish_bri_finalization(
+        artifacts,
+        bri_root=root,
+        snapshot=snapshot,
+        cleaning_protocol=cleaning_protocol,
+        quality_pipeline_git_commit=(
+            quality_pipeline_git_commit
+        ),
+        geometric_validation_pipeline_git_commit=(
+            geometric_validation_pipeline_git_commit
+        ),
+        geometric_validation_finalizer_git_commit=(
+            geometric_validation_finalizer_git_commit
+        ),
+        bri_pipeline_git_commit=(
+            bri_pipeline_git_commit
+        ),
+        finalizer_pipeline_git_commit=(
+            finalizer_pipeline_git_commit
+        ),
+        global_validation=global_validation,
+    )

@@ -842,3 +842,246 @@ def test_global_validation_rejects_first_row_xa_nonzero(
             artifacts,
             eligible_path,
         )
+
+
+def test_finalize_publishes_canonical_bri_population_and_success(
+    tmp_path: Path,
+) -> None:
+    from pdbclean.bri_finalize import (
+        finalize_bri_stage,
+    )
+
+    bri_root = tmp_path / "bri"
+    eligible_path = tmp_path / "eligible.parquet"
+
+    eligible_a = _eligible_row(
+        pdb_id="1aaa",
+        retained_ids=[1],
+    )
+    eligible_b = _eligible_row(
+        pdb_id="1bbb",
+        retained_ids=[4, 5],
+    )
+
+    _write_eligible_population(
+        eligible_path,
+        [eligible_a, eligible_b],
+    )
+
+    _write_global_task(
+        bri_root,
+        task_id=0,
+        chain_rows=[_bri_row(eligible_a)],
+    )
+    _write_global_task(
+        bri_root,
+        task_id=1,
+        chain_rows=[_bri_row(eligible_b)],
+    )
+
+    publication = finalize_bri_stage(
+        bri_root=bri_root,
+        eligible_path=eligible_path,
+        manifest_row_count=2,
+        batch_size=1,
+        snapshot=SNAPSHOT,
+        cleaning_protocol=PROTOCOL,
+        quality_pipeline_git_commit=QUALITY_COMMIT,
+        geometric_validation_pipeline_git_commit=(
+            GEOMETRY_COMMIT
+        ),
+        geometric_validation_finalizer_git_commit=(
+            GEOMETRY_FINALIZER_COMMIT
+        ),
+        bri_pipeline_git_commit=BRI_COMMIT,
+        finalizer_pipeline_git_commit="f" * 40,
+    )
+
+    assert publication.bri_path.is_file()
+    assert publication.global_summary_path.is_file()
+    assert publication.success_path.is_file()
+
+    finalized = pq.read_table(
+        publication.bri_path
+    )
+
+    assert finalized.num_rows == 2
+    assert finalized.schema.metadata == (
+        STAGE3_BRI_CHAIN_SCHEMA.metadata
+    )
+
+    identities = [
+        (
+            row["pdb_id"],
+            row["label_chain_id"],
+        )
+        for row in finalized.to_pylist()
+    ]
+
+    assert identities == [
+        ("1aaa", "A"),
+        ("1bbb", "A"),
+    ]
+
+    summary = publication.global_summary
+
+    assert summary["task_count"] == 2
+    assert summary["input_eligible_chain_count"] == 2
+    assert summary["bri_chain_count"] == 2
+    assert summary["processing_error_count"] == 0
+    assert summary["unique_eligible_identity_count"] == 2
+    assert summary["unique_bri_identity_count"] == 2
+    assert summary["minimum_retained_residue_count"] == 1
+    assert summary["maximum_retained_residue_count"] == 2
+    assert summary["chain_accounting_valid"] is True
+
+    success = json.loads(
+        publication.success_path.read_text(
+            encoding="utf-8"
+        )
+    )
+
+    assert success["success_schema_name"] == (
+        "pdbclean_stage3_bri_success"
+    )
+    assert success["bri_population"] == (
+        "finalized/bri.parquet"
+    )
+    assert success[
+        "finalizer_pipeline_git_commit"
+    ] == "f" * 40
+
+
+def test_finalize_removes_stale_success_before_failure(
+    tmp_path: Path,
+) -> None:
+    from pdbclean.bri_finalize import (
+        finalize_bri_stage,
+    )
+
+    bri_root = tmp_path / "bri"
+    eligible_path = tmp_path / "eligible.parquet"
+
+    eligible = _eligible_row(
+        pdb_id="1aaa",
+    )
+
+    _write_eligible_population(
+        eligible_path,
+        [eligible],
+    )
+
+    bri_row = _bri_row(eligible)
+    bri_row["source_etag"] = "wrong-etag"
+
+    _write_global_task(
+        bri_root,
+        task_id=0,
+        chain_rows=[bri_row],
+    )
+
+    bri_root.mkdir(
+        parents=True,
+        exist_ok=True,
+    )
+
+    success_path = bri_root / "_SUCCESS"
+    success_path.write_text(
+        "stale\n",
+        encoding="utf-8",
+    )
+
+    with pytest.raises(
+        BRIFinalizeError,
+        match="source_etag",
+    ):
+        finalize_bri_stage(
+            bri_root=bri_root,
+            eligible_path=eligible_path,
+            manifest_row_count=1,
+            batch_size=500,
+            snapshot=SNAPSHOT,
+            cleaning_protocol=PROTOCOL,
+            quality_pipeline_git_commit=(
+                QUALITY_COMMIT
+            ),
+            geometric_validation_pipeline_git_commit=(
+                GEOMETRY_COMMIT
+            ),
+            geometric_validation_finalizer_git_commit=(
+                GEOMETRY_FINALIZER_COMMIT
+            ),
+            bri_pipeline_git_commit=(
+                BRI_COMMIT
+            ),
+            finalizer_pipeline_git_commit="f" * 40,
+        )
+
+    assert not success_path.exists()
+
+
+def test_global_summary_rejects_source_accounting_mismatch(
+    tmp_path: Path,
+) -> None:
+    from pdbclean.bri_finalize import (
+        build_bri_global_summary,
+    )
+
+    bri_root = tmp_path / "bri"
+    eligible_path = tmp_path / "eligible.parquet"
+
+    eligible = _eligible_row(
+        pdb_id="1aaa",
+    )
+
+    _write_eligible_population(
+        eligible_path,
+        [eligible],
+    )
+
+    _write_global_task(
+        bri_root,
+        task_id=0,
+        chain_rows=[_bri_row(eligible)],
+    )
+
+    artifacts = _discover(
+        bri_root,
+        expected_task_ids=(0,),
+    )
+
+    result = _validate_global(
+        artifacts,
+        eligible_path,
+    )
+
+    artifacts[0].summary[
+        "manifest_source_object_count"
+    ] = 1
+    artifacts[0].summary[
+        "relevant_source_object_count"
+    ] = 1
+
+    with pytest.raises(
+        BRIFinalizeError,
+        match="relevant/downloaded/parsed",
+    ):
+        build_bri_global_summary(
+            artifacts,
+            snapshot=SNAPSHOT,
+            cleaning_protocol=PROTOCOL,
+            quality_pipeline_git_commit=(
+                QUALITY_COMMIT
+            ),
+            geometric_validation_pipeline_git_commit=(
+                GEOMETRY_COMMIT
+            ),
+            geometric_validation_finalizer_git_commit=(
+                GEOMETRY_FINALIZER_COMMIT
+            ),
+            bri_pipeline_git_commit=(
+                BRI_COMMIT
+            ),
+            finalizer_pipeline_git_commit="f" * 40,
+            global_validation=result,
+        )
