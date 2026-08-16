@@ -388,12 +388,17 @@ def test_stage5_brain_chain_schema_preserves_bri_lineage_without_matrix() -> Non
 
     assert "bri" not in schema.names
 
-    producer = schema.field(
+    bri_finalizer = schema.field(
+        "bri_finalizer_git_commit"
+    )
+    brain_producer = schema.field(
         "brain_pipeline_git_commit"
     )
 
-    assert producer.type == pa.string()
-    assert producer.nullable is False
+    assert bri_finalizer.type == pa.string()
+    assert bri_finalizer.nullable is False
+    assert brain_producer.type == pa.string()
+    assert brain_producer.nullable is False
 
 
 def test_stage5_brain_payload_is_exact_nonnullable_float64_vector9() -> None:
@@ -468,12 +473,17 @@ def test_stage5_brain_undefined_schema_is_explicit_terminal_outcome() -> None:
     assert reason.type == pa.string()
     assert reason.nullable is False
 
-    producer = schema.field(
+    bri_finalizer = schema.field(
+        "bri_finalizer_git_commit"
+    )
+    brain_producer = schema.field(
         "brain_pipeline_git_commit"
     )
 
-    assert producer.type == pa.string()
-    assert producer.nullable is False
+    assert bri_finalizer.type == pa.string()
+    assert bri_finalizer.nullable is False
+    assert brain_producer.type == pa.string()
+    assert brain_producer.nullable is False
 
 
 def test_stage5_brain_processing_error_schema_has_traceable_lineage() -> None:
@@ -516,6 +526,7 @@ def test_stage5_brain_processing_error_schema_has_traceable_lineage() -> None:
         assert observed.nullable == expected.nullable
 
     for name in (
+        "bri_finalizer_git_commit",
         "brain_pipeline_git_commit",
         "processing_stage",
         "error_type",

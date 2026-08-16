@@ -614,6 +614,11 @@ STAGE5_BRAIN_CHAIN_SCHEMA = pa.schema(
         *_STAGE5_BRAIN_UPSTREAM_FIELDS,
 
         pa.field(
+            "bri_finalizer_git_commit",
+            pa.string(),
+            nullable=False,
+        ),
+        pa.field(
             "brain_pipeline_git_commit",
             pa.string(),
             nullable=False,
@@ -651,6 +656,11 @@ STAGE5_BRAIN_UNDEFINED_CHAIN_SCHEMA = pa.schema(
     [
         *_STAGE5_BRAIN_UPSTREAM_FIELDS,
 
+        pa.field(
+            "bri_finalizer_git_commit",
+            pa.string(),
+            nullable=False,
+        ),
         pa.field(
             "brain_pipeline_git_commit",
             pa.string(),
@@ -702,6 +712,11 @@ STAGE5_BRAIN_PROCESSING_ERROR_SCHEMA = pa.schema(
     [
         *_STAGE5_BRAIN_ERROR_UPSTREAM_FIELDS,
 
+        pa.field(
+            "bri_finalizer_git_commit",
+            pa.string(),
+            nullable=False,
+        ),
         pa.field(
             "brain_pipeline_git_commit",
             pa.string(),
