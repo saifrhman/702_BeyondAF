@@ -5,10 +5,13 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
+import numpy as np
+import pyarrow as pa
 import pyarrow.parquet as pq
 import pytest
 
 from pdbclean.brain_runner import (
+    UpstreamBRI,
     BrainRunnerError,
     validate_upstream_bri_stage,
 )
@@ -308,4 +311,368 @@ def test_upstream_bri_rejects_finalized_row_count_mismatch(
             root,
             expected_snapshot=SNAPSHOT,
             expected_cleaning_protocol=PROTOCOL,
+        )
+
+
+def _upstream_for_records(
+    tmp_path: Path,
+) -> UpstreamBRI:
+    from pdbclean.brain_runner import UpstreamBRI
+
+    return UpstreamBRI(
+        bri_root=tmp_path / "bri",
+        bri_path=tmp_path / "bri" / "finalized" / "bri.parquet",
+        snapshot=SNAPSHOT,
+        cleaning_protocol=PROTOCOL,
+        task_count=3,
+        bri_chain_count=2,
+        minimum_retained_residue_count=1,
+        maximum_retained_residue_count=20,
+        quality_pipeline_git_commit=QUALITY_COMMIT,
+        geometric_validation_pipeline_git_commit=GEOMETRY_COMMIT,
+        geometric_validation_finalizer_git_commit=(
+            GEOMETRY_FINALIZER_COMMIT
+        ),
+        bri_pipeline_git_commit=BRI_COMMIT,
+        bri_finalizer_git_commit=BRI_FINALIZER_COMMIT,
+    )
+
+
+def _stage3_bri_row(
+    *,
+    m: int,
+    bri: list[list[float]],
+) -> dict:
+    row = {
+        field.name: None
+        for field in STAGE3_BRI_CHAIN_SCHEMA
+    }
+
+    row.update(
+        {
+            "snapshot": SNAPSHOT,
+            "pdb_id": "1abc",
+            "model_id": 1,
+            "label_chain_id": "A",
+            "auth_chain_id": None,
+            "entity_id": None,
+            "retained_residue_count": m,
+            "retained_label_seq_ids": list(
+                range(1, m + 1)
+            ),
+            "source_mmcif_key": (
+                f"{SNAPSHOT}/coordinates/1abc.cif.gz"
+            ),
+            "source_etag": "etag",
+            "cleaning_protocol": PROTOCOL,
+            "quality_pipeline_git_commit": QUALITY_COMMIT,
+            "geometric_validation_pipeline_git_commit": (
+                GEOMETRY_COMMIT
+            ),
+            "geometric_validation_finalizer_git_commit": (
+                GEOMETRY_FINALIZER_COMMIT
+            ),
+            "bri_pipeline_git_commit": BRI_COMMIT,
+            "bri": bri,
+        }
+    )
+
+    # Fill any additional non-null Stage-3 lineage fields with values
+    # acceptable to the schema-oriented processor tests.
+    for field in STAGE3_BRI_CHAIN_SCHEMA:
+        if row[field.name] is not None:
+            continue
+
+        if field.nullable:
+            continue
+
+        if pa.types.is_string(field.type):
+            row[field.name] = "test"
+        elif pa.types.is_integer(field.type):
+            row[field.name] = 1
+        elif pa.types.is_boolean(field.type):
+            row[field.name] = False
+        elif pa.types.is_list(field.type):
+            row[field.name] = [1]
+
+    return row
+
+
+def test_process_brain_record_defined_preserves_lineage_and_unrounded_mean(
+    tmp_path: Path,
+) -> None:
+    from pdbclean.brain_runner import process_brain_record
+
+    upstream = _upstream_for_records(
+        tmp_path
+    )
+
+    bri = [
+        [0.0] * 9,
+        [0.001] * 9,
+        [0.002] * 9,
+        [0.002] * 9,
+    ]
+
+    row = _stage3_bri_row(
+        m=4,
+        bri=bri,
+    )
+
+    result = process_brain_record(
+        row,
+        upstream=upstream,
+        brain_pipeline_git_commit="f" * 40,
+    )
+
+    assert result.chain_accounting_valid
+    assert len(result.brain_records) == 1
+    assert result.undefined_records == ()
+    assert result.processing_errors == ()
+
+    record = result.brain_records[0]
+
+    expected = np.full(
+        9,
+        0.005 / 3.0,
+        dtype=np.float64,
+    )
+
+    assert np.array_equal(
+        np.asarray(
+            record["brain"],
+            dtype=np.float64,
+        ),
+        expected,
+    )
+
+    assert not np.array_equal(
+        expected,
+        np.around(expected, 3),
+    )
+
+    assert "bri" not in record
+    assert record["bri_pipeline_git_commit"] == BRI_COMMIT
+    assert record["bri_finalizer_git_commit"] == (
+        BRI_FINALIZER_COMMIT
+    )
+    assert record["brain_pipeline_git_commit"] == "f" * 40
+
+
+def test_process_brain_record_m1_is_explicit_undefined_not_error(
+    tmp_path: Path,
+) -> None:
+    from pdbclean.brain_runner import (
+        BRAIN_UNDEFINED_M1_REASON,
+        process_brain_record,
+    )
+
+    upstream = _upstream_for_records(
+        tmp_path
+    )
+
+    row = _stage3_bri_row(
+        m=1,
+        bri=[[0.0] * 9],
+    )
+
+    result = process_brain_record(
+        row,
+        upstream=upstream,
+        brain_pipeline_git_commit="f" * 40,
+    )
+
+    assert result.chain_accounting_valid
+    assert result.brain_records == ()
+    assert result.processing_errors == ()
+    assert len(result.undefined_records) == 1
+
+    record = result.undefined_records[0]
+
+    assert record["undefined_reason"] == (
+        BRAIN_UNDEFINED_M1_REASON
+    )
+    assert "brain" not in record
+    assert "bri" not in record
+    assert record["bri_finalizer_git_commit"] == (
+        BRI_FINALIZER_COMMIT
+    )
+
+
+def test_process_brain_record_two_residues_uses_second_row(
+    tmp_path: Path,
+) -> None:
+    from pdbclean.brain_runner import process_brain_record
+
+    upstream = _upstream_for_records(
+        tmp_path
+    )
+
+    second = [
+        0.101,
+        -0.202,
+        0.303,
+        1.404,
+        -1.505,
+        2.606,
+        -2.707,
+        3.808,
+        -3.909,
+    ]
+
+    row = _stage3_bri_row(
+        m=2,
+        bri=[
+            [0.0] * 9,
+            second,
+        ],
+    )
+
+    result = process_brain_record(
+        row,
+        upstream=upstream,
+        brain_pipeline_git_commit="f" * 40,
+    )
+
+    assert np.array_equal(
+        np.asarray(
+            result.brain_records[0]["brain"],
+            dtype=np.float64,
+        ),
+        np.asarray(
+            second,
+            dtype=np.float64,
+        ),
+    )
+
+
+def test_process_brain_record_rejects_lineage_mismatch_as_terminal_error(
+    tmp_path: Path,
+) -> None:
+    from pdbclean.brain_runner import process_brain_record
+
+    upstream = _upstream_for_records(
+        tmp_path
+    )
+
+    row = _stage3_bri_row(
+        m=2,
+        bri=[
+            [0.0] * 9,
+            [1.0] * 9,
+        ],
+    )
+
+    row["bri_pipeline_git_commit"] = "0" * 40
+
+    result = process_brain_record(
+        row,
+        upstream=upstream,
+        brain_pipeline_git_commit="f" * 40,
+    )
+
+    assert result.chain_accounting_valid
+    assert result.brain_records == ()
+    assert result.undefined_records == ()
+    assert len(result.processing_errors) == 1
+
+    error = result.processing_errors[0]
+
+    assert error["processing_stage"] == (
+        "bri_lineage_validation"
+    )
+    assert error["error_type"] == "BRILineageError"
+
+
+def test_process_brain_record_invalid_bri_is_terminal_error(
+    tmp_path: Path,
+) -> None:
+    from pdbclean.brain_runner import process_brain_record
+
+    upstream = _upstream_for_records(
+        tmp_path
+    )
+
+    row = _stage3_bri_row(
+        m=2,
+        bri=[
+            [0.0] * 9,
+            [1.0] * 9,
+        ],
+    )
+
+    row["bri"][1][0] = 0.0005
+
+    result = process_brain_record(
+        row,
+        upstream=upstream,
+        brain_pipeline_git_commit="f" * 40,
+    )
+
+    assert result.chain_accounting_valid
+    assert len(result.processing_errors) == 1
+    assert result.processing_errors[0][
+        "processing_stage"
+    ] == "bri_input_validation"
+
+
+def test_process_brain_record_computation_failure_is_terminal_error(
+    tmp_path: Path,
+) -> None:
+    from pdbclean.brain_runner import process_brain_record
+
+    upstream = _upstream_for_records(
+        tmp_path
+    )
+
+    row = _stage3_bri_row(
+        m=2,
+        bri=[
+            [0.0] * 9,
+            [1.0] * 9,
+        ],
+    )
+
+    def failing_brain(_bri):
+        raise ValueError("synthetic Brain failure")
+
+    result = process_brain_record(
+        row,
+        upstream=upstream,
+        brain_pipeline_git_commit="f" * 40,
+        brain_computer=failing_brain,
+    )
+
+    assert result.chain_accounting_valid
+    assert len(result.processing_errors) == 1
+
+    error = result.processing_errors[0]
+
+    assert error["processing_stage"] == "brain_computation"
+    assert error["error_type"] == "ValueError"
+    assert error["error_message"] == "synthetic Brain failure"
+
+
+def test_process_brain_record_rejects_invalid_brain_producer_commit(
+    tmp_path: Path,
+) -> None:
+    from pdbclean.brain_runner import process_brain_record
+
+    upstream = _upstream_for_records(
+        tmp_path
+    )
+
+    row = _stage3_bri_row(
+        m=1,
+        bri=[[0.0] * 9],
+    )
+
+    with pytest.raises(
+        BrainRunnerError,
+        match="brain_pipeline_git_commit",
+    ):
+        process_brain_record(
+            row,
+            upstream=upstream,
+            brain_pipeline_git_commit="not-a-commit",
         )

@@ -476,3 +476,495 @@ def validate_upstream_bri_stage(
             "finalizer_pipeline_git_commit"
         ],
     )
+
+
+# ---------------------------------------------------------------------------
+# Stage-5 single-record Brain processing
+# ---------------------------------------------------------------------------
+
+from typing import Callable, Mapping
+
+import numpy as np
+
+from pdbclean.brain import compute_brain
+from pdbclean.schemas import (
+    STAGE5_BRAIN_CHAIN_SCHEMA,
+    STAGE5_BRAIN_PROCESSING_ERROR_SCHEMA,
+    STAGE5_BRAIN_UNDEFINED_CHAIN_SCHEMA,
+)
+
+
+BRAIN_UNDEFINED_M1_REASON = (
+    "definition_5_1_undefined_for_m1"
+)
+
+
+@dataclass(frozen=True)
+class BrainRecordResult:
+    """Terminal Stage-5 outcome for one canonical Stage-3 BRI row."""
+
+    input_bri_chain_count: int = 1
+
+    brain_records: tuple[dict[str, Any], ...] = ()
+    undefined_records: tuple[dict[str, Any], ...] = ()
+    processing_errors: tuple[dict[str, Any], ...] = ()
+
+    @property
+    def chain_accounting_valid(self) -> bool:
+        """Exactly one terminal outcome must exist for one input row."""
+
+        return self.input_bri_chain_count == (
+            len(self.brain_records)
+            + len(self.undefined_records)
+            + len(self.processing_errors)
+        )
+
+
+def _brain_row_identity(
+    row: Mapping[str, Any],
+) -> tuple[str, str, int, str]:
+    """Return the canonical Stage-3 BRI chain identity."""
+
+    try:
+        return (
+            row["snapshot"],
+            row["pdb_id"],
+            row["model_id"],
+            row["label_chain_id"],
+        )
+    except KeyError as exc:
+        raise BrainRunnerError(
+            "Canonical Stage-3 BRI row is missing identity lineage"
+        ) from exc
+
+
+def _brain_input_lineage_issue(
+    row: Mapping[str, Any],
+    *,
+    upstream: UpstreamBRI,
+) -> str | None:
+    """Return an immutable Stage-3 lineage mismatch, if any."""
+
+    missing = [
+        field.name
+        for field in STAGE3_BRI_CHAIN_SCHEMA
+        if field.name not in row
+    ]
+
+    if missing:
+        raise BrainRunnerError(
+            "Canonical Stage-3 BRI row missing required field(s): "
+            + ", ".join(missing)
+        )
+
+    if row["snapshot"] != upstream.snapshot:
+        return (
+            "BRI row snapshot does not match completed "
+            "Stage-3 publication"
+        )
+
+    if row["cleaning_protocol"] != upstream.cleaning_protocol:
+        return (
+            "BRI row cleaning_protocol does not match completed "
+            "Stage-3 publication"
+        )
+
+    provenance_checks = (
+        (
+            "quality_pipeline_git_commit",
+            upstream.quality_pipeline_git_commit,
+        ),
+        (
+            "geometric_validation_pipeline_git_commit",
+            upstream.geometric_validation_pipeline_git_commit,
+        ),
+        (
+            "geometric_validation_finalizer_git_commit",
+            upstream.geometric_validation_finalizer_git_commit,
+        ),
+        (
+            "bri_pipeline_git_commit",
+            upstream.bri_pipeline_git_commit,
+        ),
+    )
+
+    for field, expected in provenance_checks:
+        if row[field] != expected:
+            return (
+                f"BRI row {field} does not match completed "
+                "Stage-3 publication"
+            )
+
+    model_id = row["model_id"]
+
+    if (
+        not isinstance(model_id, int)
+        or isinstance(model_id, bool)
+        or model_id <= 0
+    ):
+        return "BRI row model_id must be a positive integer"
+
+    label_chain_id = row["label_chain_id"]
+
+    if (
+        not isinstance(label_chain_id, str)
+        or not label_chain_id
+    ):
+        return "BRI row label_chain_id must be non-empty"
+
+    retained_count = row["retained_residue_count"]
+    retained_ids = row["retained_label_seq_ids"]
+
+    if (
+        not isinstance(retained_count, int)
+        or isinstance(retained_count, bool)
+        or retained_count < 1
+    ):
+        return (
+            "BRI row retained_residue_count must be "
+            "a positive integer"
+        )
+
+    if not isinstance(retained_ids, (list, tuple)):
+        return (
+            "BRI row retained_label_seq_ids must be a sequence"
+        )
+
+    if len(retained_ids) != retained_count:
+        return (
+            "BRI row retained_residue_count does not match "
+            "retained_label_seq_ids"
+        )
+
+    return None
+
+
+def _validated_stage3_bri_matrix(
+    value: object,
+    *,
+    expected_residue_count: int,
+) -> np.ndarray:
+    """Validate one canonical Stage-3 BRI matrix for Brain input."""
+
+    try:
+        matrix = np.asarray(
+            value,
+            dtype=np.float64,
+        )
+    except (TypeError, ValueError) as exc:
+        raise ValueError(
+            "Stage-3 BRI payload cannot be converted to float64"
+        ) from exc
+
+    if matrix.shape != (
+        expected_residue_count,
+        9,
+    ):
+        raise ValueError(
+            "Stage-3 BRI payload has an unexpected matrix shape"
+        )
+
+    if not np.isfinite(matrix).all():
+        raise ValueError(
+            "Stage-3 BRI payload contains non-finite coordinates"
+        )
+
+    if not np.array_equal(
+        matrix,
+        np.around(matrix, 3),
+    ):
+        raise ValueError(
+            "Stage-3 BRI payload is not canonical at 3 decimals"
+        )
+
+    return matrix
+
+
+def _validated_brain_vector(
+    value: object,
+) -> np.ndarray:
+    """Validate the scientific output of compute_brain()."""
+
+    if not isinstance(value, np.ndarray):
+        raise ValueError(
+            "compute_brain() did not return a NumPy array"
+        )
+
+    if value.dtype != np.float64:
+        raise ValueError(
+            "compute_brain() did not return float64 coordinates"
+        )
+
+    if value.shape != (9,):
+        raise ValueError(
+            "compute_brain() returned an unexpected vector shape"
+        )
+
+    if not np.isfinite(value).all():
+        raise ValueError(
+            "compute_brain() returned non-finite coordinates"
+        )
+
+    return value
+
+
+def _stage5_upstream_record_fields(
+    row: Mapping[str, Any],
+) -> dict[str, Any]:
+    """Copy exact Stage-3 lineage without duplicating the BRI matrix."""
+
+    return {
+        field.name: row[field.name]
+        for field in STAGE3_BRI_CHAIN_SCHEMA
+        if field.name != "bri"
+    }
+
+
+def _brain_defined_record(
+    row: Mapping[str, Any],
+    *,
+    brain: np.ndarray,
+    upstream: UpstreamBRI,
+    brain_pipeline_git_commit: str,
+) -> dict[str, Any]:
+    """Materialize one Definition-5.1 Brain-defined record."""
+
+    record = _stage5_upstream_record_fields(
+        row
+    )
+
+    record.update(
+        {
+            "bri_finalizer_git_commit": (
+                upstream.bri_finalizer_git_commit
+            ),
+            "brain_pipeline_git_commit": (
+                brain_pipeline_git_commit
+            ),
+            "brain": brain.tolist(),
+        }
+    )
+
+    return record
+
+
+def _brain_undefined_record(
+    row: Mapping[str, Any],
+    *,
+    upstream: UpstreamBRI,
+    brain_pipeline_git_commit: str,
+) -> dict[str, Any]:
+    """Materialize the legitimate m=1 Brain-bypass outcome."""
+
+    record = _stage5_upstream_record_fields(
+        row
+    )
+
+    record.update(
+        {
+            "bri_finalizer_git_commit": (
+                upstream.bri_finalizer_git_commit
+            ),
+            "brain_pipeline_git_commit": (
+                brain_pipeline_git_commit
+            ),
+            "undefined_reason": (
+                BRAIN_UNDEFINED_M1_REASON
+            ),
+        }
+    )
+
+    return record
+
+
+def _brain_processing_error(
+    row: Mapping[str, Any],
+    *,
+    processing_stage: str,
+    error_type: str,
+    error_message: str,
+    upstream: UpstreamBRI,
+    brain_pipeline_git_commit: str,
+) -> dict[str, Any]:
+    """Materialize one genuine Stage-5 processing failure."""
+
+    record = {
+        field.name: row[field.name]
+        for field in STAGE5_BRAIN_PROCESSING_ERROR_SCHEMA
+        if field.name
+        not in {
+            "bri_finalizer_git_commit",
+            "brain_pipeline_git_commit",
+            "processing_stage",
+            "error_type",
+            "error_message",
+        }
+    }
+
+    record.update(
+        {
+            "bri_finalizer_git_commit": (
+                upstream.bri_finalizer_git_commit
+            ),
+            "brain_pipeline_git_commit": (
+                brain_pipeline_git_commit
+            ),
+            "processing_stage": processing_stage,
+            "error_type": error_type,
+            "error_message": error_message,
+        }
+    )
+
+    return record
+
+
+def process_brain_record(
+    row: Mapping[str, Any],
+    *,
+    upstream: UpstreamBRI,
+    brain_pipeline_git_commit: str,
+    brain_computer: Callable[
+        [np.ndarray],
+        np.ndarray,
+    ] = compute_brain,
+) -> BrainRecordResult:
+    """Produce exactly one terminal Stage-5 outcome for one BRI row."""
+
+    brain_pipeline_git_commit = _validated_git_commit(
+        brain_pipeline_git_commit,
+        field="brain_pipeline_git_commit",
+    )
+
+    _brain_row_identity(row)
+
+    lineage_issue = _brain_input_lineage_issue(
+        row,
+        upstream=upstream,
+    )
+
+    if lineage_issue is not None:
+        result = BrainRecordResult(
+            processing_errors=(
+                _brain_processing_error(
+                    row,
+                    processing_stage=(
+                        "bri_lineage_validation"
+                    ),
+                    error_type="BRILineageError",
+                    error_message=lineage_issue,
+                    upstream=upstream,
+                    brain_pipeline_git_commit=(
+                        brain_pipeline_git_commit
+                    ),
+                ),
+            ),
+        )
+
+        if not result.chain_accounting_valid:
+            raise BrainRunnerError(
+                "Stage-5 single-record accounting failed"
+            )
+
+        return result
+
+    retained_count = row[
+        "retained_residue_count"
+    ]
+
+    try:
+        bri = _validated_stage3_bri_matrix(
+            row["bri"],
+            expected_residue_count=retained_count,
+        )
+    except ValueError as exc:
+        result = BrainRecordResult(
+            processing_errors=(
+                _brain_processing_error(
+                    row,
+                    processing_stage="bri_input_validation",
+                    error_type=type(exc).__name__,
+                    error_message=str(exc),
+                    upstream=upstream,
+                    brain_pipeline_git_commit=(
+                        brain_pipeline_git_commit
+                    ),
+                ),
+            ),
+        )
+
+        if not result.chain_accounting_valid:
+            raise BrainRunnerError(
+                "Stage-5 single-record accounting failed"
+            )
+
+        return result
+
+    if retained_count == 1:
+        result = BrainRecordResult(
+            undefined_records=(
+                _brain_undefined_record(
+                    row,
+                    upstream=upstream,
+                    brain_pipeline_git_commit=(
+                        brain_pipeline_git_commit
+                    ),
+                ),
+            ),
+        )
+
+        if not result.chain_accounting_valid:
+            raise BrainRunnerError(
+                "Stage-5 single-record accounting failed"
+            )
+
+        return result
+
+    try:
+        brain = brain_computer(
+            bri
+        )
+        brain = _validated_brain_vector(
+            brain
+        )
+    except ValueError as exc:
+        result = BrainRecordResult(
+            processing_errors=(
+                _brain_processing_error(
+                    row,
+                    processing_stage="brain_computation",
+                    error_type=type(exc).__name__,
+                    error_message=str(exc),
+                    upstream=upstream,
+                    brain_pipeline_git_commit=(
+                        brain_pipeline_git_commit
+                    ),
+                ),
+            ),
+        )
+
+        if not result.chain_accounting_valid:
+            raise BrainRunnerError(
+                "Stage-5 single-record accounting failed"
+            )
+
+        return result
+
+    result = BrainRecordResult(
+        brain_records=(
+            _brain_defined_record(
+                row,
+                brain=brain,
+                upstream=upstream,
+                brain_pipeline_git_commit=(
+                    brain_pipeline_git_commit
+                ),
+            ),
+        ),
+    )
+
+    if not result.chain_accounting_valid:
+        raise BrainRunnerError(
+            "Stage-5 single-record accounting failed"
+        )
+
+    return result
