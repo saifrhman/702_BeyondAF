@@ -351,3 +351,180 @@ def test_stage3_bri_processing_error_schema_identity_and_lineage() -> None:
     assert schema.field("retained_label_seq_ids").type == pa.list_(
         pa.field("element", pa.int32())
     )
+
+
+def test_stage5_brain_chain_schema_preserves_bri_lineage_without_matrix() -> None:
+    from pdbclean.schemas import (
+        STAGE3_BRI_CHAIN_SCHEMA,
+        STAGE5_BRAIN_CHAIN_SCHEMA,
+        STAGE5_BRAIN_CHAIN_SCHEMA_VERSION,
+    )
+
+    schema = STAGE5_BRAIN_CHAIN_SCHEMA
+
+    assert STAGE5_BRAIN_CHAIN_SCHEMA_VERSION == "1.0"
+    assert (
+        schema.metadata[b"schema_name"]
+        == b"pdbclean_stage5_brain_chain"
+    )
+    assert schema.metadata[b"schema_version"] == b"1.0"
+
+    upstream_fields = [
+        field
+        for field in STAGE3_BRI_CHAIN_SCHEMA
+        if field.name != "bri"
+    ]
+
+    assert schema.names[: len(upstream_fields)] == [
+        field.name
+        for field in upstream_fields
+    ]
+
+    for expected in upstream_fields:
+        observed = schema.field(expected.name)
+
+        assert observed.type == expected.type
+        assert observed.nullable == expected.nullable
+
+    assert "bri" not in schema.names
+
+    producer = schema.field(
+        "brain_pipeline_git_commit"
+    )
+
+    assert producer.type == pa.string()
+    assert producer.nullable is False
+
+
+def test_stage5_brain_payload_is_exact_nonnullable_float64_vector9() -> None:
+    from pdbclean.schemas import (
+        STAGE5_BRAIN_CHAIN_SCHEMA,
+    )
+
+    expected_type = pa.list_(
+        pa.field(
+            "coordinate",
+            pa.float64(),
+            nullable=False,
+        ),
+        9,
+    )
+
+    field = STAGE5_BRAIN_CHAIN_SCHEMA.field(
+        "brain"
+    )
+
+    assert field.type == expected_type
+    assert field.nullable is False
+
+    metadata = STAGE5_BRAIN_CHAIN_SCHEMA.metadata
+
+    assert metadata[b"brain_definition"] == (
+        b"MATCH Definition 5.1"
+    )
+    assert metadata[b"brain_rows"] == (
+        b"rows 2..m; first BRI row excluded"
+    )
+    assert metadata[b"brain_result_rounding"] == b"none"
+    assert metadata[b"brain_minimum_m"] == b"2"
+
+
+def test_stage5_brain_undefined_schema_is_explicit_terminal_outcome() -> None:
+    from pdbclean.schemas import (
+        STAGE3_BRI_CHAIN_SCHEMA,
+        STAGE5_BRAIN_UNDEFINED_CHAIN_SCHEMA,
+        STAGE5_BRAIN_UNDEFINED_CHAIN_SCHEMA_VERSION,
+    )
+
+    schema = STAGE5_BRAIN_UNDEFINED_CHAIN_SCHEMA
+
+    assert STAGE5_BRAIN_UNDEFINED_CHAIN_SCHEMA_VERSION == "1.0"
+    assert (
+        schema.metadata[b"schema_name"]
+        == b"pdbclean_stage5_brain_undefined_chain"
+    )
+    assert schema.metadata[b"schema_version"] == b"1.0"
+    assert schema.metadata[b"brain_defined"] == b"false"
+    assert schema.metadata[b"brain_undefined_condition"] == b"m=1"
+
+    upstream_fields = [
+        field
+        for field in STAGE3_BRI_CHAIN_SCHEMA
+        if field.name != "bri"
+    ]
+
+    assert schema.names[: len(upstream_fields)] == [
+        field.name
+        for field in upstream_fields
+    ]
+
+    assert "bri" not in schema.names
+    assert "brain" not in schema.names
+
+    reason = schema.field(
+        "undefined_reason"
+    )
+
+    assert reason.type == pa.string()
+    assert reason.nullable is False
+
+    producer = schema.field(
+        "brain_pipeline_git_commit"
+    )
+
+    assert producer.type == pa.string()
+    assert producer.nullable is False
+
+
+def test_stage5_brain_processing_error_schema_has_traceable_lineage() -> None:
+    from pdbclean.schemas import (
+        STAGE3_BRI_CHAIN_SCHEMA,
+        STAGE5_BRAIN_PROCESSING_ERROR_SCHEMA,
+        STAGE5_BRAIN_PROCESSING_ERROR_SCHEMA_VERSION,
+    )
+
+    schema = STAGE5_BRAIN_PROCESSING_ERROR_SCHEMA
+
+    assert STAGE5_BRAIN_PROCESSING_ERROR_SCHEMA_VERSION == "1.0"
+    assert (
+        schema.metadata[b"schema_name"]
+        == b"pdbclean_stage5_brain_processing_error"
+    )
+    assert schema.metadata[b"schema_version"] == b"1.0"
+
+    upstream_names = (
+        "snapshot",
+        "pdb_id",
+        "model_id",
+        "label_chain_id",
+        "retained_residue_count",
+        "retained_label_seq_ids",
+        "source_mmcif_key",
+        "source_etag",
+        "cleaning_protocol",
+        "quality_pipeline_git_commit",
+        "geometric_validation_pipeline_git_commit",
+        "geometric_validation_finalizer_git_commit",
+        "bri_pipeline_git_commit",
+    )
+
+    for name in upstream_names:
+        observed = schema.field(name)
+        expected = STAGE3_BRI_CHAIN_SCHEMA.field(name)
+
+        assert observed.type == expected.type
+        assert observed.nullable == expected.nullable
+
+    for name in (
+        "brain_pipeline_git_commit",
+        "processing_stage",
+        "error_type",
+        "error_message",
+    ):
+        field = schema.field(name)
+
+        assert field.type == pa.string()
+        assert field.nullable is False
+
+    for field in schema:
+        assert field.nullable is False

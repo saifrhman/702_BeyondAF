@@ -580,3 +580,154 @@ STAGE3_BRI_PROCESSING_ERROR_SCHEMA = pa.schema(
         ),
     },
 )
+
+
+# ---------------------------------------------------------------------------
+# Stage 5: MATCH Definition 5.1 Brain production artifacts
+# ---------------------------------------------------------------------------
+
+STAGE5_BRAIN_CHAIN_SCHEMA_VERSION = "1.0"
+STAGE5_BRAIN_UNDEFINED_CHAIN_SCHEMA_VERSION = "1.0"
+STAGE5_BRAIN_PROCESSING_ERROR_SCHEMA_VERSION = "1.0"
+
+# Definition 5.1 has exactly nine strong-coordinate averages.
+_STAGE5_BRAIN_VECTOR_TYPE = pa.list_(
+    pa.field(
+        "coordinate",
+        pa.float64(),
+        nullable=False,
+    ),
+    9,
+)
+
+# Brain is derived entirely from the canonical Stage-3 BRI. Preserve all
+# Stage-3 lineage and producer provenance but do not duplicate the full
+# m x 9 BRI matrix into the Brain artifact.
+_STAGE5_BRAIN_UPSTREAM_FIELDS = [
+    field
+    for field in STAGE3_BRI_CHAIN_SCHEMA
+    if field.name != "bri"
+]
+
+STAGE5_BRAIN_CHAIN_SCHEMA = pa.schema(
+    [
+        *_STAGE5_BRAIN_UPSTREAM_FIELDS,
+
+        pa.field(
+            "brain_pipeline_git_commit",
+            pa.string(),
+            nullable=False,
+        ),
+
+        # MATCH Definition 5.1:
+        # mean of each of the nine BRI columns over rows 2..m.
+        pa.field(
+            "brain",
+            _STAGE5_BRAIN_VECTOR_TYPE,
+            nullable=False,
+        ),
+    ],
+    metadata={
+        b"schema_name": b"pdbclean_stage5_brain_chain",
+        b"schema_version": (
+            STAGE5_BRAIN_CHAIN_SCHEMA_VERSION.encode()
+        ),
+        b"brain_definition": b"MATCH Definition 5.1",
+        b"brain_columns": (
+            b"x(N),y(N),z(N),x(A),y(A),z(A),x(C),y(C),z(C)"
+        ),
+        b"brain_input": b"canonical Stage-3 BRI",
+        b"brain_rows": b"rows 2..m; first BRI row excluded",
+        b"brain_result_rounding": b"none",
+        b"brain_minimum_m": b"2",
+    },
+)
+
+
+# m=1 is not an error. Definition 5.1 excludes the first BRI row, so
+# there are no rows left to average. Preserve the chain explicitly so
+# downstream exact comparison can bypass the Brain prefilter.
+STAGE5_BRAIN_UNDEFINED_CHAIN_SCHEMA = pa.schema(
+    [
+        *_STAGE5_BRAIN_UPSTREAM_FIELDS,
+
+        pa.field(
+            "brain_pipeline_git_commit",
+            pa.string(),
+            nullable=False,
+        ),
+        pa.field(
+            "undefined_reason",
+            pa.string(),
+            nullable=False,
+        ),
+    ],
+    metadata={
+        b"schema_name": b"pdbclean_stage5_brain_undefined_chain",
+        b"schema_version": (
+            STAGE5_BRAIN_UNDEFINED_CHAIN_SCHEMA_VERSION.encode()
+        ),
+        b"brain_definition": b"MATCH Definition 5.1",
+        b"brain_defined": b"false",
+        b"brain_undefined_condition": b"m=1",
+    },
+)
+
+
+# Processing errors are distinct from mathematically undefined m=1
+# chains. Preserve the exact identity/source/provenance fields required
+# to trace each failed Stage-5 input back to its canonical BRI record.
+_STAGE5_BRAIN_ERROR_UPSTREAM_FIELD_NAMES = (
+    "snapshot",
+    "pdb_id",
+    "model_id",
+    "label_chain_id",
+    "retained_residue_count",
+    "retained_label_seq_ids",
+    "source_mmcif_key",
+    "source_etag",
+    "cleaning_protocol",
+    "quality_pipeline_git_commit",
+    "geometric_validation_pipeline_git_commit",
+    "geometric_validation_finalizer_git_commit",
+    "bri_pipeline_git_commit",
+)
+
+_STAGE5_BRAIN_ERROR_UPSTREAM_FIELDS = [
+    STAGE3_BRI_CHAIN_SCHEMA.field(name)
+    for name in _STAGE5_BRAIN_ERROR_UPSTREAM_FIELD_NAMES
+]
+
+STAGE5_BRAIN_PROCESSING_ERROR_SCHEMA = pa.schema(
+    [
+        *_STAGE5_BRAIN_ERROR_UPSTREAM_FIELDS,
+
+        pa.field(
+            "brain_pipeline_git_commit",
+            pa.string(),
+            nullable=False,
+        ),
+
+        pa.field(
+            "processing_stage",
+            pa.string(),
+            nullable=False,
+        ),
+        pa.field(
+            "error_type",
+            pa.string(),
+            nullable=False,
+        ),
+        pa.field(
+            "error_message",
+            pa.string(),
+            nullable=False,
+        ),
+    ],
+    metadata={
+        b"schema_name": b"pdbclean_stage5_brain_processing_error",
+        b"schema_version": (
+            STAGE5_BRAIN_PROCESSING_ERROR_SCHEMA_VERSION.encode()
+        ),
+    },
+)
