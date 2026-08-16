@@ -968,3 +968,141 @@ def process_brain_record(
         )
 
     return result
+
+
+# ---------------------------------------------------------------------------
+# Stage-5 deterministic physical task partitioning
+# ---------------------------------------------------------------------------
+
+DEFAULT_BRAIN_ROW_GROUPS_PER_TASK = 64
+
+
+@dataclass(frozen=True)
+class BrainTaskPartition:
+    """One contiguous physical partition of canonical Stage-3 BRI."""
+
+    task_id: int
+    task_count: int
+
+    start_row_group: int
+    stop_row_group: int  # exclusive
+
+    row_group_count: int
+    input_bri_chain_count: int
+
+
+def _positive_partition_integer(
+    value: object,
+    *,
+    field: str,
+) -> int:
+    if (
+        not isinstance(value, int)
+        or isinstance(value, bool)
+        or value < 1
+    ):
+        raise BrainRunnerError(
+            f"{field} must be a positive integer"
+        )
+
+    return value
+
+
+def brain_task_count(
+    row_group_count: int,
+    *,
+    row_groups_per_task: int = (
+        DEFAULT_BRAIN_ROW_GROUPS_PER_TASK
+    ),
+) -> int:
+    """Return deterministic Stage-5 task count."""
+
+    row_group_count = _positive_partition_integer(
+        row_group_count,
+        field="row_group_count",
+    )
+    row_groups_per_task = _positive_partition_integer(
+        row_groups_per_task,
+        field="row_groups_per_task",
+    )
+
+    return (
+        row_group_count
+        + row_groups_per_task
+        - 1
+    ) // row_groups_per_task
+
+
+def brain_task_partition(
+    row_group_row_counts: tuple[int, ...],
+    *,
+    task_id: int,
+    row_groups_per_task: int = (
+        DEFAULT_BRAIN_ROW_GROUPS_PER_TASK
+    ),
+) -> BrainTaskPartition:
+    """Describe one contiguous canonical-BRI row-group partition."""
+
+    counts = tuple(
+        row_group_row_counts
+    )
+
+    if not counts:
+        raise BrainRunnerError(
+            "Canonical Stage-3 BRI has no Parquet row groups"
+        )
+
+    for index, count in enumerate(counts):
+        if (
+            not isinstance(count, int)
+            or isinstance(count, bool)
+            or count < 1
+        ):
+            raise BrainRunnerError(
+                "Invalid canonical Stage-3 BRI row-group "
+                f"row count at index {index}: {count!r}"
+            )
+
+    row_groups_per_task = _positive_partition_integer(
+        row_groups_per_task,
+        field="row_groups_per_task",
+    )
+
+    if (
+        not isinstance(task_id, int)
+        or isinstance(task_id, bool)
+        or task_id < 0
+    ):
+        raise BrainRunnerError(
+            "task_id must be a non-negative integer"
+        )
+
+    task_count = brain_task_count(
+        len(counts),
+        row_groups_per_task=row_groups_per_task,
+    )
+
+    if task_id >= task_count:
+        raise BrainRunnerError(
+            "Stage-5 Brain task_id is outside the "
+            "physical partition range"
+        )
+
+    start = task_id * row_groups_per_task
+    stop = min(
+        start + row_groups_per_task,
+        len(counts),
+    )
+
+    selected = counts[
+        start:stop
+    ]
+
+    return BrainTaskPartition(
+        task_id=task_id,
+        task_count=task_count,
+        start_row_group=start,
+        stop_row_group=stop,
+        row_group_count=len(selected),
+        input_bri_chain_count=sum(selected),
+    )

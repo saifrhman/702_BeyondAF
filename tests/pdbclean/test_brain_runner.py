@@ -676,3 +676,110 @@ def test_process_brain_record_rejects_invalid_brain_producer_commit(
             upstream=upstream,
             brain_pipeline_git_commit="not-a-commit",
         )
+
+
+def test_brain_task_count_uses_ceiling_partition() -> None:
+    from pdbclean.brain_runner import brain_task_count
+
+    assert brain_task_count(
+        9286,
+        row_groups_per_task=64,
+    ) == 146
+
+
+def test_brain_task_partition_is_contiguous() -> None:
+    from pdbclean.brain_runner import brain_task_partition
+
+    counts = tuple([64] * 130)
+
+    first = brain_task_partition(
+        counts,
+        task_id=0,
+        row_groups_per_task=64,
+    )
+    second = brain_task_partition(
+        counts,
+        task_id=1,
+        row_groups_per_task=64,
+    )
+
+    assert first.start_row_group == 0
+    assert first.stop_row_group == 64
+    assert first.row_group_count == 64
+    assert first.input_bri_chain_count == 4096
+
+    assert second.start_row_group == 64
+    assert second.stop_row_group == 128
+
+
+def test_brain_task_partition_final_task_is_short() -> None:
+    from pdbclean.brain_runner import brain_task_partition
+
+    counts = tuple([64] * 130)
+
+    final = brain_task_partition(
+        counts,
+        task_id=2,
+        row_groups_per_task=64,
+    )
+
+    assert final.task_count == 3
+    assert final.start_row_group == 128
+    assert final.stop_row_group == 130
+    assert final.row_group_count == 2
+    assert final.input_bri_chain_count == 128
+
+
+def test_brain_task_partition_uses_actual_row_counts() -> None:
+    from pdbclean.brain_runner import brain_task_partition
+
+    counts = (
+        64,
+        64,
+        17,
+        3,
+    )
+
+    partition = brain_task_partition(
+        counts,
+        task_id=1,
+        row_groups_per_task=2,
+    )
+
+    assert partition.start_row_group == 2
+    assert partition.stop_row_group == 4
+    assert partition.input_bri_chain_count == 20
+
+
+def test_brain_task_partition_rejects_out_of_range_task() -> None:
+    from pdbclean.brain_runner import (
+        BrainRunnerError,
+        brain_task_partition,
+    )
+
+    with pytest.raises(
+        BrainRunnerError,
+        match="outside the physical partition range",
+    ):
+        brain_task_partition(
+            (64, 64),
+            task_id=1,
+            row_groups_per_task=64,
+        )
+
+
+def test_brain_task_partition_rejects_invalid_row_group_counts() -> None:
+    from pdbclean.brain_runner import (
+        BrainRunnerError,
+        brain_task_partition,
+    )
+
+    with pytest.raises(
+        BrainRunnerError,
+        match="row-group row count",
+    ):
+        brain_task_partition(
+            (64, 0, 64),
+            task_id=0,
+            row_groups_per_task=64,
+        )
