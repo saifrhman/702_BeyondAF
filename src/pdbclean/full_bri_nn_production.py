@@ -1358,7 +1358,10 @@ def main() -> int:
 
         "processing_error_count": 0,
         "pair_accounting_valid": True,
-        "classification_performed": True,
+        # Stage 8 applies the geometric near-duplicate threshold.
+        # Zero/nonzero duplicate classification remains a separate
+        # downstream analysis stage.
+        "classification_performed": False,
     }
 
     _write_json_atomic(
