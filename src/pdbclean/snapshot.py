@@ -5,6 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 import gzip
 import re
+from http.client import IncompleteRead
 from datetime import datetime, timezone
 from typing import Iterator
 from urllib.parse import quote, urlencode
@@ -410,7 +411,7 @@ def download_verified_s3_object_bytes(
         ) as response:
             compressed_bytes = response.read()
             response_etag = response.headers.get("ETag")
-    except OSError as exc:
+    except (OSError, IncompleteRead) as exc:
         raise SnapshotTransportError(
             f"Failed to download S3 object {s3_key}: {exc}"
         ) from exc
