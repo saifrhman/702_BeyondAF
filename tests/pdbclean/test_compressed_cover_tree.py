@@ -176,3 +176,52 @@ def test_duplicate_reference_vectors_must_be_collapsed_first():
         match="duplicate metric vectors",
     ):
         CompressedCoverTree(points)
+
+
+def test_construction_handles_negative_parent_level_exactly():
+    import numpy as np
+
+    from pdbclean.compressed_cover_tree import (
+        CompressedCoverTree,
+    )
+
+    # Unit integer distances force level -1 in the compressed
+    # cover tree.  Construction must treat 2**(-1)=0.5
+    # mathematically rather than attempting a negative bit shift.
+    points = np.array(
+        [
+            [0, 0],
+            [1, 0],
+            [2, 0],
+            [3, 0],
+            [8, 0],
+        ],
+        dtype=np.int64,
+    )
+
+    tree = CompressedCoverTree(points)
+    tree.validate()
+
+    for query in points:
+        result = tree.radius_neighbors(
+            query,
+            1,
+        )
+
+        brute = sorted(
+            (
+                int(np.max(np.abs(query - point))),
+                i,
+            )
+            for i, point in enumerate(points)
+            if int(np.max(np.abs(query - point))) <= 1
+        )
+
+        observed = list(
+            zip(
+                result.distances_mA.tolist(),
+                result.indices.tolist(),
+            )
+        )
+
+        assert observed == brute

@@ -324,7 +324,15 @@ class CompressedCoverTree:
                 nearest_parent,
             )
 
-            if distance <= (1 << parent_level):
+            # Compare integer-milliangstrom distance with 2**level
+            # without using a negative bit shift.  For level < 0,
+            # 2**level < 1, so a non-negative integer distance can
+            # satisfy the bound only when it is exactly zero.
+            if (
+                distance == 0
+                if parent_level < 0
+                else distance <= (1 << parent_level)
+            ):
                 point_level = _level_for_positive_distance(
                     distance
                 )
