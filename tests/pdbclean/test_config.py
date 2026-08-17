@@ -496,3 +496,58 @@ def test_geometric_thresholds_can_be_changed_in_config(
         ]["minimum_triangle_angle_degrees"]
         == 5.0
     )
+
+
+
+def test_duplicate_search_threshold_is_loaded() -> None:
+    loaded = load_config(CONFIG_PATH)
+
+    assert (
+        loaded.data["duplicate_search"]
+        ["near_duplicate_threshold_angstrom"]
+        == 0.010
+    )
+
+
+@pytest.mark.parametrize(
+    "value",
+    [
+        -0.001,
+        0.0,
+        True,
+        "0.010",
+        None,
+        0.0105,
+        float("inf"),
+        float("nan"),
+    ],
+)
+def test_invalid_duplicate_search_threshold_is_rejected(
+    tmp_path: Path,
+    value,
+) -> None:
+    data = yaml.safe_load(
+        CONFIG_PATH.read_text()
+    )
+
+    data["duplicate_search"][
+        "near_duplicate_threshold_angstrom"
+    ] = value
+
+    config_path = (
+        tmp_path
+        / "invalid_duplicate_search_threshold.yaml"
+    )
+
+    config_path.write_text(
+        yaml.safe_dump(
+            data,
+            sort_keys=False,
+        )
+    )
+
+    with pytest.raises(
+        ConfigError,
+        match="near_duplicate_threshold_angstrom",
+    ):
+        load_config(config_path)

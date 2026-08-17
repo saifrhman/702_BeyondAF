@@ -60,6 +60,10 @@ bri:
   implementation: backbone_rigid_invariant
   vector_partition_key: chain_length
   require_full_accounting: true
+
+duplicate_search:
+  near_duplicate_threshold_angstrom: 0.010
+
 geometric_search:
   engine: scipy_cKDTree
   metric: chebyshev

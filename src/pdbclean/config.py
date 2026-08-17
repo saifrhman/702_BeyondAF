@@ -59,6 +59,7 @@ REQUIRED_TOP_LEVEL_SECTIONS = (
     "quality_rules",
     "post_cleaning_geometric_validation",
     "bri",
+    "duplicate_search",
     "geometric_search",
     "graph",
     "execution",
@@ -283,6 +284,62 @@ def _validate_post_cleaning_geometric_validation(
 
 
 
+
+def _validate_duplicate_search(
+    config: dict[str, Any],
+) -> None:
+    """Validate the paper-derived geometric duplicate threshold."""
+
+    section = config["duplicate_search"]
+
+    if not isinstance(section, dict):
+        raise ConfigError(
+            "duplicate_search must be a mapping"
+        )
+
+    value = section.get(
+        "near_duplicate_threshold_angstrom"
+    )
+
+    if (
+        isinstance(value, bool)
+        or not isinstance(value, (int, float))
+    ):
+        raise ConfigError(
+            "duplicate_search."
+            "near_duplicate_threshold_angstrom "
+            "must be a positive numeric value"
+        )
+
+    value = float(value)
+
+    if not (
+        -float("inf")
+        < value
+        < float("inf")
+    ) or value <= 0.0:
+        raise ConfigError(
+            "duplicate_search."
+            "near_duplicate_threshold_angstrom "
+            "must be finite and greater than zero"
+        )
+
+    # Complete BRI is represented exactly in integer
+    # milliangstroms.  The configured threshold must therefore
+    # lie exactly on the 0.001-A coordinate grid.
+    milliangstrom = value * 1000.0
+
+    if abs(
+        milliangstrom
+        - round(milliangstrom)
+    ) > 1.0e-9:
+        raise ConfigError(
+            "duplicate_search."
+            "near_duplicate_threshold_angstrom "
+            "must be an exact integer milliangstrom value"
+        )
+
+
 def _validate_storage(config: dict[str, Any]) -> None:
     storage = config["storage"]
 
@@ -387,6 +444,7 @@ def load_config(path: str | Path) -> LoadedConfig:
     _validate_snapshot(expanded)
     _validate_selection(expanded)
     _validate_post_cleaning_geometric_validation(expanded)
+    _validate_duplicate_search(expanded)
     _validate_storage(expanded)
     _validate_execution(expanded)
 
