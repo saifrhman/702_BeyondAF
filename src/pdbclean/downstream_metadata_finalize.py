@@ -74,6 +74,12 @@ def main() -> int:
     parser.add_argument(
         "--producer-git-commit",
         required=True,
+        action="append",
+        dest="producer_git_commits",
+        help=(
+            "Expected metadata-task producer Git commit. "
+            "Repeat for mixed but explicitly declared producer provenance."
+        ),
     )
     parser.add_argument(
         "--finalizer-git-commit",
@@ -82,9 +88,24 @@ def main() -> int:
 
     args = parser.parse_args()
 
-    producer_commit = _validate_commit(
-        args.producer_git_commit
+    producer_commits = tuple(
+        sorted(
+            {
+                _validate_commit(value)
+                for value in args.producer_git_commits
+            }
+        )
     )
+
+    if not producer_commits:
+        raise DownstreamMetadataFinalizeError(
+            "At least one expected producer commit is required"
+        )
+
+    expected_producer_commits = set(
+        producer_commits
+    )
+
     finalizer_commit = _validate_commit(
         args.finalizer_git_commit
     )
@@ -192,6 +213,8 @@ def main() -> int:
 
     tables: list[pa.Table] = []
     total_verified_bytes = 0
+    observed_producer_commits: set[str] = set()
+    producer_by_task: dict[str, str] = {}
 
     for task_id in range(
         expected_task_count
@@ -252,9 +275,6 @@ def main() -> int:
                     "full_bri_nn_pipeline_git_commit"
                 ]
             ),
-            "metadata_task_pipeline_git_commit": (
-                producer_commit
-            ),
             "config_sha256": loaded.sha256,
             "processing_error_count": 0,
             "scientific_filtering_performed": False,
@@ -267,6 +287,28 @@ def main() -> int:
                     f"for {field}: expected {expected!r}, "
                     f"found {summary.get(field)!r}"
                 )
+
+        task_producer = _validate_commit(
+            str(
+                summary.get(
+                    "metadata_task_pipeline_git_commit",
+                    "",
+                )
+            )
+        )
+
+        if task_producer not in expected_producer_commits:
+            raise DownstreamMetadataFinalizeError(
+                f"Task {task_id} has undeclared producer commit "
+                f"{task_producer}"
+            )
+
+        observed_producer_commits.add(
+            task_producer
+        )
+        producer_by_task[
+            str(task_id)
+        ] = task_producer
 
         start = (
             task_id
@@ -339,6 +381,14 @@ def main() -> int:
             table.cast(
                 ENTRY_METADATA_SCHEMA
             )
+        )
+
+    if observed_producer_commits != expected_producer_commits:
+        raise DownstreamMetadataFinalizeError(
+            "Observed metadata-task producer commits do not exactly "
+            "match the explicitly declared producer commits: "
+            f"expected={sorted(expected_producer_commits)!r}, "
+            f"observed={sorted(observed_producer_commits)!r}"
         )
 
     merged = pa.concat_tables(
@@ -529,8 +579,11 @@ def main() -> int:
                 "full_bri_nn_pipeline_git_commit"
             ]
         ),
-        "metadata_task_pipeline_git_commit": (
-            producer_commit
+        "metadata_task_pipeline_git_commits": list(
+            producer_commits
+        ),
+        "metadata_task_producer_by_task": (
+            producer_by_task
         ),
         "metadata_finalizer_git_commit": (
             finalizer_commit
