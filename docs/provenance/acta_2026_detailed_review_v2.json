@@ -1,0 +1,62 @@
+{
+  "analysis_job_id": "10254288",
+  "analysis_script_sha256": "8700a0628351b1d815a0f95f2801c8a4dd9c026395a26958da559dfcd61f23fc",
+  "artifacts": {
+    "canonical_resolution_11.csv": {
+      "bytes": 1345,
+      "sha256": "4dfbedaf5a51b2578be17e6169b4d7aefea7a42dc3edd738aea19323299819cc"
+    },
+    "detailed_review.csv": {
+      "bytes": 1741539,
+      "sha256": "36158d76db7c6d6d8c5b31d0487038b2499a7badaaf5dfb96b5fe9b2da589c3e"
+    },
+    "exact_bri_deposition_evidence.csv": {
+      "bytes": 38424,
+      "sha256": "24761017bcbddb9e2c8190f544a026ec427e56c652d91765a2f993451a52632c"
+    },
+    "exact_bri_pair_evidence.csv": {
+      "bytes": 63234,
+      "sha256": "9effead8cf1c870e3e0d8ffbb9d6f47afb8396534bfeb6a444644e9e5b5d0e5f"
+    },
+    "exact_complete_model_evidence.csv": {
+      "bytes": 11502,
+      "sha256": "f87a666a7632ab404cc4630ce77e49dee5ad72dd00875c1aa53339c14b75aaa7"
+    },
+    "exact_polymer_evidence.csv": {
+      "bytes": 3821,
+      "sha256": "fb906bf718d9c173cb04ad6fec84e1e8bd0b0328b1c6f5b5fac69ae16c612c39"
+    },
+    "global_summary.json": {
+      "bytes": 2156,
+      "sha256": "120c50b25d6bd96107310b788e87311af8ae02802695ef3fd4c96fff0fb11aa3"
+    },
+    "nonzero_chain_pair_evidence.parquet": {
+      "bytes": 69168,
+      "sha256": "238b57a54e3987966360dd345d10c7c1a7c54179fa99f9cdb73b999150911093"
+    },
+    "nonzero_pair_evidence.parquet": {
+      "bytes": 59772,
+      "sha256": "ca5e77ad55e66027d24754da15231012e579b0f1a00ecde9efdb6b8456ae663b"
+    }
+  },
+  "guards": {
+    "automatic_deletion_performed": false,
+    "old_snapshot_comparison_used": false,
+    "representative_selection_performed": false
+  },
+  "model_scope": "model_1",
+  "publication_path": "outputs/pdbclean/20260101/protocol3.2-comp702-v1/acta_detailed_review_v2",
+  "publication_status": "PASS",
+  "publication_success_sha256": "8f5abe385d0760dbafe9695db03e838999baaa0cb6c4ff612f139085a887af27",
+  "review_source_sha256": "36158d76db7c6d6d8c5b31d0487038b2499a7badaaf5dfb96b5fe9b2da589c3e",
+  "scientific_counts": {
+    "canonical_alignment_pairs": 11,
+    "detailed_review_pairs": 1854,
+    "exact_bri_pairs": 101,
+    "nonzero_geometry_pairs": 319,
+    "nonzero_near_bri_pairs": 1753,
+    "trivial_m1_nonzero_pairs": 1423
+  },
+  "snapshot": "2026-01-01",
+  "source_git_head_before_freeze": "f5a147cfcfbc31a8defb3d16ffaae4575fbf4971"
+}
