@@ -1,0 +1,71 @@
+{
+  "counts": {
+    "canonical_input_chains": 578524,
+    "clique_components": 20494,
+    "edge_component_representatives": 21100,
+    "edge_components": 20789,
+    "edge_participating_chains": 99854,
+    "final_retained_chains": 499770,
+    "m1_retained": 764,
+    "mge2_near_duplicate_edges": 1068256,
+    "nonclique_components": 295,
+    "removed_chains": 78754
+  },
+  "final_release_audit": {
+    "canonical_population_conservation": "PASS",
+    "frozen_artifact_copy_integrity": "PASS",
+    "m1_policy": "PASS",
+    "release_manifest_artifact_integrity": "PASS",
+    "removed_mapping_reproduction": "PASS",
+    "representative_retention": "PASS",
+    "retained_removed_disjoint": "PASS"
+  },
+  "hashes": {
+    "canonical_source_sha256": "ff1b880e5b99086bfdf15fbf522b71096eb5fffcc298d025a90f8ff0f296108a",
+    "release_manifest_sha256": "1e6d6b249b6530fb501351fe6bd8d78647d3dad549db67e3fde486c2e3f8b918",
+    "release_success_sha256": "945c6c34358b127ea07365384f6f50429af315a26d9878233e4638cacf34c400",
+    "removed_chain_audit_sha256": "4cb3bea6c6a61f27de60818d097cf72c0c047f603d13f76c8286bbae647d3360",
+    "representative_mapping_sha256": "ee5ad7f182b3dee082fc1459dee84cee7f4605e4d03afe1c3c0d13aefa8565e1",
+    "representative_policy_sha256": "d4ca8bcb1ed121bba6681a0de5ece6f5d9b8aff7ad6283e2512d7a2e762fd7c5",
+    "representatives_sha256": "6fe7a3be7643165a1cde23ea579d9985a821d3b8d5711dd5bcfaf32cdc484248",
+    "retained_chains_sha256": "8ae52ad96586c2552f74083b480350973c86bdcca41ae1f30f7353472d769c8b",
+    "stage14_graph_success_sha256": "8790dcb60b6d6b1ad24c7c45a57671aa61caa075a4accbdf9ad28de902d5238d",
+    "stage14_representative_success_sha256": "845508c958aafe2b693d316ce9cdf72471fbe0d35250fa095b1a1e3f1b210758",
+    "stage8_full_bri_success_sha256": "13581e63675a63767b3c97a065b8f430331323000e1039cf6388ee9d9a2b7db0"
+  },
+  "jobs": {
+    "failed_packaging_attempts": [
+      {
+        "job_id": "10254566",
+        "reason": "incorrect source_manifest path; failed during preflight"
+      },
+      {
+        "job_id": "10254571",
+        "reason": "Arrow audit-schema nullability assertion; partial release removed before successful rebuild"
+      }
+    ],
+    "geometric_graph": "10254499",
+    "representative_selection": "10254553",
+    "successful_final_release": "10254716"
+  },
+  "model_scope": "model_1",
+  "producer_wrapper_provenance": {
+    "representative_job_wrapper_sha256": "1a3888fdde619d278542334d900a9c6613f09b017edc5f8de398b4aecc959946"
+  },
+  "protocol": "protocol3.2-comp702-v1",
+  "release_name": "PDBClean-20260101-protocol3.2-comp702-v1-dedup-v1",
+  "release_path": "outputs/releases/PDBClean-20260101-protocol3.2-comp702-v1-dedup-v1",
+  "scientific_policy": {
+    "automatic_transitive_removal": false,
+    "connectedness_treated_as_equivalence": false,
+    "distance_metric": "complete BRI L-infinity",
+    "every_removed_chain_has_direct_representative_edge": true,
+    "m1_deduplication_performed": false,
+    "near_duplicate_threshold": "d_bri_mA <= 10",
+    "old_snapshot_comparison_used": false,
+    "stage13_review_subset_used_as_global_edge_set": false
+  },
+  "snapshot": "2026-01-01",
+  "source_git_head_before_stage14_freeze": "c311d703b2fbba79fdb86c60de258f0e0bd84097",
+  "stage": 14
+}

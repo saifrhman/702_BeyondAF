@@ -1,0 +1,57 @@
+policy_name: comp702_stage14_representative_selection
+policy_version: "1.0"
+
+scientific_scope:
+  source_relation: complete_BRI_near_duplicate
+  distance_representation: exact_integer_milliangstrom
+  threshold:
+    operator: "<="
+    value_mA: 10
+
+  minimum_deduplicated_chain_length: 2
+
+  m1_policy:
+    action: retain_all
+    reason: single_residue_BRI_geometry_is_structurally_degenerate
+
+graph_policy:
+  connected_component_is_duplicate_equivalence: false
+  every_removed_chain_requires_direct_representative_edge: true
+
+representative_ranking:
+  - terminal_trimmed_false_preferred
+  - lower_dirty_residue_count_preferred
+  - comparable_method_resolution_preferred
+  - canonical_chain_key_tiebreak
+
+resolution_policy:
+  compare_only_within_component_when_all_members_have_identical_experimental_methods: true
+
+  xray:
+    method: X-RAY DIFFRACTION
+    field: refine_ls_d_res_high
+    lower_is_better: true
+
+  electron_microscopy:
+    method: ELECTRON MICROSCOPY
+    preferred_field: em_3d_reconstruction_resolution
+    fallback_field: refine_ls_d_res_high
+    lower_is_better: true
+
+  other_methods:
+    use_refine_ls_d_res_high_when_finite: true
+    lower_is_better: true
+
+nonclique_policy:
+  algorithm: deterministic_quality_ordered_greedy_direct_edge_cover
+
+  procedure:
+    - rank_nodes_by_representative_quality
+    - choose_highest_ranked_unassigned_node_as_representative
+    - assign_only_currently_unassigned_direct_neighbors_to_that_representative
+    - repeat_until_every_node_is_assigned
+
+safety:
+  use_stage13_review_subset_as_global_edge_set: false
+  automatic_transitive_removal: false
+  old_snapshot_comparison: false
