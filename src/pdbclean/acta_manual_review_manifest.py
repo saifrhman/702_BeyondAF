@@ -398,6 +398,35 @@ def _write_review_csv(
     temporary.replace(path)
 
 
+
+def _publication_layout(
+    stage11_version: str,
+) -> tuple[str, str]:
+    """Return Stage-11 input and manual-manifest output directories.
+
+    v1 paths are preserved exactly for reproducibility.
+    v2 is physically isolated from the frozen v1 publications.
+    """
+
+    layouts = {
+        "1.0": (
+            "acta_downstream_investigation",
+            "acta_manual_review_manifest",
+        ),
+        "2.0": (
+            "acta_downstream_investigation_v2",
+            "acta_manual_review_manifest_v2",
+        ),
+    }
+
+    try:
+        return layouts[str(stage11_version)]
+    except KeyError as exc:
+        raise ActaManualReviewManifestError(
+            f"Unsupported Stage-11 version: {stage11_version!r}"
+        ) from exc
+
+
 def main() -> int:
     parser = argparse.ArgumentParser()
 
@@ -411,7 +440,24 @@ def main() -> int:
         required=True,
     )
 
+    parser.add_argument(
+        "--stage11-version",
+        choices=("1.0", "2.0"),
+        default="1.0",
+        help=(
+            "Stage-11 publication to consume; "
+            "defaults to frozen v1 for backward compatibility"
+        ),
+    )
+
     args = parser.parse_args()
+
+    (
+        stage11_directory,
+        manifest_output_directory,
+    ) = _publication_layout(
+        args.stage11_version
+    )
 
     pipeline_commit = _validate_commit(
         args.pipeline_git_commit
@@ -441,7 +487,7 @@ def main() -> int:
         path.parent
         for path in storage_root.glob(
             f"*/{protocol}/"
-            "acta_downstream_investigation/_SUCCESS"
+            f"{stage11_directory}/_SUCCESS"
         )
     )
 
@@ -957,7 +1003,7 @@ def main() -> int:
 
     output_root = (
         stage_root
-        / "acta_manual_review_manifest"
+        / manifest_output_directory
     )
 
     finalized = (
@@ -1038,6 +1084,15 @@ def main() -> int:
     )
 
     provenance = {
+        "source_stage11_version": str(
+            args.stage11_version
+        ),
+        "source_stage11_publication_directory": (
+            stage11_directory
+        ),
+        "manual_review_manifest_publication_directory": (
+            manifest_output_directory
+        ),
         "snapshot": (
             stage11_success[
                 "snapshot"

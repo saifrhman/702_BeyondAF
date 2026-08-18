@@ -67,3 +67,26 @@ def test_manifest_explicitly_records_no_filtering():
         ]
         == b"unordered_PDB_deposition_pair"
     )
+
+
+
+def test_stage11_v1_publication_layout_is_preserved():
+    from pdbclean.acta_manual_review_manifest import (
+        _publication_layout,
+    )
+
+    assert _publication_layout("1.0") == (
+        "acta_downstream_investigation",
+        "acta_manual_review_manifest",
+    )
+
+
+def test_stage11_v2_publication_layout_is_isolated():
+    from pdbclean.acta_manual_review_manifest import (
+        _publication_layout,
+    )
+
+    assert _publication_layout("2.0") == (
+        "acta_downstream_investigation_v2",
+        "acta_manual_review_manifest_v2",
+    )
