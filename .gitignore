@@ -50,3 +50,6 @@ envs/
 **/.pytest_cache/
 
 src/*.egg-info/
+
+# Local pinned literature/reference artifacts
+/reference/

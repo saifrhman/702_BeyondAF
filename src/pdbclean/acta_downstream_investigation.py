@@ -47,6 +47,12 @@ SUCCESS_SCHEMA_NAME = (
 SUCCESS_SCHEMA_VERSION = "1.0"
 
 
+STAGE_OUTPUT_DIRECTORIES = {
+    "1.0": "acta_downstream_investigation",
+    "2.0": "acta_downstream_investigation_v2",
+}
+
+
 OUTPUT_SCHEMA = pa.schema(
     [
         pa.field("query_snapshot", pa.string(), nullable=False),
@@ -374,19 +380,43 @@ def _passes_resolution(
     return resolution <= threshold
 
 
-def _validate_downstream_config(
+def _stage_version(
     config: dict[str, Any],
-) -> None:
+) -> str:
     stage = config.get("stage", {})
 
     if (
         stage.get("name")
         != "acta_downstream_investigation"
-        or str(stage.get("version")) != "1.0"
     ):
         raise ActaDownstreamInvestigationError(
             "Unexpected downstream stage identity"
         )
+
+    version = str(
+        stage.get("version")
+    )
+
+    if version not in STAGE_OUTPUT_DIRECTORIES:
+        raise ActaDownstreamInvestigationError(
+            f"Unsupported downstream stage version: {version!r}"
+        )
+
+    return version
+
+
+def _output_directory_name(
+    config: dict[str, Any],
+) -> str:
+    return STAGE_OUTPUT_DIRECTORIES[
+        _stage_version(config)
+    ]
+
+
+def _validate_downstream_config(
+    config: dict[str, Any],
+) -> None:
+    _stage_version(config)
 
     resolution = config[
         "resolution_filter"
@@ -1135,7 +1165,9 @@ def main() -> int:
 
     output_root = (
         stage_root
-        / "acta_downstream_investigation"
+        / _output_directory_name(
+            downstream
+        )
     )
 
     finalized = (

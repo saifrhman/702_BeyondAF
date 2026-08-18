@@ -1,0 +1,48 @@
+stage:
+  name: acta_downstream_investigation
+  version: "2.0"
+  scientific_role: detailed_inspection_candidate_selection
+  interpretation: acta_s1_supported_xray_crystallographic_scope
+
+inputs:
+  geometric_near_duplicates: full_bri_nn
+  entry_metadata: downstream_metadata
+
+resolution_filter:
+  enabled: true
+  maximum_angstrom: 4.0
+  operator: less_than_or_equal
+  missing_resolution_policy: reject
+
+  # Acta searches all cleaned protein chains geometrically first.
+  # The detailed-inspection population in Supplementary File S1
+  # is X-ray crystallographic in every retrievable case audited.
+  method_precedence:
+    - diffraction
+
+  diffraction:
+    experimental_methods:
+      - X-RAY DIFFRACTION
+    source_field: refine_ls_d_res_high
+    aggregation: minimum_numeric
+
+pandda_group_deposition_filter:
+  enabled: true
+  metadata_field: deposit_group_mentions_pandda
+  reject_when: true
+
+same_deposition_filter:
+  enabled: true
+  query_field: query_pdb_id
+  subject_field: subject_pdb_id
+  reject_when_equal: true
+
+manual_review:
+  automatic_virus_filtering: false
+  automatic_ribosome_filtering: false
+
+expected_preflight_counts:
+  input_geometric_near_duplicate_pairs: 1072751
+  after_resolution_filter: 95297
+  after_pandda_group_deposition_filter: 95285
+  after_same_deposition_filter: 11572
