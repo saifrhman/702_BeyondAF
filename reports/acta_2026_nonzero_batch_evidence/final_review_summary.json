@@ -1,0 +1,40 @@
+{
+  "all_reviewed": 1854,
+  "automatic_deletion_performed": false,
+  "canonical_resolution_11_max_atom_deviation_A": 1.4816558530082095e-05,
+  "canonical_resolution_11_max_rmsd_A": 7.266973521317201e-06,
+  "decision_counts": {
+    "current_manual_clear_redundant": 3,
+    "current_manual_entire_model1_structural_reuse": 16,
+    "current_manual_exact_bri_geometry_origin_indeterminate": 5,
+    "current_manual_indeterminate_legacy_reuse": 1,
+    "current_manual_legacy_ligand_model_reuse": 3,
+    "current_manual_ligand_model_reuse": 3,
+    "current_manual_ligand_model_reuse_series": 39,
+    "current_manual_metadata_model_conflict": 2,
+    "current_manual_nonzero_near_bri_geometry": 319,
+    "current_manual_nonzero_near_bri_geometry_canonical_alignment": 11,
+    "current_manual_partial_polymer_model_reuse": 9,
+    "current_manual_partial_protomer_reuse": 3,
+    "current_manual_polymer_model_reuse_with_nonpolymer_differences": 10,
+    "current_manual_probable_redeposition": 1,
+    "current_manual_problematic_redeposition": 1,
+    "current_manual_replicate_same_model": 1,
+    "current_manual_same_model_alternative_processing": 1,
+    "current_manual_trivial_single_residue_near_match": 1423,
+    "trivial_single_residue_match": 3
+  },
+  "detailed_review_pair_count": 1854,
+  "evidence_source": "frozen_2026_snapshot_only",
+  "exact_bri_pair_count": 101,
+  "exact_bri_reviewed": 101,
+  "nonzero_batch_decisions": {
+    "nonzero_near_bri_geometry": 319,
+    "nonzero_near_bri_geometry_canonical_alignment": 11,
+    "trivial_single_residue_near_match": 1423
+  },
+  "nonzero_near_bri_pair_count": 1753,
+  "nonzero_near_bri_reviewed": 1753,
+  "old_snapshot_comparison_used": false,
+  "representative_selection_performed": false
+}

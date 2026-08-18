@@ -1,0 +1,1754 @@
+review_group_id,left_pdb_id,right_pdb_id,minimum_d_bri_mA,maximum_d_bri_mA,chain_pair_count,retained_residue_counts,deposition_pair_id
+NZ0001,148l,4jna,4,4,1,1,148l__4jna
+NZ0001,148l,6wuu,10,10,1,1,148l__6wuu
+NZ0001,148l,8ti6,8,8,1,1,148l__8ti6
+NZ0001,148l,9ex5,4,4,1,1,148l__9ex5
+NZ0001,1a07,8vje,6,6,1,1,1a07__8vje
+NZ0001,1a08,1a1a,6,6,1,1,1a08__1a1a
+NZ0001,1a08,1hhc,10,10,1,1,1a08__1hhc
+NZ0001,1a08,3ah8,8,8,1,1,1a08__3ah8
+NZ0001,1a08,4y6v,10,10,1,1,1a08__4y6v
+NZ0001,1a08,5d5e,9,9,1,1,1a08__5d5e
+NZ0001,1a08,6psa,7,7,1,1,1a08__6psa
+NZ0001,1a08,6tdb,10,10,1,1,1a08__6tdb
+NZ0001,1a08,6wx4,10,10,1,1,1a08__6wx4
+NZ0001,1a08,7new,10,10,1,1,1a08__7new
+NZ0001,1a08,7u0e,10,10,1,1,1a08__7u0e
+NZ0001,1a08,7z3u,7,7,1,1,1a08__7z3u
+NZ0001,1a08,8s9z,6,6,1,1,1a08__8s9z
+NZ0001,1a08,9ehn,8,8,1,1,1a08__9ehn
+NZ0001,1a08,9emz,10,10,1,1,1a08__9emz
+NZ0001,1a09,1hh3,7,7,1,1,1a09__1hh3
+NZ0001,1a09,1hhc,9,9,1,1,1a09__1hhc
+NZ0001,1a09,1hhz,10,10,1,1,1a09__1hhz
+NZ0001,1a09,1sho,8,8,1,1,1a09__1sho
+NZ0001,1a09,4ttk,4,4,1,1,1a09__4ttk
+NZ0001,1a09,6cnu,4,4,1,1,1a09__6cnu
+NZ0001,1a09,8pwj,9,9,1,1,1a09__8pwj
+NZ0001,1a09,9ex5,9,9,1,1,1a09__9ex5
+NZ0001,1a1a,1a1c,7,10,2,1,1a1a__1a1c
+NZ0001,1a1a,1t6o,9,9,1,1,1a1a__1t6o
+NZ0001,1a1a,3g3p,9,9,1,1,1a1a__3g3p
+NZ0001,1a1a,3rc0,8,8,1,1,1a1a__3rc0
+NZ0001,1a1a,4gr7,10,10,1,1,1a1a__4gr7
+NZ0001,1a1a,4o46,10,10,1,1,1a1a__4o46
+NZ0001,1a1a,5etf,8,8,1,1,1a1a__5etf
+NZ0001,1a1a,6e8m,8,8,1,1,1a1a__6e8m
+NZ0001,1a1a,6fcs,10,10,1,1,1a1a__6fcs
+NZ0001,1a1a,6fms,10,10,1,1,1a1a__6fms
+NZ0001,1a1a,7axs,8,8,1,1,1a1a__7axs
+NZ0001,1a1a,8ano,10,10,1,1,1a1a__8ano
+NZ0001,1a1a,8vjw,9,9,1,1,1a1a__8vjw
+NZ0001,1a1a,9i24,10,10,1,1,1a1a__9i24
+NZ0001,1a1b,1go6,8,8,1,1,1a1b__1go6
+NZ0001,1a1b,1hhf,6,8,2,1,1a1b__1hhf
+NZ0001,1a1b,4dg4,9,9,1,1,1a1b__4dg4
+NZ0001,1a1b,4ucb,7,7,1,1,1a1b__4ucb
+NZ0001,1a1b,5m2h,10,10,1,1,1a1b__5m2h
+NZ0001,1a1b,6wuu,10,10,1,1,1a1b__6wuu
+NZ0001,1a1b,7lkc,6,6,1,1,1a1b__7lkc
+NZ0001,1a1b,8pxy,10,10,1,1,1a1b__8pxy
+NZ0001,1a1c,1sho,10,10,1,1,1a1c__1sho
+NZ0001,1a1c,1t6o,9,9,1,1,1a1c__1t6o
+NZ0001,1a1c,3che,9,9,1,1,1a1c__3che
+NZ0001,1a1c,3g3p,2,2,1,1,1a1c__3g3p
+NZ0001,1a1c,3l35,6,6,1,1,1a1c__3l35
+NZ0001,1a1c,3rc0,5,5,1,1,1a1c__3rc0
+NZ0001,1a1c,3s8l,7,7,1,1,1a1c__3s8l
+NZ0001,1a1c,4fln,10,10,1,1,1a1c__4fln
+NZ0001,1a1c,4gr7,10,10,1,1,1a1c__4gr7
+NZ0001,1a1c,4o46,9,9,1,1,1a1c__4o46
+NZ0001,1a1c,4qg1,5,5,1,1,1a1c__4qg1
+NZ0001,1a1c,4uca,7,7,1,1,1a1c__4uca
+NZ0001,1a1c,5dir,9,9,1,1,1a1c__5dir
+NZ0001,1a1c,5etf,5,5,1,1,1a1c__5etf
+NZ0001,1a1c,6e8m,7,7,1,1,1a1c__6e8m
+NZ0001,1a1c,6fcs,8,8,1,1,1a1c__6fcs
+NZ0001,1a1c,6fms,6,6,1,1,1a1c__6fms
+NZ0001,1a1c,6g8k,6,6,1,1,1a1c__6g8k
+NZ0001,1a1c,7axs,7,7,1,1,1a1c__7axs
+NZ0001,1a1c,8ano,4,4,1,1,1a1c__8ano
+NZ0001,1a1c,8aoo,10,10,1,1,1a1c__8aoo
+NZ0001,1a1c,8sou,6,6,1,1,1a1c__8sou
+NZ0001,1a1c,8t5p,9,9,1,1,1a1c__8t5p
+NZ0001,1a1c,8vjw,2,2,1,1,1a1c__8vjw
+NZ0001,1a1e,8hop,9,9,1,1,1a1e__8hop
+NZ0001,1a1e,8vjd,10,10,1,1,1a1e__8vjd
+NZ0001,1a7z,7ajz,4,4,1,1,1a7z__7ajz
+NZ0001,1a7z,7aku,9,9,1,1,1a7z__7aku
+NZ0001,1a7z,7zb0,9,9,1,1,1a7z__7zb0
+NZ0001,1aa5,1ghg,10,10,1,1,1aa5__1ghg
+NZ0001,1aa5,1qd8,7,7,1,1,1aa5__1qd8
+NZ0001,1aa5,4jj8,4,4,1,1,1aa5__4jj8
+NZ0001,1aa5,4knl,5,5,1,1,1aa5__4knl
+NZ0001,1aa5,5b6l,3,3,1,1,1aa5__5b6l
+NZ0001,1aa5,5dir,7,7,1,1,1aa5__5dir
+NZ0001,1aa5,5efk,8,8,1,1,1aa5__5efk
+NZ0001,1aa5,6fms,6,7,3,1,1aa5__6fms
+NZ0001,1aa5,7axp,9,9,1,1,1aa5__7axp
+NZ0001,1aa5,7lkc,10,10,1,1,1aa5__7lkc
+NZ0001,1aa5,7nxe,3,3,1,1,1aa5__7nxe
+NZ0001,1axd,1zea,8,8,1,1,1axd__1zea
+NZ0001,1axd,2xdw,8,8,1,1,1axd__2xdw
+NZ0001,1axd,7f0f,7,7,1,1,1axd__7f0f
+NZ0001,1axd,7ofv,5,5,1,1,1axd__7ofv
+NZ0001,1axd,9qbe,5,5,1,1,1axd__9qbe
+NZ0001,1bx9,1ghg,10,10,1,1,1bx9__1ghg
+NZ0001,1bx9,3e7a,6,6,1,1,1bx9__3e7a
+NZ0001,1bx9,6df1,10,10,1,1,1bx9__6df1
+NZ0001,1bx9,7axp,10,10,1,1,1bx9__7axp
+NZ0001,1bx9,7lfu,9,9,1,1,1bx9__7lfu
+NZ0001,1bx9,9j3s,7,7,1,1,1bx9__9j3s
+NZ0001,1c0q,1go6,10,10,1,1,1c0q__1go6
+NZ0001,1c0q,1hhz,9,9,1,1,1c0q__1hhz
+NZ0001,1c0q,3uw4,9,9,1,1,1c0q__3uw4
+NZ0001,1c0q,6wm1,9,9,1,1,1c0q__6wm1
+NZ0001,1c0r,1go6,6,10,2,1,1c0r__1go6
+NZ0001,1c0r,2r5d,6,6,1,1,1c0r__2r5d
+NZ0001,1c0r,3mbu,9,9,1,1,1c0r__3mbu
+NZ0001,1c0r,3mgn,10,10,1,1,1c0r__3mgn
+NZ0001,1c0r,5nf0,10,10,1,1,1c0r__5nf0
+NZ0001,1c0r,8g82,9,9,1,1,1c0r__8g82
+NZ0001,1c0r,8s6t,10,10,1,1,1c0r__8s6t
+NZ0001,1czi,1eyx,10,10,1,1,1czi__1eyx
+NZ0001,1czi,1fvm,6,6,1,1,1czi__1fvm
+NZ0001,1czi,1hhz,9,9,1,1,1czi__1hhz
+NZ0001,1czi,2r5b,9,9,1,1,1czi__2r5b
+NZ0001,1czi,3che,9,9,1,1,1czi__3che
+NZ0001,1czi,3chf,4,4,1,1,1czi__3chf
+NZ0001,1czi,3s8l,8,8,1,1,1czi__3s8l
+NZ0001,1czi,4gr7,8,8,1,1,1czi__4gr7
+NZ0001,1czi,4o46,6,6,1,1,1czi__4o46
+NZ0001,1czi,5etf,10,10,1,1,1czi__5etf
+NZ0001,1czi,5mfk,8,8,1,1,1czi__5mfk
+NZ0001,1czi,5tdb,9,9,1,1,1czi__5tdb
+NZ0001,1czi,6fcs,7,7,1,1,1czi__6fcs
+NZ0001,1czi,6g8k,9,9,1,1,1czi__6g8k
+NZ0001,1czi,6tdb,9,9,1,1,1czi__6tdb
+NZ0001,1czi,6wuu,4,4,1,1,1czi__6wuu
+NZ0001,1czi,7u0e,10,10,1,1,1czi__7u0e
+NZ0001,1czi,8vpe,10,10,1,1,1czi__8vpe
+NZ0001,1d5x,1mcr,10,10,1,1,1d5x__1mcr
+NZ0001,1eb1,6fcr,2,2,1,1,1eb1__6fcr
+NZ0001,1eyx,1ghg,9,9,1,1,1eyx__1ghg
+NZ0001,1eyx,1hhz,9,9,1,1,1eyx__1hhz
+NZ0001,1eyx,1t6o,8,8,1,1,1eyx__1t6o
+NZ0001,1eyx,3qxy,5,5,1,1,1eyx__3qxy
+NZ0001,1eyx,3s8l,10,10,1,1,1eyx__3s8l
+NZ0001,1eyx,4dg4,6,6,1,1,1eyx__4dg4
+NZ0001,1eyx,4gr7,7,7,1,1,1eyx__4gr7
+NZ0001,1eyx,4o46,8,8,1,1,1eyx__4o46
+NZ0001,1eyx,4z33,5,5,1,1,1eyx__4z33
+NZ0001,1eyx,4zkr,4,4,1,1,1eyx__4zkr
+NZ0001,1eyx,5mfk,6,6,1,1,1eyx__5mfk
+NZ0001,1eyx,5nwk,4,4,1,1,1eyx__5nwk
+NZ0001,1eyx,5tdb,7,7,1,1,1eyx__5tdb
+NZ0001,1eyx,6fcs,9,9,1,1,1eyx__6fcs
+NZ0001,1eyx,6fvn,4,5,2,1,1eyx__6fvn
+NZ0001,1eyx,6tdb,5,5,1,1,1eyx__6tdb
+NZ0001,1eyx,6wuu,6,6,1,1,1eyx__6wuu
+NZ0001,1eyx,7new,8,8,1,1,1eyx__7new
+NZ0001,1eyx,7u0e,8,8,1,1,1eyx__7u0e
+NZ0001,1eyx,8vjw,5,5,1,1,1eyx__8vjw
+NZ0001,1eyx,8vpe,4,4,1,1,1eyx__8vpe
+NZ0001,1eyx,8ysa,6,6,1,1,1eyx__8ysa
+NZ0001,1fvm,2r3c,8,8,2,1,1fvm__2r3c
+NZ0001,1fvm,2r5b,10,10,1,1,1fvm__2r5b
+NZ0001,1fvm,3azq,6,10,4,1,1fvm__3azq
+NZ0001,1fvm,3che,4,4,1,1,1fvm__3che
+NZ0001,1fvm,3chf,10,10,1,1,1fvm__3chf
+NZ0001,1fvm,3h5r,10,10,1,1,1fvm__3h5r
+NZ0001,1fvm,3s8l,8,8,1,1,1fvm__3s8l
+NZ0001,1fvm,4cvk,7,7,1,1,1fvm__4cvk
+NZ0001,1fvm,4fzg,10,10,1,1,1fvm__4fzg
+NZ0001,1fvm,4gk7,7,7,1,1,1fvm__4gk7
+NZ0001,1fvm,4o46,9,9,1,1,1fvm__4o46
+NZ0001,1fvm,4s1x,10,10,1,1,1fvm__4s1x
+NZ0001,1fvm,4uca,7,7,1,1,1fvm__4uca
+NZ0001,1fvm,4ucb,9,9,1,1,1fvm__4ucb
+NZ0001,1fvm,6fcs,9,9,1,1,1fvm__6fcs
+NZ0001,1fvm,6rlz,6,6,1,1,1fvm__6rlz
+NZ0001,1fvm,6wuu,8,8,1,1,1fvm__6wuu
+NZ0001,1fvm,8t5p,10,10,1,1,1fvm__8t5p
+NZ0001,1fvm,9qby,4,7,3,1,1fvm__9qby
+NZ0001,1ghg,1go6,9,10,2,1,1ghg__1go6
+NZ0001,1ghg,1rrv,10,10,1,1,1ghg__1rrv
+NZ0001,1ghg,1t6o,7,7,1,1,1ghg__1t6o
+NZ0001,1ghg,3azq,9,9,1,1,1ghg__3azq
+NZ0001,1ghg,3h9q,6,6,1,1,1ghg__3h9q
+NZ0001,1ghg,3ove,10,10,1,1,1ghg__3ove
+NZ0001,1ghg,3qxy,8,8,1,1,1ghg__3qxy
+NZ0001,1ghg,3s8o,9,9,1,1,1ghg__3s8o
+NZ0001,1ghg,4dg4,5,5,1,1,1ghg__4dg4
+NZ0001,1ghg,4f75,10,10,1,1,1ghg__4f75
+NZ0001,1ghg,4jj8,10,10,1,1,1ghg__4jj8
+NZ0001,1ghg,4jna,7,10,2,1,1ghg__4jna
+NZ0001,1ghg,4knl,7,7,1,1,1ghg__4knl
+NZ0001,1ghg,4z33,8,8,1,1,1ghg__4z33
+NZ0001,1ghg,4zkr,8,8,1,1,1ghg__4zkr
+NZ0001,1ghg,5lrk,9,9,1,1,1ghg__5lrk
+NZ0001,1ghg,5nwk,8,8,1,1,1ghg__5nwk
+NZ0001,1ghg,6fms,6,8,3,1,1ghg__6fms
+NZ0001,1ghg,6fvn,7,10,2,1,1ghg__6fvn
+NZ0001,1ghg,6tdb,10,10,1,1,1ghg__6tdb
+NZ0001,1ghg,7nxe,10,10,1,1,1ghg__7nxe
+NZ0001,1ghg,8hoo,9,9,1,1,1ghg__8hoo
+NZ0001,1ghg,8sou,10,10,1,1,1ghg__8sou
+NZ0001,1ghg,8vjw,6,6,1,1,1ghg__8vjw
+NZ0001,1ghg,8vpe,9,9,1,1,1ghg__8vpe
+NZ0001,1ghg,8ysa,6,6,1,1,1ghg__8ysa
+NZ0001,1ghg,9i24,2,2,1,1,1ghg__9i24
+NZ0001,1go6,1hh3,4,4,1,1,1go6__1hh3
+NZ0001,1go6,1hhf,10,10,1,1,1go6__1hhf
+NZ0001,1go6,1hhz,7,10,4,1,1go6__1hhz
+NZ0001,1go6,2r5d,4,10,2,1,1go6__2r5d
+NZ0001,1go6,3h5r,8,8,1,1,1go6__3h5r
+NZ0001,1go6,3h9q,6,6,1,1,1go6__3h9q
+NZ0001,1go6,3l37,4,10,2,1,1go6__3l37
+NZ0001,1go6,3mbu,5,10,2,1,1go6__3mbu
+NZ0001,1go6,3nzx,6,6,1,1,1go6__3nzx
+NZ0001,1go6,4f75,1,1,1,1,1go6__4f75
+NZ0001,1go6,4jj8,10,10,1,1,1go6__4jj8
+NZ0001,1go6,4ucb,2,2,1,1,1go6__4ucb
+NZ0001,1go6,4wkm,6,8,3,1,1go6__4wkm
+NZ0001,1go6,5dir,10,10,1,1,1go6__5dir
+NZ0001,1go6,5m2h,7,7,1,1,1go6__5m2h
+NZ0001,1go6,5nf0,5,10,2,1,1go6__5nf0
+NZ0001,1go6,6fms,10,10,2,1,1go6__6fms
+NZ0001,1go6,6m5e,7,7,1,1,1go6__6m5e
+NZ0001,1go6,6phm,6,10,2,1,1go6__6phm
+NZ0001,1go6,6wm1,9,9,1,1,1go6__6wm1
+NZ0001,1go6,6wuu,7,10,2,1,1go6__6wuu
+NZ0001,1go6,7axp,7,7,1,1,1go6__7axp
+NZ0001,1go6,7lfu,10,10,1,1,1go6__7lfu
+NZ0001,1go6,7lkc,6,9,2,1,1go6__7lkc
+NZ0001,1go6,7ltb,3,3,1,1,1go6__7ltb
+NZ0001,1go6,8hoo,4,4,1,1,1go6__8hoo
+NZ0001,1go6,8pxy,9,9,1,1,1go6__8pxy
+NZ0001,1go6,8rhk,10,10,1,1,1go6__8rhk
+NZ0001,1go6,8vld,10,10,1,1,1go6__8vld
+NZ0001,1go6,9emz,8,8,1,1,1go6__9emz
+NZ0001,1hh3,1hhf,10,10,1,1,1hh3__1hhf
+NZ0001,1hh3,1hhu,2,9,4,1,1hh3__1hhu
+NZ0001,1hh3,1hhz,9,9,1,1,1hh3__1hhz
+NZ0001,1hh3,1n51,5,5,1,1,1hh3__1n51
+NZ0001,1hh3,1sho,4,4,1,1,1hh3__1sho
+NZ0001,1hh3,3lvy,6,9,2,1,1hh3__3lvy
+NZ0001,1hh3,4f75,3,3,1,1,1hh3__4f75
+NZ0001,1hh3,4jj7,9,9,1,1,1hh3__4jj7
+NZ0001,1hh3,4jj8,10,10,2,1,1hh3__4jj8
+NZ0001,1hh3,4ttk,8,8,1,1,1hh3__4ttk
+NZ0001,1hh3,4wkm,6,7,3,1,1hh3__4wkm
+NZ0001,1hh3,5aa2,10,10,1,1,1hh3__5aa2
+NZ0001,1hh3,5m2h,7,7,1,1,1hh3__5m2h
+NZ0001,1hh3,6cnu,3,3,1,1,1hh3__6cnu
+NZ0001,1hh3,6fbt,10,10,1,1,1hh3__6fbt
+NZ0001,1hh3,6m5e,8,10,2,1,1hh3__6m5e
+NZ0001,1hh3,6pt2,7,7,1,1,1hh3__6pt2
+NZ0001,1hh3,6ryo,10,10,1,1,1hh3__6ryo
+NZ0001,1hh3,6tch,10,10,1,1,1hh3__6tch
+NZ0001,1hh3,6wuu,9,9,1,1,1hh3__6wuu
+NZ0001,1hh3,7lkc,9,9,1,1,1hh3__7lkc
+NZ0001,1hh3,8hoo,1,5,3,1,1hh3__8hoo
+NZ0001,1hh3,8vld,8,8,1,1,1hh3__8vld
+NZ0001,1hh3,9emz,10,10,1,1,1hh3__9emz
+NZ0001,1hhc,4jj8,9,9,1,1,1hhc__4jj8
+NZ0001,1hhc,4nz8,7,7,1,1,1hhc__4nz8
+NZ0001,1hhc,5b6l,9,9,1,1,1hhc__5b6l
+NZ0001,1hhc,5efk,8,8,1,1,1hhc__5efk
+NZ0001,1hhc,6fms,10,10,1,1,1hhc__6fms
+NZ0001,1hhc,8pwj,4,4,1,1,1hhc__8pwj
+NZ0001,1hhf,4wkm,4,8,2,1,1hhf__4wkm
+NZ0001,1hhf,6x5r,8,8,1,1,1hhf__6x5r
+NZ0001,1hhf,7ltb,7,7,1,1,1hhf__7ltb
+NZ0001,1hhu,1hhy,10,10,2,1,1hhu__1hhy
+NZ0001,1hhu,3lvy,3,5,2,1,1hhu__3lvy
+NZ0001,1hhu,4jj8,6,8,2,1,1hhu__4jj8
+NZ0001,1hhu,4wkm,6,10,2,1,1hhu__4wkm
+NZ0001,1hhu,5dir,4,9,3,1,1hhu__5dir
+NZ0001,1hhu,5efk,8,8,1,1,1hhu__5efk
+NZ0001,1hhu,5m2h,9,9,1,1,1hhu__5m2h
+NZ0001,1hhu,6fbt,6,6,1,1,1hhu__6fbt
+NZ0001,1hhu,6m5e,6,6,1,1,1hhu__6m5e
+NZ0001,1hhu,6pt2,7,7,1,1,1hhu__6pt2
+NZ0001,1hhu,6ryo,4,9,2,1,1hhu__6ryo
+NZ0001,1hhu,6tch,4,4,1,1,1hhu__6tch
+NZ0001,1hhu,7lkc,7,7,1,1,1hhu__7lkc
+NZ0001,1hhu,8hoo,1,8,2,1,1hhu__8hoo
+NZ0001,1hhu,8vld,6,10,2,1,1hhu__8vld
+NZ0001,1hhy,4wkm,7,7,1,1,1hhy__4wkm
+NZ0001,1hhy,4y84,9,9,1,1,1hhy__4y84
+NZ0001,1hhy,5dir,9,9,1,1,1hhy__5dir
+NZ0001,1hhy,6tch,10,10,1,1,1hhy__6tch
+NZ0001,1hhy,7ltb,10,10,1,1,1hhy__7ltb
+NZ0001,1hhz,1sho,10,10,1,1,1hhz__1sho
+NZ0001,1hhz,3chf,10,10,1,1,1hhz__3chf
+NZ0001,1hhz,3mbu,4,10,3,1,1hhz__3mbu
+NZ0001,1hhz,3td5,10,10,1,1,1hhz__3td5
+NZ0001,1hhz,4wkm,9,9,1,1,1hhz__4wkm
+NZ0001,1hhz,5mfk,8,8,1,1,1hhz__5mfk
+NZ0001,1hhz,5nf0,9,9,1,1,1hhz__5nf0
+NZ0001,1hhz,6cnu,10,10,1,1,1hhz__6cnu
+NZ0001,1hhz,6ecf,9,9,1,1,1hhz__6ecf
+NZ0001,1hhz,6fvn,9,9,1,1,1hhz__6fvn
+NZ0001,1hhz,6ppm,9,9,1,1,1hhz__6ppm
+NZ0001,1hhz,6tdb,10,10,1,1,1hhz__6tdb
+NZ0001,1hhz,6wuu,9,9,1,1,1hhz__6wuu
+NZ0001,1hhz,7ltb,8,8,1,1,1hhz__7ltb
+NZ0001,1hhz,7new,6,6,1,1,1hhz__7new
+NZ0001,1hhz,7u0e,8,8,1,1,1hhz__7u0e
+NZ0001,1hhz,8rhk,10,10,1,1,1hhz__8rhk
+NZ0001,1hhz,8vpe,10,10,1,1,1hhz__8vpe
+NZ0001,1hhz,8ysa,10,10,1,1,1hhz__8ysa
+NZ0001,1jyq,3gkr,10,10,1,1,1jyq__3gkr
+NZ0001,1jyq,4jsq,8,9,2,1,1jyq__4jsq
+NZ0001,1jyq,6ece,7,7,1,1,1jyq__6ece
+NZ0001,1jyq,6ecf,6,6,1,1,1jyq__6ecf
+NZ0001,1jyq,6l5z,5,5,1,1,1jyq__6l5z
+NZ0001,1jyq,7qdi,9,9,1,1,1jyq__7qdi
+NZ0001,1jyq,8vje,10,10,1,1,1jyq__8vje
+NZ0001,1lgc,2h5d,9,9,1,1,1lgc__2h5d
+NZ0001,1lgc,6wo2,8,8,1,1,1lgc__6wo2
+NZ0001,1lgc,6yd2,8,8,1,1,1lgc__6yd2
+NZ0001,1lgc,6zve,9,9,1,1,1lgc__6zve
+NZ0001,1lgc,7f0c,4,4,1,1,1lgc__7f0c
+NZ0001,1mcb,6xbg,10,10,1,1,1mcb__6xbg
+NZ0001,1mcb,7lfv,10,10,1,1,1mcb__7lfv
+NZ0001,1mcb,9ehn,9,9,1,1,1mcb__9ehn
+NZ0001,1mck,3che,6,6,1,1,1mck__3che
+NZ0001,1mck,3l35,10,10,1,1,1mck__3l35
+NZ0001,1mck,3td5,5,10,3,1,1mck__3td5
+NZ0001,1mck,4jsq,9,9,2,1,1mck__4jsq
+NZ0001,1mck,6mw2,10,10,1,1,1mck__6mw2
+NZ0001,1mck,6ppm,10,10,1,1,1mck__6ppm
+NZ0001,1mck,7q4t,8,8,1,1,1mck__7q4t
+NZ0001,1mcr,6ece,7,7,1,1,1mcr__6ece
+NZ0001,1n51,1sho,9,9,1,1,1n51__1sho
+NZ0001,1n51,4wkm,10,10,2,1,1n51__4wkm
+NZ0001,1n51,5dir,8,8,1,1,1n51__5dir
+NZ0001,1n51,6cnu,8,8,1,1,1n51__6cnu
+NZ0001,1n51,6tch,7,7,1,1,1n51__6tch
+NZ0001,1qd8,4x6z,9,9,1,1,1qd8__4x6z
+NZ0001,1qd8,5b6l,9,9,1,1,1qd8__5b6l
+NZ0001,1qd8,5dir,7,7,1,1,1qd8__5dir
+NZ0001,1qd8,6fms,10,10,1,1,1qd8__6fms
+NZ0001,1qd8,7nxe,6,6,1,1,1qd8__7nxe
+NZ0001,1qd8,8g82,4,10,8,1,1qd8__8g82
+NZ0001,1qd8,8s6t,7,7,1,1,1qd8__8s6t
+NZ0001,1rrv,5m2h,7,7,1,1,1rrv__5m2h
+NZ0001,1sho,2r5b,6,8,2,1,1sho__2r5b
+NZ0001,1sho,2r5d,9,9,1,1,1sho__2r5d
+NZ0001,1sho,3chf,9,9,1,1,1sho__3chf
+NZ0001,1sho,3l35,4,4,1,1,1sho__3l35
+NZ0001,1sho,4han,9,9,1,1,1sho__4han
+NZ0001,1sho,4qg1,8,8,1,1,1sho__4qg1
+NZ0001,1sho,4ttk,9,9,1,1,1sho__4ttk
+NZ0001,1sho,4wkm,9,9,2,1,1sho__4wkm
+NZ0001,1sho,6cnu,4,4,1,1,1sho__6cnu
+NZ0001,1sho,6fms,9,9,1,1,1sho__6fms
+NZ0001,1sho,6tch,9,9,1,1,1sho__6tch
+NZ0001,1sho,6tsl,10,10,1,1,1sho__6tsl
+NZ0001,1sho,8ano,10,10,1,1,1sho__8ano
+NZ0001,1sho,8aoo,4,4,1,1,1sho__8aoo
+NZ0001,1sho,9emz,9,9,1,1,1sho__9emz
+NZ0001,1t6o,3ove,10,10,1,1,1t6o__3ove
+NZ0001,1t6o,3qxy,3,3,1,1,1t6o__3qxy
+NZ0001,1t6o,3rc0,5,5,1,1,1t6o__3rc0
+NZ0001,1t6o,3s8l,10,10,1,1,1t6o__3s8l
+NZ0001,1t6o,4dg4,3,3,1,1,1t6o__4dg4
+NZ0001,1t6o,4fln,9,9,1,1,1t6o__4fln
+NZ0001,1t6o,4gr7,8,8,1,1,1t6o__4gr7
+NZ0001,1t6o,4o46,7,7,1,1,1t6o__4o46
+NZ0001,1t6o,4uca,9,9,1,1,1t6o__4uca
+NZ0001,1t6o,4z33,3,3,1,1,1t6o__4z33
+NZ0001,1t6o,4zkr,4,4,1,1,1t6o__4zkr
+NZ0001,1t6o,5etf,5,5,1,1,1t6o__5etf
+NZ0001,1t6o,5nwk,4,4,1,1,1t6o__5nwk
+NZ0001,1t6o,5tdb,5,5,1,1,1t6o__5tdb
+NZ0001,1t6o,6fcs,7,7,1,1,1t6o__6fcs
+NZ0001,1t6o,6fvn,4,8,2,1,1t6o__6fvn
+NZ0001,1t6o,6g8k,9,9,1,1,1t6o__6g8k
+NZ0001,1t6o,6wuu,8,8,1,1,1t6o__6wuu
+NZ0001,1t6o,7lfv,10,10,1,1,1t6o__7lfv
+NZ0001,1t6o,8sou,7,7,1,1,1t6o__8sou
+NZ0001,1t6o,8vjw,3,3,1,1,1t6o__8vjw
+NZ0001,1t6o,8vpe,4,4,1,1,1t6o__8vpe
+NZ0001,1t6o,8ysa,4,4,1,1,1t6o__8ysa
+NZ0001,1t6o,9i24,9,9,1,1,1t6o__9i24
+NZ0001,1w9u,1waw,3,3,1,1,1w9u__1waw
+NZ0001,1w9u,6wo2,8,8,1,1,1w9u__6wo2
+NZ0001,1zea,4y69,9,9,1,1,1zea__4y69
+NZ0001,1zea,7f0f,9,9,1,1,1zea__7f0f
+NZ0001,1zea,9qdf,7,10,2,1,1zea__9qdf
+NZ0001,2g2l,4gm8,10,10,1,1,2g2l__4gm8
+NZ0001,2ig0,5cgh,6,7,2,1,2ig0__5cgh
+NZ0001,2j9n,5ctv,7,7,1,1,2j9n__5ctv
+NZ0001,2j9n,7qdi,8,9,2,1,2j9n__7qdi
+NZ0001,2r3c,3azq,6,6,1,1,2r3c__3azq
+NZ0001,2r3c,3h5r,7,7,1,1,2r3c__3h5r
+NZ0001,2r3c,4dg4,5,5,1,1,2r3c__4dg4
+NZ0001,2r3c,4s1x,3,3,1,1,2r3c__4s1x
+NZ0001,2r3c,5gnd,6,6,1,1,2r3c__5gnd
+NZ0001,2r3c,5nqa,9,9,1,1,2r3c__5nqa
+NZ0001,2r3c,6m9c,9,9,1,1,2r3c__6m9c
+NZ0001,2r3c,6tsl,8,8,1,1,2r3c__6tsl
+NZ0001,2r3c,6wuu,7,9,3,1,2r3c__6wuu
+NZ0001,2r3c,8aoo,10,10,1,1,2r3c__8aoo
+NZ0001,2r3c,8ti6,6,6,1,1,2r3c__8ti6
+NZ0001,2r3c,9emz,8,8,1,1,2r3c__9emz
+NZ0001,2r3c,9ex5,9,9,1,1,2r3c__9ex5
+NZ0001,2r3c,9fxn,9,9,1,1,2r3c__9fxn
+NZ0001,2r5b,2r5d,5,9,3,1,2r5b__2r5d
+NZ0001,2r5b,3azq,9,9,1,1,2r5b__3azq
+NZ0001,2r5b,3che,6,6,1,1,2r5b__3che
+NZ0001,2r5b,3l35,10,10,1,1,2r5b__3l35
+NZ0001,2r5b,3s8l,6,6,1,1,2r5b__3s8l
+NZ0001,2r5b,4fln,7,7,1,1,2r5b__4fln
+NZ0001,2r5b,4han,3,8,2,1,2r5b__4han
+NZ0001,2r5b,4jt0,9,10,2,1,2r5b__4jt0
+NZ0001,2r5b,4knl,10,10,1,1,2r5b__4knl
+NZ0001,2r5b,4o46,9,9,1,1,2r5b__4o46
+NZ0001,2r5b,4qg1,10,10,1,1,2r5b__4qg1
+NZ0001,2r5b,4uca,8,8,1,1,2r5b__4uca
+NZ0001,2r5b,5dir,9,9,1,1,2r5b__5dir
+NZ0001,2r5b,5i5a,9,9,1,1,2r5b__5i5a
+NZ0001,2r5b,5lrk,10,10,1,1,2r5b__5lrk
+NZ0001,2r5b,6fcs,9,9,1,1,2r5b__6fcs
+NZ0001,2r5b,6g8k,7,7,1,1,2r5b__6g8k
+NZ0001,2r5b,6m9c,9,9,1,1,2r5b__6m9c
+NZ0001,2r5b,6phq,10,10,1,1,2r5b__6phq
+NZ0001,2r5b,6wuu,9,9,1,1,2r5b__6wuu
+NZ0001,2r5b,7qdi,10,10,1,1,2r5b__7qdi
+NZ0001,2r5b,8ano,10,10,1,1,2r5b__8ano
+NZ0001,2r5b,8aoo,10,10,1,1,2r5b__8aoo
+NZ0001,2r5b,8c3d,10,10,2,1,2r5b__8c3d
+NZ0001,2r5b,8cis,8,8,1,1,2r5b__8cis
+NZ0001,2r5b,8t5p,10,10,1,1,2r5b__8t5p
+NZ0001,2r5b,9emz,10,10,2,1,2r5b__9emz
+NZ0001,2r5b,9fxn,9,9,1,1,2r5b__9fxn
+NZ0001,2r5d,3l37,8,8,1,1,2r5d__3l37
+NZ0001,2r5d,3s8o,9,10,2,1,2r5d__3s8o
+NZ0001,2r5d,4han,8,10,2,1,2r5d__4han
+NZ0001,2r5d,4knl,8,10,2,1,2r5d__4knl
+NZ0001,2r5d,5d13,7,9,2,1,2r5d__5d13
+NZ0001,2r5d,5dir,10,10,1,1,2r5d__5dir
+NZ0001,2r5d,5i5a,6,9,2,1,2r5d__5i5a
+NZ0001,2r5d,5jqs,10,10,1,1,2r5d__5jqs
+NZ0001,2r5d,5lrk,7,10,4,1,2r5d__5lrk
+NZ0001,2r5d,6fms,10,10,1,1,2r5d__6fms
+NZ0001,2r5d,6m9c,10,10,1,1,2r5d__6m9c
+NZ0001,2r5d,6phq,7,10,2,1,2r5d__6phq
+NZ0001,2r5d,6whq,8,10,2,1,2r5d__6whq
+NZ0001,2r5d,7axp,7,7,1,1,2r5d__7axp
+NZ0001,2r5d,7lkc,10,10,1,1,2r5d__7lkc
+NZ0001,2r5d,8c3d,10,10,1,1,2r5d__8c3d
+NZ0001,2r5d,8cis,4,4,2,1,2r5d__8cis
+NZ0001,2r5d,8vld,7,7,1,1,2r5d__8vld
+NZ0001,2r5d,9emz,6,9,4,1,2r5d__9emz
+NZ0001,2r5d,9fxn,10,10,1,1,2r5d__9fxn
+NZ0001,2r5d,9j3s,10,10,1,1,2r5d__9j3s
+NZ0001,2xdw,3q4a,9,9,1,1,2xdw__3q4a
+NZ0001,2xdw,4y6a,10,10,1,1,2xdw__4y6a
+NZ0001,2xdw,7ofv,7,7,1,1,2xdw__7ofv
+NZ0001,2xdw,8hoq,7,7,1,1,2xdw__8hoq
+NZ0001,2xdw,9qbe,3,3,1,1,2xdw__9qbe
+NZ0001,3ah8,3uw5,6,6,1,1,3ah8__3uw5
+NZ0001,3ah8,4y6v,4,4,1,1,3ah8__4y6v
+NZ0001,3ah8,5d5e,9,9,1,1,3ah8__5d5e
+NZ0001,3ah8,6psa,6,6,1,1,3ah8__6psa
+NZ0001,3ah8,7ms1,9,9,1,1,3ah8__7ms1
+NZ0001,3ah8,7z3u,9,9,1,1,3ah8__7z3u
+NZ0001,3ah8,8s9z,6,6,1,1,3ah8__8s9z
+NZ0001,3ah8,8vld,10,10,1,1,3ah8__8vld
+NZ0001,3ah8,9ehn,4,4,1,1,3ah8__9ehn
+NZ0001,3ah8,9emz,3,3,1,1,3ah8__9emz
+NZ0001,3ah8,9qbe,7,7,1,1,3ah8__9qbe
+NZ0001,3azq,3h5r,9,9,1,1,3azq__3h5r
+NZ0001,3azq,4cvk,6,6,1,1,3azq__4cvk
+NZ0001,3azq,4s1x,8,8,1,1,3azq__4s1x
+NZ0001,3azq,9qby,8,8,1,1,3azq__9qby
+NZ0001,3che,3l35,8,8,1,1,3che__3l35
+NZ0001,3che,3rc0,7,7,1,1,3che__3rc0
+NZ0001,3che,3s8l,4,4,1,1,3che__3s8l
+NZ0001,3che,3td5,3,10,4,1,3che__3td5
+NZ0001,3che,4gr7,8,8,1,1,3che__4gr7
+NZ0001,3che,4o46,5,5,1,1,3che__4o46
+NZ0001,3che,4qg1,10,10,1,1,3che__4qg1
+NZ0001,3che,4uca,3,3,1,1,3che__4uca
+NZ0001,3che,5dir,9,9,1,1,3che__5dir
+NZ0001,3che,5etf,7,7,1,1,3che__5etf
+NZ0001,3che,5tdb,7,7,1,1,3che__5tdb
+NZ0001,3che,6fcr,5,5,1,1,3che__6fcr
+NZ0001,3che,6fcs,5,5,1,1,3che__6fcs
+NZ0001,3che,6g8k,7,7,1,1,3che__6g8k
+NZ0001,3che,6mw2,5,5,1,1,3che__6mw2
+NZ0001,3che,6ppm,8,8,1,1,3che__6ppm
+NZ0001,3che,6wuu,9,9,1,1,3che__6wuu
+NZ0001,3che,7q4t,6,6,1,1,3che__7q4t
+NZ0001,3che,8ano,10,10,1,1,3che__8ano
+NZ0001,3che,8t5p,7,7,1,1,3che__8t5p
+NZ0001,3che,8vpe,10,10,1,1,3che__8vpe
+NZ0001,3che,9qby,8,8,1,1,3che__9qby
+NZ0001,3chf,3l35,6,6,1,1,3chf__3l35
+NZ0001,3chf,3rc0,10,10,1,1,3chf__3rc0
+NZ0001,3chf,4gr7,9,9,1,1,3chf__4gr7
+NZ0001,3chf,4o46,10,10,1,1,3chf__4o46
+NZ0001,3chf,4qg1,7,7,1,1,3chf__4qg1
+NZ0001,3chf,4uca,9,9,1,1,3chf__4uca
+NZ0001,3chf,5dir,3,3,1,1,3chf__5dir
+NZ0001,3chf,5mfk,7,7,1,1,3chf__5mfk
+NZ0001,3chf,6tdb,10,10,1,1,3chf__6tdb
+NZ0001,3chf,6tsl,6,6,1,1,3chf__6tsl
+NZ0001,3chf,6wuu,5,5,1,1,3chf__6wuu
+NZ0001,3chf,7u0e,10,10,1,1,3chf__7u0e
+NZ0001,3chf,8ano,8,8,1,1,3chf__8ano
+NZ0001,3chf,8aoo,5,5,1,1,3chf__8aoo
+NZ0001,3chf,8t5p,10,10,1,1,3chf__8t5p
+NZ0001,3chf,8ti6,8,8,1,1,3chf__8ti6
+NZ0001,3e0n,3nzw,8,8,1,1,3e0n__3nzw
+NZ0001,3e0n,6s5p,10,10,1,1,3e0n__6s5p
+NZ0001,3e0n,8c3d,6,6,1,1,3e0n__8c3d
+NZ0001,3e7a,3l37,7,7,1,1,3e7a__3l37
+NZ0001,3e7a,3u8o,10,10,1,1,3e7a__3u8o
+NZ0001,3e7a,4dkt,5,5,1,1,3e7a__4dkt
+NZ0001,3e7a,6df1,10,10,1,1,3e7a__6df1
+NZ0001,3e7a,6phm,10,10,1,1,3e7a__6phm
+NZ0001,3e7a,9j3s,4,4,1,1,3e7a__9j3s
+NZ0001,3g3p,3l35,8,8,1,1,3g3p__3l35
+NZ0001,3g3p,3rc0,7,7,1,1,3g3p__3rc0
+NZ0001,3g3p,3s8l,9,9,1,1,3g3p__3s8l
+NZ0001,3g3p,4qg1,7,7,1,1,3g3p__4qg1
+NZ0001,3g3p,4uca,9,9,1,1,3g3p__4uca
+NZ0001,3g3p,5etf,7,7,1,1,3g3p__5etf
+NZ0001,3g3p,6e8m,5,5,1,1,3g3p__6e8m
+NZ0001,3g3p,6fcs,10,10,1,1,3g3p__6fcs
+NZ0001,3g3p,6fms,4,4,1,1,3g3p__6fms
+NZ0001,3g3p,6g8k,8,8,1,1,3g3p__6g8k
+NZ0001,3g3p,6tsl,10,10,1,1,3g3p__6tsl
+NZ0001,3g3p,6wuu,10,10,1,1,3g3p__6wuu
+NZ0001,3g3p,7lfv,9,9,1,1,3g3p__7lfv
+NZ0001,3g3p,8ano,6,6,1,1,3g3p__8ano
+NZ0001,3g3p,8aoo,9,9,1,1,3g3p__8aoo
+NZ0001,3g3p,8pwp,9,9,1,1,3g3p__8pwp
+NZ0001,3g3p,8sou,4,4,1,1,3g3p__8sou
+NZ0001,3g3p,9fxn,9,9,1,1,3g3p__9fxn
+NZ0001,3gkr,5ctv,6,6,1,1,3gkr__5ctv
+NZ0001,3gkr,7qdi,3,3,1,1,3gkr__7qdi
+NZ0001,3h5r,4cvk,9,9,1,1,3h5r__4cvk
+NZ0001,3h5r,4fzg,10,10,1,1,3h5r__4fzg
+NZ0001,3h5r,4s1x,5,5,1,1,3h5r__4s1x
+NZ0001,3h5r,5nqa,2,5,2,1,3h5r__5nqa
+NZ0001,3h5r,5zms,9,9,1,1,3h5r__5zms
+NZ0001,3h5r,8bfd,10,10,1,1,3h5r__8bfd
+NZ0001,3h9q,4dg4,8,8,1,1,3h9q__4dg4
+NZ0001,3h9q,4jna,9,9,1,1,3h9q__4jna
+NZ0001,3h9q,4knl,9,9,1,1,3h9q__4knl
+NZ0001,3h9q,4ucb,7,7,1,1,3h9q__4ucb
+NZ0001,3h9q,6whq,9,9,1,1,3h9q__6whq
+NZ0001,3h9q,7lkc,8,8,1,1,3h9q__7lkc
+NZ0001,3k26,3l35,8,8,1,1,3k26__3l35
+NZ0001,3k26,4gm8,10,10,1,1,3k26__4gm8
+NZ0001,3l35,3td5,8,9,6,1,3l35__3td5
+NZ0001,3l35,4qg1,4,4,1,1,3l35__4qg1
+NZ0001,3l35,4rcp,9,9,1,1,3l35__4rcp
+NZ0001,3l35,5dir,8,8,1,1,3l35__5dir
+NZ0001,3l35,6e8m,7,7,1,1,3l35__6e8m
+NZ0001,3l35,6ecf,10,10,1,1,3l35__6ecf
+NZ0001,3l35,6fcr,9,9,1,1,3l35__6fcr
+NZ0001,3l35,6fms,5,5,1,1,3l35__6fms
+NZ0001,3l35,6m9c,10,10,1,1,3l35__6m9c
+NZ0001,3l35,6mw2,9,9,1,1,3l35__6mw2
+NZ0001,3l35,6s7g,9,9,1,1,3l35__6s7g
+NZ0001,3l35,6tsl,6,6,1,1,3l35__6tsl
+NZ0001,3l35,6wi3,7,7,1,1,3l35__6wi3
+NZ0001,3l35,6wuu,8,9,2,1,3l35__6wuu
+NZ0001,3l35,7q4t,5,5,1,1,3l35__7q4t
+NZ0001,3l35,8ano,6,6,1,1,3l35__8ano
+NZ0001,3l35,8aoo,4,4,1,1,3l35__8aoo
+NZ0001,3l35,8g82,9,10,2,1,3l35__8g82
+NZ0001,3l35,8i82,9,9,1,1,3l35__8i82
+NZ0001,3l35,8pwp,9,9,1,1,3l35__8pwp
+NZ0001,3l35,8sou,10,10,1,1,3l35__8sou
+NZ0001,3l35,8ti6,10,10,1,1,3l35__8ti6
+NZ0001,3l35,8vjw,8,8,1,1,3l35__8vjw
+NZ0001,3l35,8vld,8,8,1,1,3l35__8vld
+NZ0001,3l35,9emz,10,10,1,1,3l35__9emz
+NZ0001,3l35,9fxn,8,8,1,1,3l35__9fxn
+NZ0001,3l37,5dir,10,10,1,1,3l37__5dir
+NZ0001,3l37,6fms,10,10,1,1,3l37__6fms
+NZ0001,3l37,6phm,6,6,1,1,3l37__6phm
+NZ0001,3l37,7axp,7,7,1,1,3l37__7axp
+NZ0001,3l37,7lkc,6,6,1,1,3l37__7lkc
+NZ0001,3l37,8vld,7,7,1,1,3l37__8vld
+NZ0001,3lvy,5dir,7,9,2,1,3lvy__5dir
+NZ0001,3lvy,5efk,8,8,1,1,3lvy__5efk
+NZ0001,3lvy,6fbt,6,6,1,1,3lvy__6fbt
+NZ0001,3lvy,7lkc,7,7,1,1,3lvy__7lkc
+NZ0001,3lvy,8hoo,5,5,1,1,3lvy__8hoo
+NZ0001,3lvy,8vld,6,6,1,1,3lvy__8vld
+NZ0001,3mbu,3uw5,7,7,1,1,3mbu__3uw5
+NZ0001,3mbu,4fbv,8,8,1,1,3mbu__4fbv
+NZ0001,3mbu,4y6v,9,9,1,1,3mbu__4y6v
+NZ0001,3mbu,4y84,9,9,1,1,3mbu__4y84
+NZ0001,3mbu,5dc8,10,10,1,1,3mbu__5dc8
+NZ0001,3mbu,5nf0,9,9,1,1,3mbu__5nf0
+NZ0001,3mbu,6ecd,10,10,1,1,3mbu__6ecd
+NZ0001,3mbu,6ucw,8,8,1,1,3mbu__6ucw
+NZ0001,3mbu,7ms1,8,8,1,1,3mbu__7ms1
+NZ0001,3mbu,7rxf,6,6,1,1,3mbu__7rxf
+NZ0001,3mbu,8hor,9,9,1,1,3mbu__8hor
+NZ0001,3mbu,8i84,8,8,1,1,3mbu__8i84
+NZ0001,3mbu,8vld,9,9,1,1,3mbu__8vld
+NZ0001,3mbu,9qbe,1,1,1,1,3mbu__9qbe
+NZ0001,3mgn,3nzj,10,10,2,1,3mgn__3nzj
+NZ0001,3mgn,5n8j,10,10,1,1,3mgn__5n8j
+NZ0001,3nzw,6s5p,9,9,1,1,3nzw__6s5p
+NZ0001,3nzx,4ucb,7,7,1,1,3nzx__4ucb
+NZ0001,3ove,4dg4,9,9,1,1,3ove__4dg4
+NZ0001,3ove,7lfv,3,3,1,1,3ove__7lfv
+NZ0001,3ove,8pwp,10,10,1,1,3ove__8pwp
+NZ0001,3ove,8sou,9,9,1,1,3ove__8sou
+NZ0001,3ove,8vjw,10,10,1,1,3ove__8vjw
+NZ0001,3ove,8ysa,10,10,1,1,3ove__8ysa
+NZ0001,3ove,9i24,10,10,1,1,3ove__9i24
+NZ0001,3q4a,5d53,10,10,1,1,3q4a__5d53
+NZ0001,3q4a,6pt2,10,10,1,1,3q4a__6pt2
+NZ0001,3q4a,7ofv,9,9,1,1,3q4a__7ofv
+NZ0001,3q4a,8hoq,9,9,1,1,3q4a__8hoq
+NZ0001,3q4a,9qbe,8,8,1,1,3q4a__9qbe
+NZ0001,3qxy,3rc0,8,8,1,1,3qxy__3rc0
+NZ0001,3qxy,3s8l,9,9,1,1,3qxy__3s8l
+NZ0001,3qxy,4dg4,3,3,1,1,3qxy__4dg4
+NZ0001,3qxy,4fln,9,9,1,1,3qxy__4fln
+NZ0001,3qxy,4gr7,6,6,1,1,3qxy__4gr7
+NZ0001,3qxy,4o46,6,6,1,1,3qxy__4o46
+NZ0001,3qxy,4uca,9,9,1,1,3qxy__4uca
+NZ0001,3qxy,4zkr,1,1,1,1,3qxy__4zkr
+NZ0001,3qxy,5etf,7,7,1,1,3qxy__5etf
+NZ0001,3qxy,5nwk,1,1,1,1,3qxy__5nwk
+NZ0001,3qxy,5tdb,4,4,1,1,3qxy__5tdb
+NZ0001,3qxy,6fcs,6,6,1,1,3qxy__6fcs
+NZ0001,3qxy,6fvn,1,6,2,1,3qxy__6fvn
+NZ0001,3qxy,6g8k,8,8,1,1,3qxy__6g8k
+NZ0001,3qxy,6tdb,10,10,1,1,3qxy__6tdb
+NZ0001,3qxy,6wuu,7,7,1,1,3qxy__6wuu
+NZ0001,3qxy,8sou,10,10,1,1,3qxy__8sou
+NZ0001,3qxy,8vjw,2,2,1,1,3qxy__8vjw
+NZ0001,3qxy,8vpe,2,2,1,1,3qxy__8vpe
+NZ0001,3qxy,8ysa,3,3,1,1,3qxy__8ysa
+NZ0001,3qxy,9i24,10,10,1,1,3qxy__9i24
+NZ0001,3rc0,3s8l,5,5,1,1,3rc0__3s8l
+NZ0001,3rc0,4dg4,7,7,1,1,3rc0__4dg4
+NZ0001,3rc0,4gr7,6,6,1,1,3rc0__4gr7
+NZ0001,3rc0,4o46,5,5,1,1,3rc0__4o46
+NZ0001,3rc0,4qg1,8,8,1,1,3rc0__4qg1
+NZ0001,3rc0,4uca,4,4,1,1,3rc0__4uca
+NZ0001,3rc0,4z33,8,8,1,1,3rc0__4z33
+NZ0001,3rc0,4zkr,9,9,1,1,3rc0__4zkr
+NZ0001,3rc0,5dir,7,7,1,1,3rc0__5dir
+NZ0001,3rc0,5etf,4,4,1,1,3rc0__5etf
+NZ0001,3rc0,5nwk,9,9,1,1,3rc0__5nwk
+NZ0001,3rc0,5tdb,8,8,1,1,3rc0__5tdb
+NZ0001,3rc0,6fcs,4,4,1,1,3rc0__6fcs
+NZ0001,3rc0,6fms,10,10,1,1,3rc0__6fms
+NZ0001,3rc0,6fvn,8,9,2,1,3rc0__6fvn
+NZ0001,3rc0,6g8k,7,7,1,1,3rc0__6g8k
+NZ0001,3rc0,8ano,8,8,1,1,3rc0__8ano
+NZ0001,3rc0,8t5p,7,7,1,1,3rc0__8t5p
+NZ0001,3rc0,8vjw,7,8,2,1,3rc0__8vjw
+NZ0001,3rc0,8vpe,9,9,1,1,3rc0__8vpe
+NZ0001,3rc0,8ysa,7,7,1,1,3rc0__8ysa
+NZ0001,3s8l,4fln,8,8,1,1,3s8l__4fln
+NZ0001,3s8l,4gr7,7,7,1,1,3s8l__4gr7
+NZ0001,3s8l,4o46,5,5,1,1,3s8l__4o46
+NZ0001,3s8l,4uca,6,6,1,1,3s8l__4uca
+NZ0001,3s8l,4z33,9,9,1,1,3s8l__4z33
+NZ0001,3s8l,4zkr,9,9,1,1,3s8l__4zkr
+NZ0001,3s8l,5dir,10,10,1,1,3s8l__5dir
+NZ0001,3s8l,5etf,5,5,1,1,3s8l__5etf
+NZ0001,3s8l,5nwk,9,9,1,1,3s8l__5nwk
+NZ0001,3s8l,5tdb,5,5,1,1,3s8l__5tdb
+NZ0001,3s8l,6fcs,4,4,1,1,3s8l__6fcs
+NZ0001,3s8l,6fvn,9,10,2,1,3s8l__6fvn
+NZ0001,3s8l,6g8k,3,3,1,1,3s8l__6g8k
+NZ0001,3s8l,6wuu,8,8,1,1,3s8l__6wuu
+NZ0001,3s8l,8t5p,8,8,1,1,3s8l__8t5p
+NZ0001,3s8l,8vjw,9,9,1,1,3s8l__8vjw
+NZ0001,3s8l,8vpe,8,8,1,1,3s8l__8vpe
+NZ0001,3s8n,4y84,10,10,1,1,3s8n__4y84
+NZ0001,3s8n,5i5a,10,10,1,1,3s8n__5i5a
+NZ0001,3s8n,5jqs,6,6,1,1,3s8n__5jqs
+NZ0001,3s8n,6xbg,7,7,1,1,3s8n__6xbg
+NZ0001,3s8n,8pwp,10,10,1,1,3s8n__8pwp
+NZ0001,3s8n,8vjd,9,9,1,1,3s8n__8vjd
+NZ0001,3s8n,9j3s,7,7,1,1,3s8n__9j3s
+NZ0001,3s8o,4dg4,9,9,1,1,3s8o__4dg4
+NZ0001,3s8o,4jna,7,7,1,1,3s8o__4jna
+NZ0001,3s8o,5d13,7,7,1,1,3s8o__5d13
+NZ0001,3s8o,5gnd,8,8,1,1,3s8o__5gnd
+NZ0001,3s8o,5lrk,4,4,1,1,3s8o__5lrk
+NZ0001,3s8o,6whq,3,3,1,1,3s8o__6whq
+NZ0001,3s8o,9emz,7,7,1,1,3s8o__9emz
+NZ0001,3td5,3u1i,10,10,1,1,3td5__3u1i
+NZ0001,3td5,4fln,5,8,4,1,3td5__4fln
+NZ0001,3td5,5d54,9,9,1,1,3td5__5d54
+NZ0001,3td5,5mfk,10,10,1,1,3td5__5mfk
+NZ0001,3td5,6fcr,6,6,2,1,3td5__6fcr
+NZ0001,3td5,6m9d,10,10,1,1,3td5__6m9d
+NZ0001,3td5,6mw2,5,6,2,1,3td5__6mw2
+NZ0001,3td5,6ppm,8,10,2,1,3td5__6ppm
+NZ0001,3td5,6wi3,8,10,7,1,3td5__6wi3
+NZ0001,3td5,7q4t,6,9,4,1,3td5__7q4t
+NZ0001,3td5,7u0e,10,10,1,1,3td5__7u0e
+NZ0001,3td5,7zb0,9,10,2,1,3td5__7zb0
+NZ0001,3td5,8i82,8,10,4,1,3td5__8i82
+NZ0001,3td5,9qby,5,8,6,1,3td5__9qby
+NZ0001,3u1i,7o50,7,7,1,1,3u1i__7o50
+NZ0001,3u1i,9qby,4,4,1,1,3u1i__9qby
+NZ0001,3u8o,4dkt,10,10,1,1,3u8o__4dkt
+NZ0001,3u8o,8pwp,8,8,1,1,3u8o__8pwp
+NZ0001,3uw5,4fbv,7,7,1,1,3uw5__4fbv
+NZ0001,3uw5,4gm9,10,10,1,1,3uw5__4gm9
+NZ0001,3uw5,4jsq,10,10,1,1,3uw5__4jsq
+NZ0001,3uw5,4y6a,9,9,1,1,3uw5__4y6a
+NZ0001,3uw5,4y6v,8,8,1,1,3uw5__4y6v
+NZ0001,3uw5,6s5p,8,8,1,1,3uw5__6s5p
+NZ0001,3uw5,9ehn,10,10,1,1,3uw5__9ehn
+NZ0001,3uw5,9emz,9,9,1,1,3uw5__9emz
+NZ0001,3uw5,9qbe,7,10,2,1,3uw5__9qbe
+NZ0001,4cvk,5nqa,8,8,1,1,4cvk__5nqa
+NZ0001,4cvk,6rlz,8,8,1,1,4cvk__6rlz
+NZ0001,4dg4,4gr7,6,6,1,1,4dg4__4gr7
+NZ0001,4dg4,4jna,10,10,1,1,4dg4__4jna
+NZ0001,4dg4,4knl,6,6,1,1,4dg4__4knl
+NZ0001,4dg4,4o46,9,9,1,1,4dg4__4o46
+NZ0001,4dg4,4ucb,10,10,1,1,4dg4__4ucb
+NZ0001,4dg4,4z33,3,3,1,1,4dg4__4z33
+NZ0001,4dg4,4zkr,3,3,1,1,4dg4__4zkr
+NZ0001,4dg4,5etf,7,7,1,1,4dg4__5etf
+NZ0001,4dg4,5gnd,4,4,1,1,4dg4__5gnd
+NZ0001,4dg4,5lrk,9,9,1,1,4dg4__5lrk
+NZ0001,4dg4,5nwk,3,3,1,1,4dg4__5nwk
+NZ0001,4dg4,5tdb,7,7,1,1,4dg4__5tdb
+NZ0001,4dg4,6fcs,9,9,1,1,4dg4__6fcs
+NZ0001,4dg4,6fvn,2,5,2,1,4dg4__6fvn
+NZ0001,4dg4,6m9c,8,8,1,1,4dg4__6m9c
+NZ0001,4dg4,6whq,6,6,1,1,4dg4__6whq
+NZ0001,4dg4,6wuu,7,10,2,1,4dg4__6wuu
+NZ0001,4dg4,7lkc,7,7,1,1,4dg4__7lkc
+NZ0001,4dg4,8sou,9,9,1,1,4dg4__8sou
+NZ0001,4dg4,8ti6,10,10,1,1,4dg4__8ti6
+NZ0001,4dg4,8vjw,1,1,1,1,4dg4__8vjw
+NZ0001,4dg4,8vpe,4,4,1,1,4dg4__8vpe
+NZ0001,4dg4,8ysa,1,1,1,1,4dg4__8ysa
+NZ0001,4dg4,9emz,7,8,3,1,4dg4__9emz
+NZ0001,4dg4,9i24,7,7,1,1,4dg4__9i24
+NZ0001,4dkt,6xbg,9,9,1,1,4dkt__6xbg
+NZ0001,4f75,6fms,10,10,2,1,4f75__6fms
+NZ0001,4f75,6wuu,7,7,1,1,4f75__6wuu
+NZ0001,4f75,7lfu,10,10,1,1,4f75__7lfu
+NZ0001,4f75,7lkc,10,10,1,1,4f75__7lkc
+NZ0001,4f75,8hoo,5,5,1,1,4f75__8hoo
+NZ0001,4f75,8pxy,8,8,1,1,4f75__8pxy
+NZ0001,4f75,9emz,9,9,1,1,4f75__9emz
+NZ0001,4fbv,4y6a,8,8,1,1,4fbv__4y6a
+NZ0001,4fbv,5d53,8,8,1,1,4fbv__5d53
+NZ0001,4fbv,5d54,8,8,1,1,4fbv__5d54
+NZ0001,4fbv,6m9d,10,10,1,1,4fbv__6m9d
+NZ0001,4fbv,6wi3,9,9,1,1,4fbv__6wi3
+NZ0001,4fbv,7ofv,10,10,1,1,4fbv__7ofv
+NZ0001,4fbv,8i82,5,5,1,1,4fbv__8i82
+NZ0001,4fbv,9qbe,8,8,1,1,4fbv__9qbe
+NZ0001,4fln,4jt0,3,4,2,1,4fln__4jt0
+NZ0001,4fln,4z33,9,9,1,1,4fln__4z33
+NZ0001,4fln,4zkr,9,9,1,1,4fln__4zkr
+NZ0001,4fln,5etf,8,8,1,1,4fln__5etf
+NZ0001,4fln,5nwk,9,9,1,1,4fln__5nwk
+NZ0001,4fln,5tdb,5,5,1,1,4fln__5tdb
+NZ0001,4fln,6fvn,9,9,1,1,4fln__6fvn
+NZ0001,4fln,6g8k,5,5,1,1,4fln__6g8k
+NZ0001,4fln,6m9d,10,10,1,1,4fln__6m9d
+NZ0001,4fln,7qdi,10,10,1,1,4fln__7qdi
+NZ0001,4fln,7zb0,8,8,1,1,4fln__7zb0
+NZ0001,4fln,8sou,10,10,1,1,4fln__8sou
+NZ0001,4fln,8v2n,7,7,1,1,4fln__8v2n
+NZ0001,4fln,8vjw,10,10,1,1,4fln__8vjw
+NZ0001,4fzg,4s1x,9,9,1,1,4fzg__4s1x
+NZ0001,4fzg,5nqa,9,9,1,1,4fzg__5nqa
+NZ0001,4fzg,5zms,5,5,1,1,4fzg__5zms
+NZ0001,4fzg,8bfd,9,9,1,1,4fzg__8bfd
+NZ0001,4gk7,4ucb,9,9,1,1,4gk7__4ucb
+NZ0001,4gm9,6xbg,5,5,1,1,4gm9__6xbg
+NZ0001,4gmb,4nz8,10,10,1,1,4gmb__4nz8
+NZ0001,4gr7,4o46,3,3,1,1,4gr7__4o46
+NZ0001,4gr7,4uca,7,7,1,1,4gr7__4uca
+NZ0001,4gr7,4z33,6,6,1,1,4gr7__4z33
+NZ0001,4gr7,4zkr,6,6,1,1,4gr7__4zkr
+NZ0001,4gr7,5etf,7,7,1,1,4gr7__5etf
+NZ0001,4gr7,5nwk,6,6,1,1,4gr7__5nwk
+NZ0001,4gr7,5tdb,10,10,1,1,4gr7__5tdb
+NZ0001,4gr7,6fcs,3,3,1,1,4gr7__6fcs
+NZ0001,4gr7,6fvn,3,7,2,1,4gr7__6fvn
+NZ0001,4gr7,6g8k,10,10,1,1,4gr7__6g8k
+NZ0001,4gr7,6wuu,5,5,1,1,4gr7__6wuu
+NZ0001,4gr7,8vjw,5,5,1,1,4gr7__8vjw
+NZ0001,4gr7,8vpe,4,4,1,1,4gr7__8vpe
+NZ0001,4gr7,8ysa,6,6,1,1,4gr7__8ysa
+NZ0001,4gr7,9ex5,10,10,1,1,4gr7__9ex5
+NZ0001,4han,6m9c,10,10,1,1,4han__6m9c
+NZ0001,4han,8c3d,10,10,1,1,4han__8c3d
+NZ0001,4han,8pwp,9,9,1,1,4han__8pwp
+NZ0001,4han,9fxn,10,10,1,1,4han__9fxn
+NZ0001,4jj7,5i5a,5,5,1,1,4jj7__5i5a
+NZ0001,4jj7,5jqs,8,8,1,1,4jj7__5jqs
+NZ0001,4jj7,5lrk,4,9,2,1,4jj7__5lrk
+NZ0001,4jj7,6phq,4,4,1,1,4jj7__6phq
+NZ0001,4jj7,8cis,10,10,1,1,4jj7__8cis
+NZ0001,4jj7,8hoo,9,9,1,1,4jj7__8hoo
+NZ0001,4jj7,9j3s,4,7,2,1,4jj7__9j3s
+NZ0001,4jj7,9mkj,10,10,1,1,4jj7__9mkj
+NZ0001,4jj8,4knl,3,3,1,1,4jj8__4knl
+NZ0001,4jj8,5b6l,3,3,1,1,4jj8__5b6l
+NZ0001,4jj8,5dir,7,8,2,1,4jj8__5dir
+NZ0001,4jj8,5efk,8,8,1,1,4jj8__5efk
+NZ0001,4jj8,5m2h,9,9,1,1,4jj8__5m2h
+NZ0001,4jj8,6fbt,7,7,1,1,4jj8__6fbt
+NZ0001,4jj8,6fms,3,4,3,1,4jj8__6fms
+NZ0001,4jj8,6ryo,3,3,1,1,4jj8__6ryo
+NZ0001,4jj8,6tch,7,7,1,1,4jj8__6tch
+NZ0001,4jj8,7axp,6,6,1,1,4jj8__7axp
+NZ0001,4jj8,7lkc,9,9,1,1,4jj8__7lkc
+NZ0001,4jj8,7nxe,6,6,1,1,4jj8__7nxe
+NZ0001,4jj8,8hoo,9,9,1,1,4jj8__8hoo
+NZ0001,4jj8,8vld,10,10,1,1,4jj8__8vld
+NZ0001,4jna,5d13,10,10,1,1,4jna__5d13
+NZ0001,4jna,5lrk,7,7,1,1,4jna__5lrk
+NZ0001,4jna,6fms,10,10,1,1,4jna__6fms
+NZ0001,4jna,6whq,10,10,1,1,4jna__6whq
+NZ0001,4jna,6wuu,9,9,1,1,4jna__6wuu
+NZ0001,4jna,7lkc,9,9,1,1,4jna__7lkc
+NZ0001,4jna,8ti6,7,7,1,1,4jna__8ti6
+NZ0001,4jna,9emz,10,10,1,1,4jna__9emz
+NZ0001,4jna,9ex5,2,2,1,1,4jna__9ex5
+NZ0001,4jsq,6ppm,10,10,1,1,4jsq__6ppm
+NZ0001,4jsq,7q4t,10,10,1,1,4jsq__7q4t
+NZ0001,4jsq,8i82,9,9,1,1,4jsq__8i82
+NZ0001,4jsq,9emz,10,10,1,1,4jsq__9emz
+NZ0001,4jsq,9qbe,8,8,1,1,4jsq__9qbe
+NZ0001,4jsu,6ecd,5,6,4,1,4jsu__6ecd
+NZ0001,4jsu,6uf4,9,10,2,1,4jsu__6uf4
+NZ0001,4jsu,6wo2,7,8,4,1,4jsu__6wo2
+NZ0001,4jsu,7oyq,10,10,1,1,4jsu__7oyq
+NZ0001,4jsu,9qby,5,10,7,1,4jsu__9qby
+NZ0001,4jt0,5tdb,8,9,2,1,4jt0__5tdb
+NZ0001,4jt0,6g8k,8,9,2,1,4jt0__6g8k
+NZ0001,4jt0,7qdi,9,9,2,1,4jt0__7qdi
+NZ0001,4jt0,9qbe,9,10,2,1,4jt0__9qbe
+NZ0001,4knl,5b6l,6,6,1,1,4knl__5b6l
+NZ0001,4knl,5d13,10,10,1,1,4knl__5d13
+NZ0001,4knl,5dir,10,10,1,1,4knl__5dir
+NZ0001,4knl,5gnd,6,6,1,1,4knl__5gnd
+NZ0001,4knl,5jqs,10,10,1,1,4knl__5jqs
+NZ0001,4knl,5lrk,7,7,1,1,4knl__5lrk
+NZ0001,4knl,6fms,3,5,3,1,4knl__6fms
+NZ0001,4knl,6m9c,7,7,1,1,4knl__6m9c
+NZ0001,4knl,6whq,8,8,1,1,4knl__6whq
+NZ0001,4knl,6wuu,6,6,1,1,4knl__6wuu
+NZ0001,4knl,7axp,8,8,1,1,4knl__7axp
+NZ0001,4knl,7lkc,9,9,1,1,4knl__7lkc
+NZ0001,4knl,7nxe,6,6,1,1,4knl__7nxe
+NZ0001,4knl,8cis,6,6,1,1,4knl__8cis
+NZ0001,4knl,8hoo,8,8,1,1,4knl__8hoo
+NZ0001,4knl,9emz,4,7,3,1,4knl__9emz
+NZ0001,4knl,9j3s,9,9,1,1,4knl__9j3s
+NZ0001,4o46,4uca,6,6,1,1,4o46__4uca
+NZ0001,4o46,4z33,6,6,1,1,4o46__4z33
+NZ0001,4o46,4zkr,6,6,1,1,4o46__4zkr
+NZ0001,4o46,5etf,5,5,1,1,4o46__5etf
+NZ0001,4o46,5nwk,6,6,1,1,4o46__5nwk
+NZ0001,4o46,5tdb,8,8,1,1,4o46__5tdb
+NZ0001,4o46,6fcs,1,1,1,1,4o46__6fcs
+NZ0001,4o46,6fvn,6,7,2,1,4o46__6fvn
+NZ0001,4o46,6g8k,8,8,1,1,4o46__6g8k
+NZ0001,4o46,6wuu,6,6,1,1,4o46__6wuu
+NZ0001,4o46,8t5p,10,10,1,1,4o46__8t5p
+NZ0001,4o46,8vjw,8,8,1,1,4o46__8vjw
+NZ0001,4o46,8vpe,5,5,1,1,4o46__8vpe
+NZ0001,4o46,8ysa,9,9,1,1,4o46__8ysa
+NZ0001,4p9z,6ecf,6,6,1,1,4p9z__6ecf
+NZ0001,4p9z,6l5z,10,10,1,1,4p9z__6l5z
+NZ0001,4p9z,8i8g,9,9,1,1,4p9z__8i8g
+NZ0001,4p9z,8v2n,6,6,1,1,4p9z__8v2n
+NZ0001,4qa5,4y84,10,10,1,1,4qa5__4y84
+NZ0001,4qa5,5dc8,3,3,1,1,4qa5__5dc8
+NZ0001,4qa5,6ecf,4,4,1,1,4qa5__6ecf
+NZ0001,4qa5,6yi1,10,10,1,1,4qa5__6yi1
+NZ0001,4qa5,7oyq,7,7,1,1,4qa5__7oyq
+NZ0001,4qa5,7rxf,9,9,1,1,4qa5__7rxf
+NZ0001,4qa5,8i84,6,6,1,1,4qa5__8i84
+NZ0001,4qa5,9qby,7,9,2,1,4qa5__9qby
+NZ0001,4qg1,4uca,9,9,1,1,4qg1__4uca
+NZ0001,4qg1,5dir,4,4,1,1,4qg1__5dir
+NZ0001,4qg1,5etf,9,9,1,1,4qg1__5etf
+NZ0001,4qg1,6e8m,6,6,1,1,4qg1__6e8m
+NZ0001,4qg1,6fms,4,4,1,1,4qg1__6fms
+NZ0001,4qg1,6g8k,10,10,1,1,4qg1__6g8k
+NZ0001,4qg1,6tsl,8,8,1,1,4qg1__6tsl
+NZ0001,4qg1,6wuu,8,9,2,1,4qg1__6wuu
+NZ0001,4qg1,8ano,2,2,1,1,4qg1__8ano
+NZ0001,4qg1,8aoo,6,6,1,1,4qg1__8aoo
+NZ0001,4qg1,8pwp,9,9,1,1,4qg1__8pwp
+NZ0001,4qg1,8sou,9,9,1,1,4qg1__8sou
+NZ0001,4qg1,8ti6,10,10,1,1,4qg1__8ti6
+NZ0001,4qg1,8vjw,7,7,1,1,4qg1__8vjw
+NZ0001,4qg1,9fxn,7,7,1,1,4qg1__9fxn
+NZ0001,4rcp,4y84,7,7,1,1,4rcp__4y84
+NZ0001,4rcp,5d5e,5,5,1,1,4rcp__5d5e
+NZ0001,4rcp,6ecf,3,5,2,1,4rcp__6ecf
+NZ0001,4rcp,6ppm,9,9,1,1,4rcp__6ppm
+NZ0001,4rcp,6psa,5,5,1,1,4rcp__6psa
+NZ0001,4rcp,6s7g,6,6,1,1,4rcp__6s7g
+NZ0001,4rcp,7ms1,9,9,1,1,4rcp__7ms1
+NZ0001,4rcp,7new,10,10,1,1,4rcp__7new
+NZ0001,4rcp,7u0e,10,10,1,1,4rcp__7u0e
+NZ0001,4rcp,7z3u,8,8,1,1,4rcp__7z3u
+NZ0001,4rcp,8s9z,5,5,1,1,4rcp__8s9z
+NZ0001,4rcp,8vld,9,9,1,1,4rcp__8vld
+NZ0001,4rcp,9ehn,7,7,1,1,4rcp__9ehn
+NZ0001,4s1x,5nqa,7,7,1,1,4s1x__5nqa
+NZ0001,4s1x,5zms,9,9,1,1,4s1x__5zms
+NZ0001,4s1x,7o50,9,9,1,1,4s1x__7o50
+NZ0001,4ttk,5efj,10,10,1,1,4ttk__5efj
+NZ0001,4ttk,6cnu,5,5,1,1,4ttk__6cnu
+NZ0001,4uca,4z33,9,9,1,1,4uca__4z33
+NZ0001,4uca,4zkr,10,10,1,1,4uca__4zkr
+NZ0001,4uca,5dir,6,6,1,1,4uca__5dir
+NZ0001,4uca,5etf,6,6,1,1,4uca__5etf
+NZ0001,4uca,5nwk,10,10,1,1,4uca__5nwk
+NZ0001,4uca,5tdb,9,9,1,1,4uca__5tdb
+NZ0001,4uca,6e8m,10,10,1,1,4uca__6e8m
+NZ0001,4uca,6fcs,5,5,1,1,4uca__6fcs
+NZ0001,4uca,6fms,10,10,1,1,4uca__6fms
+NZ0001,4uca,6fvn,9,10,2,1,4uca__6fvn
+NZ0001,4uca,6g8k,9,9,1,1,4uca__6g8k
+NZ0001,4uca,8ano,7,7,1,1,4uca__8ano
+NZ0001,4uca,8t5p,4,4,1,1,4uca__8t5p
+NZ0001,4uca,8vjw,9,10,2,1,4uca__8vjw
+NZ0001,4uca,8vpe,10,10,1,1,4uca__8vpe
+NZ0001,4ucb,6wuu,9,9,1,1,4ucb__6wuu
+NZ0001,4ucb,7lkc,5,5,1,1,4ucb__7lkc
+NZ0001,4whl,5svi,7,7,1,1,4whl__5svi
+NZ0001,4whl,9qb1,2,5,2,1,4whl__9qb1
+NZ0001,4wkm,6cnu,8,8,1,1,4wkm__6cnu
+NZ0001,4wkm,6m5e,1,9,3,1,4wkm__6m5e
+NZ0001,4wkm,6pt2,3,9,2,1,4wkm__6pt2
+NZ0001,4wkm,6tch,10,10,1,1,4wkm__6tch
+NZ0001,4wkm,7ltb,7,10,4,1,4wkm__7ltb
+NZ0001,4wkm,8hoo,6,10,2,1,4wkm__8hoo
+NZ0001,4x6z,8g82,4,10,6,1,4x6z__8g82
+NZ0001,4x6z,8s6t,9,9,1,1,4x6z__8s6t
+NZ0001,4y69,4y6v,8,8,1,1,4y69__4y6v
+NZ0001,4y69,9qdf,4,4,1,1,4y69__9qdf
+NZ0001,4y6a,6s5p,9,9,1,1,4y6a__6s5p
+NZ0001,4y6a,7ofv,8,8,1,1,4y6a__7ofv
+NZ0001,4y6a,9qbe,8,8,1,1,4y6a__9qbe
+NZ0001,4y6v,6psa,10,10,1,1,4y6v__6psa
+NZ0001,4y6v,8s9z,10,10,1,1,4y6v__8s9z
+NZ0001,4y6v,9ehn,8,8,1,1,4y6v__9ehn
+NZ0001,4y6v,9emz,6,6,1,1,4y6v__9emz
+NZ0001,4y6v,9qbe,10,10,2,1,4y6v__9qbe
+NZ0001,4y6v,9qdf,9,9,1,1,4y6v__9qdf
+NZ0001,4y84,6ecf,7,9,2,1,4y84__6ecf
+NZ0001,4y84,6psa,6,6,1,1,4y84__6psa
+NZ0001,4y84,7ms1,5,5,1,1,4y84__7ms1
+NZ0001,4y84,8s9z,8,8,1,1,4y84__8s9z
+NZ0001,4y84,9qbe,10,10,1,1,4y84__9qbe
+NZ0001,4y84,9qdf,8,8,1,1,4y84__9qdf
+NZ0001,4z33,4zkr,1,1,1,1,4z33__4zkr
+NZ0001,4z33,5etf,7,7,1,1,4z33__5etf
+NZ0001,4z33,5nwk,1,1,1,1,4z33__5nwk
+NZ0001,4z33,5tdb,4,4,1,1,4z33__5tdb
+NZ0001,4z33,6fcs,6,6,1,1,4z33__6fcs
+NZ0001,4z33,6fvn,1,6,2,1,4z33__6fvn
+NZ0001,4z33,6g8k,8,8,1,1,4z33__6g8k
+NZ0001,4z33,6tdb,10,10,1,1,4z33__6tdb
+NZ0001,4z33,6wuu,7,7,1,1,4z33__6wuu
+NZ0001,4z33,8sou,10,10,1,1,4z33__8sou
+NZ0001,4z33,8vjw,2,2,1,1,4z33__8vjw
+NZ0001,4z33,8vpe,2,2,1,1,4z33__8vpe
+NZ0001,4z33,8ysa,3,3,1,1,4z33__8ysa
+NZ0001,4z33,9i24,10,10,1,1,4z33__9i24
+NZ0001,4zkr,5etf,8,8,1,1,4zkr__5etf
+NZ0001,4zkr,5mfk,10,10,1,1,4zkr__5mfk
+NZ0001,4zkr,5tdb,4,4,1,1,4zkr__5tdb
+NZ0001,4zkr,6fcs,6,6,1,1,4zkr__6fcs
+NZ0001,4zkr,6fvn,1,6,2,1,4zkr__6fvn
+NZ0001,4zkr,6g8k,8,8,1,1,4zkr__6g8k
+NZ0001,4zkr,6tdb,9,9,1,1,4zkr__6tdb
+NZ0001,4zkr,6wuu,7,7,1,1,4zkr__6wuu
+NZ0001,4zkr,8vjw,2,2,1,1,4zkr__8vjw
+NZ0001,4zkr,8vpe,2,2,1,1,4zkr__8vpe
+NZ0001,4zkr,8ysa,3,3,1,1,4zkr__8ysa
+NZ0001,4zkr,9i24,10,10,1,1,4zkr__9i24
+NZ0001,5aa2,9j3s,10,10,1,1,5aa2__9j3s
+NZ0001,5b6l,5dir,5,9,2,1,5b6l__5dir
+NZ0001,5b6l,5efk,6,6,1,1,5b6l__5efk
+NZ0001,5b6l,6fms,5,7,3,1,5b6l__6fms
+NZ0001,5b6l,7axp,8,8,1,1,5b6l__7axp
+NZ0001,5b6l,7lkc,9,9,1,1,5b6l__7lkc
+NZ0001,5b6l,7nxe,4,4,1,1,5b6l__7nxe
+NZ0001,5b6l,8vld,10,10,1,1,5b6l__8vld
+NZ0001,5cgh,9qby,10,10,2,1,5cgh__9qby
+NZ0001,5ctv,7qdi,5,8,2,1,5ctv__7qdi
+NZ0001,5d13,5i5a,9,9,1,1,5d13__5i5a
+NZ0001,5d13,5lrk,7,10,2,1,5d13__5lrk
+NZ0001,5d13,6phq,10,10,1,1,5d13__6phq
+NZ0001,5d13,6whq,10,10,1,1,5d13__6whq
+NZ0001,5d13,8cis,6,6,1,1,5d13__8cis
+NZ0001,5d13,9emz,8,9,2,1,5d13__9emz
+NZ0001,5d53,5d54,9,9,1,1,5d53__5d54
+NZ0001,5d53,6ecf,7,7,1,1,5d53__6ecf
+NZ0001,5d53,6m9d,8,8,1,1,5d53__6m9d
+NZ0001,5d53,6pt2,6,6,1,1,5d53__6pt2
+NZ0001,5d53,6wi3,10,10,1,1,5d53__6wi3
+NZ0001,5d53,7ofv,10,10,1,1,5d53__7ofv
+NZ0001,5d53,8i8g,4,4,1,1,5d53__8i8g
+NZ0001,5d53,8v2n,8,8,1,1,5d53__8v2n
+NZ0001,5d54,6ecf,8,8,1,1,5d54__6ecf
+NZ0001,5d54,6m9d,2,2,1,1,5d54__6m9d
+NZ0001,5d54,6uf4,8,8,1,1,5d54__6uf4
+NZ0001,5d54,7ofv,10,10,1,1,5d54__7ofv
+NZ0001,5d54,8i8g,8,8,1,1,5d54__8i8g
+NZ0001,5d54,8v2n,9,9,1,1,5d54__8v2n
+NZ0001,5d5e,5mfk,9,9,1,1,5d5e__5mfk
+NZ0001,5d5e,6ecf,6,6,2,1,5d5e__6ecf
+NZ0001,5d5e,6ppm,4,4,1,1,5d5e__6ppm
+NZ0001,5d5e,6psa,6,6,1,1,5d5e__6psa
+NZ0001,5d5e,6s7g,2,2,1,1,5d5e__6s7g
+NZ0001,5d5e,6tdb,10,10,1,1,5d5e__6tdb
+NZ0001,5d5e,7new,7,7,1,1,5d5e__7new
+NZ0001,5d5e,7q4t,6,6,1,1,5d5e__7q4t
+NZ0001,5d5e,7u0e,7,7,1,1,5d5e__7u0e
+NZ0001,5d5e,7z3u,10,10,1,1,5d5e__7z3u
+NZ0001,5d5e,8s9z,4,4,1,1,5d5e__8s9z
+NZ0001,5d5e,9ehn,5,5,1,1,5d5e__9ehn
+NZ0001,5dc8,6ecf,5,5,1,1,5dc8__6ecf
+NZ0001,5dc8,6yi1,8,8,1,1,5dc8__6yi1
+NZ0001,5dc8,7oyq,6,6,1,1,5dc8__7oyq
+NZ0001,5dc8,7rxf,6,6,1,1,5dc8__7rxf
+NZ0001,5dc8,8i84,3,3,1,1,5dc8__8i84
+NZ0001,5dc8,9qby,9,9,1,1,5dc8__9qby
+NZ0001,5dir,5efk,4,9,2,1,5dir__5efk
+NZ0001,5dir,5etf,8,8,1,1,5dir__5etf
+NZ0001,5dir,6e8m,10,10,1,1,5dir__6e8m
+NZ0001,5dir,6fbt,9,9,1,1,5dir__6fbt
+NZ0001,5dir,6fms,8,10,3,1,5dir__6fms
+NZ0001,5dir,6g8k,9,9,1,1,5dir__6g8k
+NZ0001,5dir,6ryo,8,8,1,1,5dir__6ryo
+NZ0001,5dir,6tch,3,3,1,1,5dir__6tch
+NZ0001,5dir,6tsl,9,9,1,1,5dir__6tsl
+NZ0001,5dir,6wuu,10,10,1,1,5dir__6wuu
+NZ0001,5dir,7axp,6,6,1,1,5dir__7axp
+NZ0001,5dir,7lkc,4,4,1,1,5dir__7lkc
+NZ0001,5dir,7nxe,9,9,1,1,5dir__7nxe
+NZ0001,5dir,8ano,5,5,1,1,5dir__8ano
+NZ0001,5dir,8aoo,8,8,1,1,5dir__8aoo
+NZ0001,5dir,8t5p,7,7,1,1,5dir__8t5p
+NZ0001,5dir,8vld,5,8,2,1,5dir__8vld
+NZ0001,5efk,6fms,10,10,1,1,5efk__6fms
+NZ0001,5efk,7axp,7,7,1,1,5efk__7axp
+NZ0001,5efk,7lkc,8,8,1,1,5efk__7lkc
+NZ0001,5efk,7nxe,9,9,1,1,5efk__7nxe
+NZ0001,5efk,8vld,9,9,1,1,5efk__8vld
+NZ0001,5etf,5nwk,8,8,1,1,5etf__5nwk
+NZ0001,5etf,5tdb,7,7,1,1,5etf__5tdb
+NZ0001,5etf,6fcs,4,4,1,1,5etf__6fcs
+NZ0001,5etf,6fvn,7,8,2,1,5etf__6fvn
+NZ0001,5etf,6g8k,4,4,1,1,5etf__6g8k
+NZ0001,5etf,6wuu,10,10,1,1,5etf__6wuu
+NZ0001,5etf,8ano,9,9,1,1,5etf__8ano
+NZ0001,5etf,8sou,7,7,1,1,5etf__8sou
+NZ0001,5etf,8t5p,8,8,1,1,5etf__8t5p
+NZ0001,5etf,8vjw,7,7,2,1,5etf__8vjw
+NZ0001,5etf,8vpe,8,8,1,1,5etf__8vpe
+NZ0001,5etf,8ysa,7,7,1,1,5etf__8ysa
+NZ0001,5gnd,5lrk,8,8,1,1,5gnd__5lrk
+NZ0001,5gnd,6m9c,7,7,1,1,5gnd__6m9c
+NZ0001,5gnd,6tsl,8,8,1,1,5gnd__6tsl
+NZ0001,5gnd,6whq,5,5,1,1,5gnd__6whq
+NZ0001,5gnd,6wuu,8,10,3,1,5gnd__6wuu
+NZ0001,5gnd,8aoo,10,10,1,1,5gnd__8aoo
+NZ0001,5gnd,8ti6,10,10,1,1,5gnd__8ti6
+NZ0001,5gnd,9emz,5,8,3,1,5gnd__9emz
+NZ0001,5gnd,9fxn,9,9,1,1,5gnd__9fxn
+NZ0001,5i5a,5jqs,4,4,1,1,5i5a__5jqs
+NZ0001,5i5a,5lrk,2,2,1,1,5i5a__5lrk
+NZ0001,5i5a,6phq,2,2,1,1,5i5a__6phq
+NZ0001,5i5a,8cis,7,7,1,1,5i5a__8cis
+NZ0001,5i5a,8hoo,10,10,1,1,5i5a__8hoo
+NZ0001,5i5a,9j3s,4,6,2,1,5i5a__9j3s
+NZ0001,5jqs,5lrk,6,6,1,1,5jqs__5lrk
+NZ0001,5jqs,6phq,6,6,1,1,5jqs__6phq
+NZ0001,5jqs,8cis,9,9,1,1,5jqs__8cis
+NZ0001,5jqs,9emz,10,10,1,1,5jqs__9emz
+NZ0001,5jqs,9j3s,2,6,2,1,5jqs__9j3s
+NZ0001,5lrk,6phq,4,4,1,1,5lrk__6phq
+NZ0001,5lrk,6whq,3,3,1,1,5lrk__6whq
+NZ0001,5lrk,8cis,7,9,2,1,5lrk__8cis
+NZ0001,5lrk,9emz,4,9,2,1,5lrk__9emz
+NZ0001,5lrk,9j3s,5,6,2,1,5lrk__9j3s
+NZ0001,5m2h,6fbt,8,8,1,1,5m2h__6fbt
+NZ0001,5m2h,6ryo,10,10,1,1,5m2h__6ryo
+NZ0001,5m2h,7ltb,10,10,1,1,5m2h__7ltb
+NZ0001,5m2h,8hoo,10,10,1,1,5m2h__8hoo
+NZ0001,5m2k,9c2y,5,6,2,1,5m2k__9c2y
+NZ0001,5mfk,5nwk,10,10,1,1,5mfk__5nwk
+NZ0001,5mfk,6ecf,10,10,1,1,5mfk__6ecf
+NZ0001,5mfk,6fvn,10,10,1,1,5mfk__6fvn
+NZ0001,5mfk,6ppm,7,7,1,1,5mfk__6ppm
+NZ0001,5mfk,6tdb,3,3,1,1,5mfk__6tdb
+NZ0001,5mfk,6wuu,8,8,1,1,5mfk__6wuu
+NZ0001,5mfk,7new,5,5,1,1,5mfk__7new
+NZ0001,5mfk,7u0e,3,3,1,1,5mfk__7u0e
+NZ0001,5mfk,8vpe,10,10,1,1,5mfk__8vpe
+NZ0001,5mfk,9ehn,10,10,1,1,5mfk__9ehn
+NZ0001,5n22,6x5r,8,8,1,1,5n22__6x5r
+NZ0001,5n8j,7qdi,10,10,1,1,5n8j__7qdi
+NZ0001,5nf0,6phm,10,10,1,1,5nf0__6phm
+NZ0001,5nqa,6rlz,10,10,1,1,5nqa__6rlz
+NZ0001,5nwk,5tdb,4,4,1,1,5nwk__5tdb
+NZ0001,5nwk,6fcs,6,6,1,1,5nwk__6fcs
+NZ0001,5nwk,6fvn,1,6,2,1,5nwk__6fvn
+NZ0001,5nwk,6g8k,8,8,1,1,5nwk__6g8k
+NZ0001,5nwk,6tdb,9,9,1,1,5nwk__6tdb
+NZ0001,5nwk,6wuu,7,7,1,1,5nwk__6wuu
+NZ0001,5nwk,8vjw,2,2,1,1,5nwk__8vjw
+NZ0001,5nwk,8vpe,2,2,1,1,5nwk__8vpe
+NZ0001,5nwk,8ysa,3,3,1,1,5nwk__8ysa
+NZ0001,5nwk,9i24,10,10,1,1,5nwk__9i24
+NZ0001,5onj,6wo2,10,10,1,1,5onj__6wo2
+NZ0001,5svi,9qb1,9,9,2,1,5svi__9qb1
+NZ0001,5tdb,6fcs,7,7,1,1,5tdb__6fcs
+NZ0001,5tdb,6fvn,5,10,2,1,5tdb__6fvn
+NZ0001,5tdb,6g8k,6,6,1,1,5tdb__6g8k
+NZ0001,5tdb,6tdb,10,10,1,1,5tdb__6tdb
+NZ0001,5tdb,6wuu,7,7,1,1,5tdb__6wuu
+NZ0001,5tdb,8sou,10,10,1,1,5tdb__8sou
+NZ0001,5tdb,8vjw,6,6,1,1,5tdb__8vjw
+NZ0001,5tdb,8vpe,6,6,1,1,5tdb__8vpe
+NZ0001,5tdb,8ysa,7,7,1,1,5tdb__8ysa
+NZ0001,6cl1,6yd2,8,8,1,1,6cl1__6yd2
+NZ0001,6df1,9j3s,6,6,1,1,6df1__9j3s
+NZ0001,6e8m,6fms,2,2,1,1,6e8m__6fms
+NZ0001,6e8m,6m9c,9,9,1,1,6e8m__6m9c
+NZ0001,6e8m,6tsl,9,9,1,1,6e8m__6tsl
+NZ0001,6e8m,6wuu,5,6,2,1,6e8m__6wuu
+NZ0001,6e8m,7lfv,10,10,1,1,6e8m__7lfv
+NZ0001,6e8m,8ano,5,5,1,1,6e8m__8ano
+NZ0001,6e8m,8aoo,8,8,1,1,6e8m__8aoo
+NZ0001,6e8m,8pwp,10,10,1,1,6e8m__8pwp
+NZ0001,6e8m,8sou,9,9,1,1,6e8m__8sou
+NZ0001,6e8m,8t5p,10,10,1,1,6e8m__8t5p
+NZ0001,6e8m,8ti6,9,9,1,1,6e8m__8ti6
+NZ0001,6e8m,8vjw,5,5,1,1,6e8m__8vjw
+NZ0001,6e8m,9emz,9,9,1,1,6e8m__9emz
+NZ0001,6e8m,9fxn,8,8,1,1,6e8m__9fxn
+NZ0001,6ecd,9qby,10,10,1,1,6ecd__9qby
+NZ0001,6ece,6ecf,3,8,2,1,6ece__6ecf
+NZ0001,6ece,6l5z,10,10,1,1,6ece__6l5z
+NZ0001,6ece,9qby,9,9,1,1,6ece__9qby
+NZ0001,6ecf,6l5z,8,9,2,1,6ecf__6l5z
+NZ0001,6ecf,6m9d,8,10,2,1,6ecf__6m9d
+NZ0001,6ecf,6ppm,9,10,2,1,6ecf__6ppm
+NZ0001,6ecf,6psa,8,9,2,1,6ecf__6psa
+NZ0001,6ecf,6pt2,6,6,1,1,6ecf__6pt2
+NZ0001,6ecf,6s7g,6,7,2,1,6ecf__6s7g
+NZ0001,6ecf,6tdb,9,9,1,1,6ecf__6tdb
+NZ0001,6ecf,6wi3,8,8,1,1,6ecf__6wi3
+NZ0001,6ecf,7new,5,8,2,1,6ecf__7new
+NZ0001,6ecf,7oyq,10,10,1,1,6ecf__7oyq
+NZ0001,6ecf,7rxf,9,9,1,1,6ecf__7rxf
+NZ0001,6ecf,7u0e,7,8,2,1,6ecf__7u0e
+NZ0001,6ecf,7z3u,7,8,2,1,6ecf__7z3u
+NZ0001,6ecf,8i82,10,10,1,1,6ecf__8i82
+NZ0001,6ecf,8i84,6,6,1,1,6ecf__8i84
+NZ0001,6ecf,8i8g,3,3,1,1,6ecf__8i8g
+NZ0001,6ecf,8s9z,8,9,2,1,6ecf__8s9z
+NZ0001,6ecf,8v2n,4,4,1,1,6ecf__8v2n
+NZ0001,6ecf,9c2y,10,10,1,1,6ecf__9c2y
+NZ0001,6ecf,9ehn,10,10,1,1,6ecf__9ehn
+NZ0001,6ecf,9qb1,10,10,1,1,6ecf__9qb1
+NZ0001,6ecf,9qby,10,10,2,1,6ecf__9qby
+NZ0001,6fbt,6ryo,7,7,1,1,6fbt__6ryo
+NZ0001,6fcr,6mw2,1,1,1,1,6fcr__6mw2
+NZ0001,6fcr,7q4t,9,9,1,1,6fcr__7q4t
+NZ0001,6fcr,9qby,10,10,1,1,6fcr__9qby
+NZ0001,6fcs,6fvn,6,7,2,1,6fcs__6fvn
+NZ0001,6fcs,6g8k,7,7,1,1,6fcs__6g8k
+NZ0001,6fcs,6wuu,7,7,1,1,6fcs__6wuu
+NZ0001,6fcs,8t5p,9,9,1,1,6fcs__8t5p
+NZ0001,6fcs,8vjw,8,10,2,1,6fcs__8vjw
+NZ0001,6fcs,8vpe,5,5,1,1,6fcs__8vpe
+NZ0001,6fcs,8ysa,9,9,1,1,6fcs__8ysa
+NZ0001,6fms,6m9c,10,10,1,1,6fms__6m9c
+NZ0001,6fms,6tsl,7,7,1,1,6fms__6tsl
+NZ0001,6fms,6wuu,6,7,2,1,6fms__6wuu
+NZ0001,6fms,7axp,5,5,3,1,6fms__7axp
+NZ0001,6fms,7nxe,8,9,3,1,6fms__7nxe
+NZ0001,6fms,8ano,3,3,1,1,6fms__8ano
+NZ0001,6fms,8aoo,6,6,1,1,6fms__8aoo
+NZ0001,6fms,8pwp,8,8,1,1,6fms__8pwp
+NZ0001,6fms,8sou,8,8,1,1,6fms__8sou
+NZ0001,6fms,8ti6,8,8,1,1,6fms__8ti6
+NZ0001,6fms,8vjw,4,4,1,1,6fms__8vjw
+NZ0001,6fms,9emz,10,10,1,1,6fms__9emz
+NZ0001,6fms,9fxn,6,6,1,1,6fms__9fxn
+NZ0001,6fvn,6g8k,9,10,2,1,6fvn__6g8k
+NZ0001,6fvn,6tdb,9,10,2,1,6fvn__6tdb
+NZ0001,6fvn,6wuu,7,8,2,1,6fvn__6wuu
+NZ0001,6fvn,8vjw,2,5,2,1,6fvn__8vjw
+NZ0001,6fvn,8vpe,3,4,2,1,6fvn__8vpe
+NZ0001,6fvn,8ysa,3,4,2,1,6fvn__8ysa
+NZ0001,6fvn,9ex5,10,10,1,1,6fvn__9ex5
+NZ0001,6fvn,9i24,9,10,2,1,6fvn__9i24
+NZ0001,6g8k,6wuu,9,9,1,1,6g8k__6wuu
+NZ0001,6g8k,8ano,10,10,1,1,6g8k__8ano
+NZ0001,6g8k,8pwp,9,9,1,1,6g8k__8pwp
+NZ0001,6g8k,8sou,10,10,1,1,6g8k__8sou
+NZ0001,6g8k,8vjw,8,10,2,1,6g8k__8vjw
+NZ0001,6g8k,8vpe,7,7,1,1,6g8k__8vpe
+NZ0001,6l5z,8i8g,8,8,1,1,6l5z__8i8g
+NZ0001,6m5e,6pt2,4,4,1,1,6m5e__6pt2
+NZ0001,6m5e,6xif,9,9,1,1,6m5e__6xif
+NZ0001,6m5e,7ltb,9,9,1,1,6m5e__7ltb
+NZ0001,6m5e,8hoo,7,7,1,1,6m5e__8hoo
+NZ0001,6m9c,6tsl,9,9,1,1,6m9c__6tsl
+NZ0001,6m9c,6whq,9,9,1,1,6m9c__6whq
+NZ0001,6m9c,6wuu,7,7,1,1,6m9c__6wuu
+NZ0001,6m9c,8aoo,8,8,1,1,6m9c__8aoo
+NZ0001,6m9c,8cis,8,8,1,1,6m9c__8cis
+NZ0001,6m9c,9emz,2,7,2,1,6m9c__9emz
+NZ0001,6m9c,9fxn,5,5,1,1,6m9c__9fxn
+NZ0001,6m9d,6uf4,9,9,1,1,6m9d__6uf4
+NZ0001,6m9d,7ofv,10,10,1,1,6m9d__7ofv
+NZ0001,6m9d,8i8g,8,8,1,1,6m9d__8i8g
+NZ0001,6m9d,8v2n,9,9,1,1,6m9d__8v2n
+NZ0001,6mw2,6ppm,10,10,1,1,6mw2__6ppm
+NZ0001,6mw2,7q4t,8,8,1,1,6mw2__7q4t
+NZ0001,6phm,8vld,10,10,1,1,6phm__8vld
+NZ0001,6phq,8cis,6,6,1,1,6phq__8cis
+NZ0001,6phq,8hoo,8,8,1,1,6phq__8hoo
+NZ0001,6phq,9emz,10,10,2,1,6phq__9emz
+NZ0001,6phq,9j3s,3,5,2,1,6phq__9j3s
+NZ0001,6ppm,6psa,10,10,1,1,6ppm__6psa
+NZ0001,6ppm,6s7g,4,4,1,1,6ppm__6s7g
+NZ0001,6ppm,6tdb,8,8,1,1,6ppm__6tdb
+NZ0001,6ppm,7new,5,5,1,1,6ppm__7new
+NZ0001,6ppm,7q4t,8,8,1,1,6ppm__7q4t
+NZ0001,6ppm,7u0e,5,5,1,1,6ppm__7u0e
+NZ0001,6ppm,8s9z,8,8,1,1,6ppm__8s9z
+NZ0001,6ppm,9ehn,9,9,1,1,6ppm__9ehn
+NZ0001,6psa,6s7g,7,7,1,1,6psa__6s7g
+NZ0001,6psa,7ms1,9,9,1,1,6psa__7ms1
+NZ0001,6psa,7new,10,10,1,1,6psa__7new
+NZ0001,6psa,7u0e,10,10,1,1,6psa__7u0e
+NZ0001,6psa,7z3u,8,8,1,1,6psa__7z3u
+NZ0001,6psa,8s9z,2,2,1,1,6psa__8s9z
+NZ0001,6psa,8vld,9,9,1,1,6psa__8vld
+NZ0001,6psa,9ehn,6,6,1,1,6psa__9ehn
+NZ0001,6psa,9emz,9,9,1,1,6psa__9emz
+NZ0001,6pt2,7ms1,9,9,1,1,6pt2__7ms1
+NZ0001,6pt2,8hoo,7,7,1,1,6pt2__8hoo
+NZ0001,6pt2,8i8g,6,6,1,1,6pt2__8i8g
+NZ0001,6pt2,8v2n,9,9,1,1,6pt2__8v2n
+NZ0001,6pt2,8vld,10,10,1,1,6pt2__8vld
+NZ0001,6ryo,6tch,6,6,1,1,6ryo__6tch
+NZ0001,6ryo,8hoo,9,9,1,1,6ryo__8hoo
+NZ0001,6s7g,7ms1,10,10,1,1,6s7g__7ms1
+NZ0001,6s7g,7new,9,9,1,1,6s7g__7new
+NZ0001,6s7g,7q4t,5,5,1,1,6s7g__7q4t
+NZ0001,6s7g,7u0e,9,9,1,1,6s7g__7u0e
+NZ0001,6s7g,8s9z,5,5,1,1,6s7g__8s9z
+NZ0001,6s7g,8vld,10,10,1,1,6s7g__8vld
+NZ0001,6s7g,9ehn,7,7,1,1,6s7g__9ehn
+NZ0001,6tdb,6wuu,7,7,1,1,6tdb__6wuu
+NZ0001,6tdb,7new,4,4,1,1,6tdb__7new
+NZ0001,6tdb,7u0e,3,3,1,1,6tdb__7u0e
+NZ0001,6tdb,8vjw,10,10,1,1,6tdb__8vjw
+NZ0001,6tdb,8vpe,9,9,1,1,6tdb__8vpe
+NZ0001,6tdb,9qbe,10,10,1,1,6tdb__9qbe
+NZ0001,6tsl,6wuu,9,9,1,1,6tsl__6wuu
+NZ0001,6tsl,8ano,8,8,1,1,6tsl__8ano
+NZ0001,6tsl,8aoo,6,6,1,1,6tsl__8aoo
+NZ0001,6tsl,8ti6,4,4,1,1,6tsl__8ti6
+NZ0001,6tsl,8vjw,10,10,1,1,6tsl__8vjw
+NZ0001,6tsl,9emz,8,8,1,1,6tsl__9emz
+NZ0001,6tsl,9ex5,9,9,1,1,6tsl__9ex5
+NZ0001,6tsl,9fxn,10,10,1,1,6tsl__9fxn
+NZ0001,6ucw,6yi1,10,10,1,1,6ucw__6yi1
+NZ0001,6ucw,7f0f,8,8,1,1,6ucw__7f0f
+NZ0001,6ucw,7oyq,9,9,1,1,6ucw__7oyq
+NZ0001,6ucw,8hor,2,2,1,1,6ucw__8hor
+NZ0001,6uf4,6wo2,8,8,1,1,6uf4__6wo2
+NZ0001,6whq,7lkc,9,9,1,1,6whq__7lkc
+NZ0001,6whq,8cis,8,8,1,1,6whq__8cis
+NZ0001,6whq,9emz,4,10,3,1,6whq__9emz
+NZ0001,6wi3,8i82,4,4,1,1,6wi3__8i82
+NZ0001,6wi3,8i8g,8,8,1,1,6wi3__8i8g
+NZ0001,6wi3,8v2n,7,7,1,1,6wi3__8v2n
+NZ0001,6wi3,8vld,8,8,1,1,6wi3__8vld
+NZ0001,6wo2,7f0c,8,8,1,1,6wo2__7f0c
+NZ0001,6wo2,9qby,10,10,1,1,6wo2__9qby
+NZ0001,6wuu,7lkc,5,5,1,1,6wuu__7lkc
+NZ0001,6wuu,7new,10,10,1,1,6wuu__7new
+NZ0001,6wuu,7u0e,10,10,1,1,6wuu__7u0e
+NZ0001,6wuu,8ano,8,9,2,1,6wuu__8ano
+NZ0001,6wuu,8aoo,8,10,2,1,6wuu__8aoo
+NZ0001,6wuu,8hoo,9,9,1,1,6wuu__8hoo
+NZ0001,6wuu,8ti6,9,9,1,1,6wuu__8ti6
+NZ0001,6wuu,8vjw,9,10,2,1,6wuu__8vjw
+NZ0001,6wuu,8vpe,6,6,1,1,6wuu__8vpe
+NZ0001,6wuu,8ysa,10,10,1,1,6wuu__8ysa
+NZ0001,6wuu,9emz,6,10,4,1,6wuu__9emz
+NZ0001,6wuu,9ex5,7,7,1,1,6wuu__9ex5
+NZ0001,6wuu,9fxn,7,7,1,1,6wuu__9fxn
+NZ0001,6wx4,7z3u,7,7,1,1,6wx4__7z3u
+NZ0001,6wx4,9i24,9,9,1,1,6wx4__9i24
+NZ0001,6xbg,7lfv,9,9,1,1,6xbg__7lfv
+NZ0001,6xbg,8vjd,5,5,1,1,6xbg__8vjd
+NZ0001,6xbh,8hoq,8,8,1,1,6xbh__8hoq
+NZ0001,6yd2,9qb1,10,10,1,1,6yd2__9qb1
+NZ0001,6yi1,7oyq,4,4,1,1,6yi1__7oyq
+NZ0001,6yi1,7rxf,9,9,1,1,6yi1__7rxf
+NZ0001,6yi1,7zb0,5,5,1,1,6yi1__7zb0
+NZ0001,6yi1,8hor,9,9,1,1,6yi1__8hor
+NZ0001,6yi1,8i84,10,10,1,1,6yi1__8i84
+NZ0001,6yi1,9qby,10,10,1,1,6yi1__9qby
+NZ0001,6zve,9qb1,8,10,2,1,6zve__9qb1
+NZ0001,7ajz,7zb0,9,9,1,1,7ajz__7zb0
+NZ0001,7axp,7lkc,8,8,1,1,7axp__7lkc
+NZ0001,7axp,8vld,9,9,1,1,7axp__8vld
+NZ0001,7axx,8g82,9,10,2,1,7axx__8g82
+NZ0001,7f0f,8hor,7,7,1,1,7f0f__8hor
+NZ0001,7lfv,8pwp,8,8,1,1,7lfv__8pwp
+NZ0001,7lfv,8sou,7,7,1,1,7lfv__8sou
+NZ0001,7lfv,8vjw,9,9,1,1,7lfv__8vjw
+NZ0001,7lfv,9fxn,10,10,1,1,7lfv__9fxn
+NZ0001,7lkc,8hoo,10,10,1,1,7lkc__8hoo
+NZ0001,7lkc,8vld,3,3,1,1,7lkc__8vld
+NZ0001,7lkc,9emz,10,10,1,1,7lkc__9emz
+NZ0001,7m2p,8tqu,8,8,1,1,7m2p__8tqu
+NZ0001,7m2p,9qbe,4,4,1,1,7m2p__9qbe
+NZ0001,7m2p,9qdf,9,9,1,1,7m2p__9qdf
+NZ0001,7ms1,8s9z,10,10,1,1,7ms1__8s9z
+NZ0001,7ms1,8vld,8,8,1,1,7ms1__8vld
+NZ0001,7ms1,9qbe,8,8,1,1,7ms1__9qbe
+NZ0001,7new,7u0e,2,2,1,1,7new__7u0e
+NZ0001,7new,7z3u,10,10,1,1,7new__7z3u
+NZ0001,7new,8s9z,9,9,1,1,7new__8s9z
+NZ0001,7new,9ehn,8,8,1,1,7new__9ehn
+NZ0001,7ofv,8hoq,9,9,1,1,7ofv__8hoq
+NZ0001,7ofv,9qbe,5,5,1,1,7ofv__9qbe
+NZ0001,7oyq,7rxf,10,10,1,1,7oyq__7rxf
+NZ0001,7oyq,7zb0,8,8,1,1,7oyq__7zb0
+NZ0001,7oyq,8hor,10,10,1,1,7oyq__8hor
+NZ0001,7oyq,8i84,7,7,1,1,7oyq__8i84
+NZ0001,7oyq,9qby,6,10,2,1,7oyq__9qby
+NZ0001,7q4t,8s9z,10,10,1,1,7q4t__8s9z
+NZ0001,7q4t,8vld,6,6,1,1,7q4t__8vld
+NZ0001,7qdi,8c3d,10,10,1,1,7qdi__8c3d
+NZ0001,7rxf,8i84,3,3,1,1,7rxf__8i84
+NZ0001,7u0e,8s9z,9,9,1,1,7u0e__8s9z
+NZ0001,7u0e,9ehn,8,8,1,1,7u0e__9ehn
+NZ0001,7z3u,8s9z,7,7,1,1,7z3u__8s9z
+NZ0001,7z3u,9ehn,10,10,1,1,7z3u__9ehn
+NZ0001,7zb0,8v2n,10,10,1,1,7zb0__8v2n
+NZ0001,8ano,8aoo,6,6,1,1,8ano__8aoo
+NZ0001,8ano,8sou,8,8,1,1,8ano__8sou
+NZ0001,8ano,8t5p,9,9,1,1,8ano__8t5p
+NZ0001,8ano,8ti6,10,10,1,1,8ano__8ti6
+NZ0001,8ano,8vjw,6,6,1,1,8ano__8vjw
+NZ0001,8ano,9fxn,9,9,1,1,8ano__9fxn
+NZ0001,8aoo,8pwp,10,10,1,1,8aoo__8pwp
+NZ0001,8aoo,8ti6,10,10,1,1,8aoo__8ti6
+NZ0001,8aoo,8vjw,9,9,1,1,8aoo__8vjw
+NZ0001,8aoo,9emz,6,6,1,1,8aoo__9emz
+NZ0001,8aoo,9fxn,9,9,1,1,8aoo__9fxn
+NZ0001,8cis,8hoo,10,10,1,1,8cis__8hoo
+NZ0001,8cis,9emz,4,9,3,1,8cis__9emz
+NZ0001,8cis,9fxn,10,10,1,1,8cis__9fxn
+NZ0001,8cis,9j3s,9,9,1,1,8cis__9j3s
+NZ0001,8g1w,9kgq,3,3,1,1,8g1w__9kgq
+NZ0001,8g82,8s6t,5,9,6,1,8g82__8s6t
+NZ0001,8hoo,8vld,9,9,1,1,8hoo__8vld
+NZ0001,8hoo,9emz,6,6,1,1,8hoo__9emz
+NZ0001,8hoo,9j3s,8,8,1,1,8hoo__9j3s
+NZ0001,8hop,8hoq,9,9,1,1,8hop__8hoq
+NZ0001,8hoq,9qbe,7,7,1,1,8hoq__9qbe
+NZ0001,8i82,8i8g,9,9,1,1,8i82__8i8g
+NZ0001,8i82,8vld,8,8,1,1,8i82__8vld
+NZ0001,8i84,9qby,10,10,1,1,8i84__9qby
+NZ0001,8i8g,8v2n,4,4,1,1,8i8g__8v2n
+NZ0001,8pwp,8sou,5,5,1,1,8pwp__8sou
+NZ0001,8pwp,8vjw,9,9,1,1,8pwp__8vjw
+NZ0001,8pwp,9fxn,10,10,1,1,8pwp__9fxn
+NZ0001,8s9z,8vld,10,10,1,1,8s9z__8vld
+NZ0001,8s9z,9ehn,4,4,1,1,8s9z__9ehn
+NZ0001,8s9z,9emz,9,9,1,1,8s9z__9emz
+NZ0001,8s9z,9qbe,10,10,1,1,8s9z__9qbe
+NZ0001,8sou,8vjw,4,10,2,1,8sou__8vjw
+NZ0001,8sou,8ysa,10,10,1,1,8sou__8ysa
+NZ0001,8sou,9i24,10,10,1,1,8sou__9i24
+NZ0001,8t5p,9ex5,10,10,1,1,8t5p__9ex5
+NZ0001,8ti6,9ex5,6,6,1,1,8ti6__9ex5
+NZ0001,8tqu,9qbe,7,7,1,1,8tqu__9qbe
+NZ0001,8vjw,8vpe,3,3,1,1,8vjw__8vpe
+NZ0001,8vjw,8ysa,1,1,1,1,8vjw__8ysa
+NZ0001,8vjw,9fxn,9,9,1,1,8vjw__9fxn
+NZ0001,8vjw,9i24,8,8,1,1,8vjw__9i24
+NZ0001,8vld,9qbe,9,9,1,1,8vld__9qbe
+NZ0001,8vpe,8ysa,4,4,1,1,8vpe__8ysa
+NZ0001,8ysa,9i24,7,7,1,1,8ysa__9i24
+NZ0001,9c2y,9kgq,8,8,1,1,9c2y__9kgq
+NZ0001,9c2y,9qb1,9,10,2,1,9c2y__9qb1
+NZ0001,9ehn,9emz,7,7,1,1,9ehn__9emz
+NZ0001,9ehn,9qbe,8,8,1,1,9ehn__9qbe
+NZ0001,9emz,9fxn,5,5,1,1,9emz__9fxn
+NZ0001,9emz,9j3s,8,10,2,1,9emz__9j3s
+NZ0001,9emz,9qbe,4,4,1,1,9emz__9qbe
+NZ0001,9qbe,9qdf,10,10,1,1,9qbe__9qdf
+NZ0002,2zxe,5avq,2,3,2,39 | 992,2zxe__5avq
+NZ0002,2zxe,5avr,3,3,2,39 | 992,2zxe__5avr
+NZ0002,2zxe,5avs,3,3,2,39 | 992,2zxe__5avs
+NZ0002,2zxe,5avt,3,3,2,39 | 992,2zxe__5avt
+NZ0002,2zxe,5avu,3,3,2,39 | 992,2zxe__5avu
+NZ0002,2zxe,5avv,2,3,2,39 | 992,2zxe__5avv
+NZ0002,2zxe,5avw,3,3,2,39 | 992,2zxe__5avw
+NZ0002,2zxe,5avx,2,4,2,39 | 992,2zxe__5avx
+NZ0002,2zxe,5avy,3,4,2,39 | 992,2zxe__5avy
+NZ0002,2zxe,5avz,3,3,2,39 | 992,2zxe__5avz
+NZ0002,2zxe,5aw0,2,3,2,39 | 992,2zxe__5aw0
+NZ0002,2zxe,5aw1,3,3,2,39 | 992,2zxe__5aw1
+NZ0002,2zxe,5aw2,2,3,2,39 | 992,2zxe__5aw2
+NZ0002,2zxe,5aw3,3,3,2,39 | 992,2zxe__5aw3
+NZ0002,2zxe,5aw4,3,5,2,39 | 992,2zxe__5aw4
+NZ0002,2zxe,5aw5,3,4,2,39 | 992,2zxe__5aw5
+NZ0002,2zxe,5aw6,4,4,2,39 | 992,2zxe__5aw6
+NZ0002,2zxe,5aw7,3,4,2,39 | 992,2zxe__5aw7
+NZ0002,2zxe,5aw8,4,4,2,39 | 992,2zxe__5aw8
+NZ0002,5avq,5avr,3,5,2,39 | 992,5avq__5avr
+NZ0002,5avq,5avs,3,5,2,39 | 992,5avq__5avs
+NZ0002,5avq,5avt,4,5,2,39 | 992,5avq__5avt
+NZ0002,5avq,5avu,3,4,2,39 | 992,5avq__5avu
+NZ0002,5avq,5avv,3,4,2,39 | 992,5avq__5avv
+NZ0002,5avq,5avw,3,4,2,39 | 992,5avq__5avw
+NZ0002,5avq,5avx,3,5,2,39 | 992,5avq__5avx
+NZ0002,5avq,5avy,3,5,2,39 | 992,5avq__5avy
+NZ0002,5avq,5avz,4,5,2,39 | 992,5avq__5avz
+NZ0002,5avq,5aw0,3,4,2,39 | 992,5avq__5aw0
+NZ0002,5avq,5aw1,4,5,2,39 | 992,5avq__5aw1
+NZ0002,5avq,5aw2,4,4,2,39 | 992,5avq__5aw2
+NZ0002,5avq,5aw3,4,4,2,39 | 992,5avq__5aw3
+NZ0002,5avq,5aw4,5,6,2,39 | 992,5avq__5aw4
+NZ0002,5avq,5aw5,4,4,2,39 | 992,5avq__5aw5
+NZ0002,5avq,5aw6,4,5,2,39 | 992,5avq__5aw6
+NZ0002,5avq,5aw7,4,5,2,39 | 992,5avq__5aw7
+NZ0002,5avq,5aw8,4,5,2,39 | 992,5avq__5aw8
+NZ0002,5avr,5avs,4,5,2,39 | 992,5avr__5avs
+NZ0002,5avr,5avt,4,5,2,39 | 992,5avr__5avt
+NZ0002,5avr,5avu,4,4,2,39 | 992,5avr__5avu
+NZ0002,5avr,5avv,4,5,2,39 | 992,5avr__5avv
+NZ0002,5avr,5avw,4,5,2,39 | 992,5avr__5avw
+NZ0002,5avr,5avx,4,5,2,39 | 992,5avr__5avx
+NZ0002,5avr,5avy,3,5,2,39 | 992,5avr__5avy
+NZ0002,5avr,5avz,4,5,2,39 | 992,5avr__5avz
+NZ0002,5avr,5aw0,4,5,2,39 | 992,5avr__5aw0
+NZ0002,5avr,5aw1,4,5,2,39 | 992,5avr__5aw1
+NZ0002,5avr,5aw2,3,5,2,39 | 992,5avr__5aw2
+NZ0002,5avr,5aw3,4,5,2,39 | 992,5avr__5aw3
+NZ0002,5avr,5aw4,4,5,2,39 | 992,5avr__5aw4
+NZ0002,5avr,5aw5,4,5,2,39 | 992,5avr__5aw5
+NZ0002,5avr,5aw6,5,5,2,39 | 992,5avr__5aw6
+NZ0002,5avr,5aw7,4,5,2,39 | 992,5avr__5aw7
+NZ0002,5avr,5aw8,4,5,2,39 | 992,5avr__5aw8
+NZ0002,5avs,5avt,4,5,2,39 | 992,5avs__5avt
+NZ0002,5avs,5avu,4,4,2,39 | 992,5avs__5avu
+NZ0002,5avs,5avv,3,5,2,39 | 992,5avs__5avv
+NZ0002,5avs,5avw,4,4,2,39 | 992,5avs__5avw
+NZ0002,5avs,5avx,4,5,2,39 | 992,5avs__5avx
+NZ0002,5avs,5avy,3,5,2,39 | 992,5avs__5avy
+NZ0002,5avs,5avz,3,4,2,39 | 992,5avs__5avz
+NZ0002,5avs,5aw0,4,5,2,39 | 992,5avs__5aw0
+NZ0002,5avs,5aw1,4,5,2,39 | 992,5avs__5aw1
+NZ0002,5avs,5aw2,3,4,2,39 | 992,5avs__5aw2
+NZ0002,5avs,5aw3,3,5,2,39 | 992,5avs__5aw3
+NZ0002,5avs,5aw4,4,6,2,39 | 992,5avs__5aw4
+NZ0002,5avs,5aw5,3,5,2,39 | 992,5avs__5aw5
+NZ0002,5avs,5aw6,6,6,2,39 | 992,5avs__5aw6
+NZ0002,5avs,5aw7,4,5,2,39 | 992,5avs__5aw7
+NZ0002,5avs,5aw8,5,5,2,39 | 992,5avs__5aw8
+NZ0002,5avt,5avu,3,4,2,39 | 992,5avt__5avu
+NZ0002,5avt,5avv,4,4,2,39 | 992,5avt__5avv
+NZ0002,5avt,5avw,3,5,2,39 | 992,5avt__5avw
+NZ0002,5avt,5avx,4,5,2,39 | 992,5avt__5avx
+NZ0002,5avt,5avy,4,5,2,39 | 992,5avt__5avy
+NZ0002,5avt,5avz,4,5,2,39 | 992,5avt__5avz
+NZ0002,5avt,5aw0,5,5,2,39 | 992,5avt__5aw0
+NZ0002,5avt,5aw1,4,5,2,39 | 992,5avt__5aw1
+NZ0002,5avt,5aw2,4,4,2,39 | 992,5avt__5aw2
+NZ0002,5avt,5aw3,3,5,2,39 | 992,5avt__5aw3
+NZ0002,5avt,5aw4,5,6,2,39 | 992,5avt__5aw4
+NZ0002,5avt,5aw5,4,6,2,39 | 992,5avt__5aw5
+NZ0002,5avt,5aw6,4,5,2,39 | 992,5avt__5aw6
+NZ0002,5avt,5aw7,4,5,2,39 | 992,5avt__5aw7
+NZ0002,5avt,5aw8,4,5,2,39 | 992,5avt__5aw8
+NZ0002,5avu,5avv,4,4,2,39 | 992,5avu__5avv
+NZ0002,5avu,5avw,4,4,2,39 | 992,5avu__5avw
+NZ0002,5avu,5avx,4,5,2,39 | 992,5avu__5avx
+NZ0002,5avu,5avy,3,4,2,39 | 992,5avu__5avy
+NZ0002,5avu,5avz,4,5,2,39 | 992,5avu__5avz
+NZ0002,5avu,5aw0,4,5,2,39 | 992,5avu__5aw0
+NZ0002,5avu,5aw1,4,5,2,39 | 992,5avu__5aw1
+NZ0002,5avu,5aw2,4,4,2,39 | 992,5avu__5aw2
+NZ0002,5avu,5aw3,4,5,2,39 | 992,5avu__5aw3
+NZ0002,5avu,5aw4,4,5,2,39 | 992,5avu__5aw4
+NZ0002,5avu,5aw5,5,5,2,39 | 992,5avu__5aw5
+NZ0002,5avu,5aw6,5,5,2,39 | 992,5avu__5aw6
+NZ0002,5avu,5aw7,4,5,2,39 | 992,5avu__5aw7
+NZ0002,5avu,5aw8,4,5,2,39 | 992,5avu__5aw8
+NZ0002,5avv,5avw,4,5,2,39 | 992,5avv__5avw
+NZ0002,5avv,5avx,4,4,2,39 | 992,5avv__5avx
+NZ0002,5avv,5avy,4,5,2,39 | 992,5avv__5avy
+NZ0002,5avv,5avz,4,5,2,39 | 992,5avv__5avz
+NZ0002,5avv,5aw0,3,5,2,39 | 992,5avv__5aw0
+NZ0002,5avv,5aw1,3,6,2,39 | 992,5avv__5aw1
+NZ0002,5avv,5aw2,4,5,2,39 | 992,5avv__5aw2
+NZ0002,5avv,5aw3,4,4,2,39 | 992,5avv__5aw3
+NZ0002,5avv,5aw4,4,5,2,39 | 992,5avv__5aw4
+NZ0002,5avv,5aw5,4,6,2,39 | 992,5avv__5aw5
+NZ0002,5avv,5aw6,4,5,2,39 | 992,5avv__5aw6
+NZ0002,5avv,5aw7,5,7,2,39 | 992,5avv__5aw7
+NZ0002,5avv,5aw8,5,5,2,39 | 992,5avv__5aw8
+NZ0002,5avw,5avx,3,4,2,39 | 992,5avw__5avx
+NZ0002,5avw,5avy,3,4,2,39 | 992,5avw__5avy
+NZ0002,5avw,5avz,4,5,2,39 | 992,5avw__5avz
+NZ0002,5avw,5aw0,3,5,2,39 | 992,5avw__5aw0
+NZ0002,5avw,5aw1,3,5,2,39 | 992,5avw__5aw1
+NZ0002,5avw,5aw2,5,5,2,39 | 992,5avw__5aw2
+NZ0002,5avw,5aw3,4,5,2,39 | 992,5avw__5aw3
+NZ0002,5avw,5aw4,4,5,2,39 | 992,5avw__5aw4
+NZ0002,5avw,5aw5,4,6,2,39 | 992,5avw__5aw5
+NZ0002,5avw,5aw6,6,6,2,39 | 992,5avw__5aw6
+NZ0002,5avw,5aw7,4,6,2,39 | 992,5avw__5aw7
+NZ0002,5avw,5aw8,4,6,2,39 | 992,5avw__5aw8
+NZ0002,5avx,5avy,4,6,2,39 | 992,5avx__5avy
+NZ0002,5avx,5avz,3,5,2,39 | 992,5avx__5avz
+NZ0002,5avx,5aw0,3,5,2,39 | 992,5avx__5aw0
+NZ0002,5avx,5aw1,4,5,2,39 | 992,5avx__5aw1
+NZ0002,5avx,5aw2,3,4,2,39 | 992,5avx__5aw2
+NZ0002,5avx,5aw3,4,6,2,39 | 992,5avx__5aw3
+NZ0002,5avx,5aw4,5,5,2,39 | 992,5avx__5aw4
+NZ0002,5avx,5aw5,4,6,2,39 | 992,5avx__5aw5
+NZ0002,5avx,5aw6,4,6,2,39 | 992,5avx__5aw6
+NZ0002,5avx,5aw7,4,6,2,39 | 992,5avx__5aw7
+NZ0002,5avx,5aw8,4,6,2,39 | 992,5avx__5aw8
+NZ0002,5avy,5avz,3,5,2,39 | 992,5avy__5avz
+NZ0002,5avy,5aw0,4,5,2,39 | 992,5avy__5aw0
+NZ0002,5avy,5aw1,3,5,2,39 | 992,5avy__5aw1
+NZ0002,5avy,5aw2,4,5,2,39 | 992,5avy__5aw2
+NZ0002,5avy,5aw3,3,4,2,39 | 992,5avy__5aw3
+NZ0002,5avy,5aw4,4,5,2,39 | 992,5avy__5aw4
+NZ0002,5avy,5aw5,5,5,2,39 | 992,5avy__5aw5
+NZ0002,5avy,5aw6,5,5,2,39 | 992,5avy__5aw6
+NZ0002,5avy,5aw7,4,5,2,39 | 992,5avy__5aw7
+NZ0002,5avy,5aw8,5,6,2,39 | 992,5avy__5aw8
+NZ0002,5avz,5aw0,4,5,2,39 | 992,5avz__5aw0
+NZ0002,5avz,5aw1,3,5,2,39 | 992,5avz__5aw1
+NZ0002,5avz,5aw2,4,5,2,39 | 992,5avz__5aw2
+NZ0002,5avz,5aw3,4,5,2,39 | 992,5avz__5aw3
+NZ0002,5avz,5aw4,4,6,2,39 | 992,5avz__5aw4
+NZ0002,5avz,5aw5,5,5,2,39 | 992,5avz__5aw5
+NZ0002,5avz,5aw6,5,6,2,39 | 992,5avz__5aw6
+NZ0002,5avz,5aw7,5,7,2,39 | 992,5avz__5aw7
+NZ0002,5avz,5aw8,4,6,2,39 | 992,5avz__5aw8
+NZ0002,5aw0,5aw1,3,5,2,39 | 992,5aw0__5aw1
+NZ0002,5aw0,5aw2,4,5,2,39 | 992,5aw0__5aw2
+NZ0002,5aw0,5aw3,3,5,2,39 | 992,5aw0__5aw3
+NZ0002,5aw0,5aw4,4,6,2,39 | 992,5aw0__5aw4
+NZ0002,5aw0,5aw5,4,5,2,39 | 992,5aw0__5aw5
+NZ0002,5aw0,5aw6,4,6,2,39 | 992,5aw0__5aw6
+NZ0002,5aw0,5aw7,3,6,2,39 | 992,5aw0__5aw7
+NZ0002,5aw0,5aw8,4,5,2,39 | 992,5aw0__5aw8
+NZ0002,5aw1,5aw2,4,5,2,39 | 992,5aw1__5aw2
+NZ0002,5aw1,5aw3,4,5,2,39 | 992,5aw1__5aw3
+NZ0002,5aw1,5aw4,5,5,2,39 | 992,5aw1__5aw4
+NZ0002,5aw1,5aw5,4,6,2,39 | 992,5aw1__5aw5
+NZ0002,5aw1,5aw6,4,5,2,39 | 992,5aw1__5aw6
+NZ0002,5aw1,5aw7,4,6,2,39 | 992,5aw1__5aw7
+NZ0002,5aw1,5aw8,4,5,2,39 | 992,5aw1__5aw8
+NZ0002,5aw2,5aw3,4,4,2,39 | 992,5aw2__5aw3
+NZ0002,5aw2,5aw4,3,6,2,39 | 992,5aw2__5aw4
+NZ0002,5aw2,5aw5,4,5,2,39 | 992,5aw2__5aw5
+NZ0002,5aw2,5aw6,4,5,2,39 | 992,5aw2__5aw6
+NZ0002,5aw2,5aw7,4,6,2,39 | 992,5aw2__5aw7
+NZ0002,5aw2,5aw8,4,5,2,39 | 992,5aw2__5aw8
+NZ0002,5aw3,5aw4,4,5,2,39 | 992,5aw3__5aw4
+NZ0002,5aw3,5aw5,3,6,2,39 | 992,5aw3__5aw5
+NZ0002,5aw3,5aw6,5,6,2,39 | 992,5aw3__5aw6
+NZ0002,5aw3,5aw7,4,5,2,39 | 992,5aw3__5aw7
+NZ0002,5aw3,5aw8,4,7,2,39 | 992,5aw3__5aw8
+NZ0002,5aw4,5aw5,3,5,2,39 | 992,5aw4__5aw5
+NZ0002,5aw4,5aw6,3,5,2,39 | 992,5aw4__5aw6
+NZ0002,5aw4,5aw7,3,5,2,39 | 992,5aw4__5aw7
+NZ0002,5aw4,5aw8,4,5,2,39 | 992,5aw4__5aw8
+NZ0002,5aw5,5aw6,4,5,2,39 | 992,5aw5__5aw6
+NZ0002,5aw5,5aw7,4,5,2,39 | 992,5aw5__5aw7
+NZ0002,5aw5,5aw8,3,6,2,39 | 992,5aw5__5aw8
+NZ0002,5aw6,5aw7,4,6,2,39 | 992,5aw6__5aw7
+NZ0002,5aw6,5aw8,3,5,2,39 | 992,5aw6__5aw8
+NZ0002,5aw7,5aw8,3,5,2,39 | 992,5aw7__5aw8
+NZ0003,5eeu,5eev,2,2,19,67 | 68 | 69 | 70,5eeu__5eev
+NZ0003,5eeu,5eew,2,2,19,67 | 68 | 69 | 70,5eeu__5eew
+NZ0003,5eeu,5eex,2,3,19,67 | 68 | 69 | 70,5eeu__5eex
+NZ0003,5eeu,5eey,2,2,19,67 | 68 | 69 | 70,5eeu__5eey
+NZ0003,5eeu,5eez,2,2,19,67 | 68 | 69 | 70,5eeu__5eez
+NZ0003,5eeu,5ef0,2,2,19,67 | 68 | 69 | 70,5eeu__5ef0
+NZ0003,5eeu,5ef1,2,3,19,67 | 68 | 69 | 70,5eeu__5ef1
+NZ0003,5eeu,5ef2,2,2,19,67 | 68 | 69 | 70,5eeu__5ef2
+NZ0003,5eeu,5ef3,2,2,19,67 | 68 | 69 | 70,5eeu__5ef3
+NZ0003,5eev,5eew,2,3,19,67 | 68 | 69 | 70,5eev__5eew
+NZ0003,5eev,5eex,2,3,19,67 | 68 | 69 | 70,5eev__5eex
+NZ0003,5eev,5eey,2,3,19,67 | 68 | 69 | 70,5eev__5eey
+NZ0003,5eev,5eez,2,3,19,67 | 68 | 69 | 70,5eev__5eez
+NZ0003,5eev,5ef0,2,3,19,67 | 68 | 69 | 70,5eev__5ef0
+NZ0003,5eev,5ef1,2,4,19,67 | 68 | 69 | 70,5eev__5ef1
+NZ0003,5eev,5ef2,2,3,19,67 | 68 | 69 | 70,5eev__5ef2
+NZ0003,5eev,5ef3,2,4,19,67 | 68 | 69 | 70,5eev__5ef3
+NZ0003,5eew,5eex,2,4,19,67 | 68 | 69 | 70,5eew__5eex
+NZ0003,5eew,5eey,2,4,19,67 | 68 | 69 | 70,5eew__5eey
+NZ0003,5eew,5eez,2,3,19,67 | 68 | 69 | 70,5eew__5eez
+NZ0003,5eew,5ef0,2,4,19,67 | 68 | 69 | 70,5eew__5ef0
+NZ0003,5eew,5ef1,2,3,19,67 | 68 | 69 | 70,5eew__5ef1
+NZ0003,5eew,5ef2,2,4,19,67 | 68 | 69 | 70,5eew__5ef2
+NZ0003,5eew,5ef3,2,4,19,67 | 68 | 69 | 70,5eew__5ef3
+NZ0003,5eex,5eey,2,3,19,67 | 68 | 69 | 70,5eex__5eey
+NZ0003,5eex,5eez,2,3,19,67 | 68 | 69 | 70,5eex__5eez
+NZ0003,5eex,5ef0,2,3,19,67 | 68 | 69 | 70,5eex__5ef0
+NZ0003,5eex,5ef1,2,3,19,67 | 68 | 69 | 70,5eex__5ef1
+NZ0003,5eex,5ef2,2,3,19,67 | 68 | 69 | 70,5eex__5ef2
+NZ0003,5eex,5ef3,2,5,19,67 | 68 | 69 | 70,5eex__5ef3
+NZ0003,5eey,5eez,2,3,19,67 | 68 | 69 | 70,5eey__5eez
+NZ0003,5eey,5ef0,2,3,19,67 | 68 | 69 | 70,5eey__5ef0
+NZ0003,5eey,5ef1,2,4,19,67 | 68 | 69 | 70,5eey__5ef1
+NZ0003,5eey,5ef2,2,3,19,67 | 68 | 69 | 70,5eey__5ef2
+NZ0003,5eey,5ef3,2,3,19,67 | 68 | 69 | 70,5eey__5ef3
+NZ0003,5eez,5ef0,2,3,19,67 | 68 | 69 | 70,5eez__5ef0
+NZ0003,5eez,5ef1,2,3,19,67 | 68 | 69 | 70,5eez__5ef1
+NZ0003,5eez,5ef2,2,3,19,67 | 68 | 69 | 70,5eez__5ef2
+NZ0003,5eez,5ef3,2,4,19,67 | 68 | 69 | 70,5eez__5ef3
+NZ0003,5ef0,5ef1,2,3,19,67 | 68 | 69 | 70,5ef0__5ef1
+NZ0003,5ef0,5ef2,2,4,19,67 | 68 | 69 | 70,5ef0__5ef2
+NZ0003,5ef0,5ef3,2,4,19,67 | 68 | 69 | 70,5ef0__5ef3
+NZ0003,5ef1,5ef2,2,3,19,67 | 68 | 69 | 70,5ef1__5ef2
+NZ0003,5ef1,5ef3,2,4,19,67 | 68 | 69 | 70,5ef1__5ef3
+NZ0003,5ef2,5ef3,2,3,19,67 | 68 | 69 | 70,5ef2__5ef3
+NZ0004,4x4b,4x4c,2,2,4,76 | 77,4x4b__4x4c
+NZ0004,4x4b,4x4d,2,2,4,76 | 77,4x4b__4x4d
+NZ0004,4x4b,4x4e,2,2,4,76 | 77,4x4b__4x4e
+NZ0004,4x4b,4x4f,2,2,4,76 | 77,4x4b__4x4f
+NZ0004,4x4b,4x4g,2,2,4,76 | 77,4x4b__4x4g
+NZ0004,4x4b,4x4h,2,2,4,76 | 77,4x4b__4x4h
+NZ0004,4x4b,4x4i,2,2,4,76 | 77,4x4b__4x4i
+NZ0004,4x4c,4x4d,3,3,4,76 | 77,4x4c__4x4d
+NZ0004,4x4c,4x4e,2,3,4,76 | 77,4x4c__4x4e
+NZ0004,4x4c,4x4f,2,3,4,76 | 77,4x4c__4x4f
+NZ0004,4x4c,4x4g,2,3,4,76 | 77,4x4c__4x4g
+NZ0004,4x4c,4x4h,2,3,4,76 | 77,4x4c__4x4h
+NZ0004,4x4c,4x4i,2,3,4,76 | 77,4x4c__4x4i
+NZ0004,4x4d,4x4e,3,3,4,76 | 77,4x4d__4x4e
+NZ0004,4x4d,4x4f,3,3,4,76 | 77,4x4d__4x4f
+NZ0004,4x4d,4x4g,2,3,4,76 | 77,4x4d__4x4g
+NZ0004,4x4d,4x4h,3,3,4,76 | 77,4x4d__4x4h
+NZ0004,4x4d,4x4i,2,3,4,76 | 77,4x4d__4x4i
+NZ0004,4x4e,4x4f,2,3,4,76 | 77,4x4e__4x4f
+NZ0004,4x4e,4x4g,2,3,4,76 | 77,4x4e__4x4g
+NZ0004,4x4e,4x4h,2,3,4,76 | 77,4x4e__4x4h
+NZ0004,4x4e,4x4i,3,4,4,76 | 77,4x4e__4x4i
+NZ0004,4x4f,4x4g,3,3,4,76 | 77,4x4f__4x4g
+NZ0004,4x4f,4x4h,2,3,4,76 | 77,4x4f__4x4h
+NZ0004,4x4f,4x4i,2,3,4,76 | 77,4x4f__4x4i
+NZ0004,4x4g,4x4h,3,3,4,76 | 77,4x4g__4x4h
+NZ0004,4x4g,4x4i,2,3,4,76 | 77,4x4g__4x4i
+NZ0004,4x4h,4x4i,2,3,4,76 | 77,4x4h__4x4i
+NZ0005,1k4c,3f5w,2,2,2,212 | 219,1k4c__3f5w
+NZ0005,1k4c,3f7y,2,2,2,212 | 219,1k4c__3f7y
+NZ0005,1k4c,3fb6,3,3,2,212 | 219,1k4c__3fb6
+NZ0005,1k4c,3fb8,2,2,2,212 | 219,1k4c__3fb8
+NZ0005,3f5w,3f7y,3,3,2,212 | 219,3f5w__3f7y
+NZ0005,3f5w,3fb6,4,4,2,212 | 219,3f5w__3fb6
+NZ0005,3f5w,3fb8,3,3,2,212 | 219,3f5w__3fb8
+NZ0005,3f7y,3fb6,3,5,2,212 | 219,3f7y__3fb6
+NZ0005,3f7y,3fb8,3,3,2,212 | 219,3f7y__3fb8
+NZ0005,3fb6,3fb8,3,4,2,212 | 219,3fb6__3fb8
+NZ0006,6zhw,6zi6,1,1,2,257 | 332,6zhw__6zi6
+NZ0006,6zhw,6zi9,1,1,2,257 | 332,6zhw__6zi9
+NZ0006,6zhw,6zia,1,1,2,257 | 332,6zhw__6zia
+NZ0006,6zhw,6zid,1,1,2,257 | 332,6zhw__6zid
+NZ0006,6zi6,6zi9,1,1,2,257 | 332,6zi6__6zi9
+NZ0006,6zi6,6zia,1,1,2,257 | 332,6zi6__6zia
+NZ0006,6zi6,6zid,1,1,2,257 | 332,6zi6__6zid
+NZ0006,6zi9,6zia,1,1,2,257 | 332,6zi9__6zia
+NZ0006,6zi9,6zid,1,1,2,257 | 332,6zi9__6zid
+NZ0006,6zia,6zid,1,1,2,257 | 332,6zia__6zid
+NZ0007,7gw3,7gw4,10,10,1,3,7gw3__7gw4
+NZ0007,7gw4,7gw6,9,9,1,3,7gw4__7gw6
+NZ0007,7gw6,7gw7,10,10,1,3,7gw6__7gw7
+NZ0008,3kzi,4v62,2,3,6,28 | 34 | 35 | 62 | 335 | 340,3kzi__4v62
+NZ0008,3kzi,4v82,5,6,2,62 | 335,3kzi__4v82
+NZ0008,4v62,4v82,3,4,17,32 | 34 | 35 | 37 | 62 | 97 | 137 | 243 | 335,4v62__4v82
+NZ0009,7gvc,7gvg,10,10,1,3,7gvc__7gvg
+NZ0009,7gvf,7gvg,10,10,1,3,7gvf__7gvg
+NZ0010,1bmf,2w6i,6,7,5,466 | 467 | 487 | 492,1bmf__2w6i
+NZ0011,1fzi,1mty,3,3,2,384,1fzi__1mty
+NZ0012,1gyp,1gyq,2,3,4,358,1gyp__1gyq
+NZ0013,1kac,1p69,2,2,1,124,1kac__1p69
+NZ0014,1kqa,1krr,4,6,3,200,1kqa__1krr
+NZ0015,1mqm,1mqn,2,3,6,172 | 318,1mqm__1mqn
+NZ0016,1th6,2arm,2,2,1,121,1th6__2arm
+NZ0017,1tmb,6yd3,9,9,1,1,1tmb__6yd3
+NZ0018,1ydt,2uzw,2,2,1,20,1ydt__2uzw
+NZ0019,2ck3,2w6j,2,3,2,25 | 490,2ck3__2w6j
+NZ0020,2h4y,2hby,2,2,1,3,2h4y__2hby
+NZ0021,3g1f,3g1h,3,3,1,217,3g1f__3g1h
+NZ0022,3l3o,3ohx,3,4,6,84 | 184,3l3o__3ohx
+NZ0023,3rhw,3ria,7,9,3,339 | 340,3rhw__3ria
+NZ0024,3run,7zmu,8,8,1,1,3run__7zmu
+NZ0025,3s60,8vjf,10,10,1,1,3s60__8vjf
+NZ0026,4f9n,4i47,1,1,1,246,4f9n__4i47
+NZ0027,4lo0,4lo7,5,5,1,286,4lo0__4lo7
+NZ0028,4lyz,5lyz,2,2,1,129,4lyz__5lyz
+NZ0029,4oin,4q4z,2,3,3,94 | 227 | 231,4oin__4q4z
+NZ0030,4v2b,4v2c,3,3,1,106,4v2b__4v2c
+NZ0031,5c7z,5fpi,1,1,1,6,5c7z__5fpi
+NZ0032,5cry,5hbc,3,3,1,348,5cry__5hbc
+NZ0033,5wku,5wky,2,3,2,417 | 418,5wku__5wky
+NZ0034,5zis,5zlh,3,3,2,449 | 451,5zis__5zlh
+NZ0035,6dvc,6tyf,2,2,1,174,6dvc__6tyf
+NZ0036,6e2w,6e2y,4,4,1,327,6e2w__6e2y
+NZ0037,6j5p,6j5q,1,1,1,246,6j5p__6j5q
+NZ0038,6zi4,6zi5,1,1,2,257 | 332,6zi4__6zi5
+NZ0039,7f4m,7f4n,2,3,2,25 | 130,7f4m__7f4n
+NZ0040,7gue,7guf,9,9,1,3,7gue__7guf
+NZ0041,7gvb,7gve,10,10,1,3,7gvb__7gve
+NZ0042,7gvr,7gvz,9,9,1,3,7gvr__7gvz
+NZ0043,7gvv,7gvx,10,10,1,3,7gvv__7gvx
+NZ0044,7gwb,7gwf,10,10,1,3,7gwb__7gwf
+NZ0045,7gwm,7gxb,9,9,1,3,7gwm__7gxb
+NZ0046,7gwy,7gx2,9,9,1,3,7gwy__7gx2
+NZ0047,7gx1,7gx9,10,10,1,3,7gx1__7gx9
+NZ0048,7gxe,7gxf,8,8,1,3,7gxe__7gxf
+NZ0049,7gxh,7gxn,9,9,1,3,7gxh__7gxn
+NZ0050,7gxs,7gxu,10,10,1,3,7gxs__7gxu
+NZ0051,8bzl,9cl8,5,9,2,1,8bzl__9cl8
+NZ0052,8f6s,9el8,2,2,2,133 | 665,8f6s__9el8
+NZ0053,8hos,9bc1,8,10,2,1,8hos__9bc1

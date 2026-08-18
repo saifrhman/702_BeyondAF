@@ -1,0 +1,21 @@
+{
+  "alignment_available_chain_pair_count": 1475,
+  "alignment_missing_nontrivial_chain_pair_count": 11,
+  "cache_hits": 0,
+  "cache_misses": 136,
+  "cache_version": "comp702-nonzero-near-evidence-v1",
+  "chain_pair_count": 3179,
+  "deposition_pair_count": 1753,
+  "evidence_category_counts": {
+    "AMBIGUOUS_REQUIRES_MANUAL_REVIEW": 11,
+    "NEAR_BRI_GEOMETRY_ONLY": 319,
+    "TRIVIAL_M1_ONLY": 1423
+  },
+  "m1_only_pair_count": 1423,
+  "manual_review_pair_count": 330,
+  "nontrivial_pair_count": 330,
+  "old_snapshot_comparison_used": false,
+  "required_mmcif_deposition_count": 136,
+  "review_csv_modified": false,
+  "scientific_duplicate_decisions_made": 0
+}

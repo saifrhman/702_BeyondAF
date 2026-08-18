@@ -41,11 +41,9 @@ slurm-*.out
 .idea/
 
 # Conda environments are reconstructed from reproducibility files
-envs/
 
 # Generated Python and application caches
 **/__pycache__/
-*.pyc
 **/.cache/
 **/.pytest_cache/
 
@@ -53,3 +51,7 @@ src/*.egg-info/
 
 # Local pinned literature/reference artifacts
 /reference/
+
+# Stage-13 temporary review checkpoints and parser caches
+reports/*.before_*.csv
+reports/acta_2026_nonzero_batch_evidence/mmcif_cache/

@@ -1,0 +1,41 @@
+deposition_pair_id,left_pdb_id,right_pdb_id,exact_bri_chain_pair_count,retained_residue_counts,left_polymer_chain_count,right_polymer_chain_count,shared_identity_chain_count,shared_raw_xyz_chain_count,shared_full_chain_count,complete_polymer_identity_equal,complete_polymer_raw_xyz_equal,complete_polymer_full_equal,evidence_group
+7wvd__8gv6,7wvd,8gv6,10,107 | 124 | 172 | 318,10,10,4,4,4,False,False,False,C_partial_polymer_raw_coordinate_reuse
+2bsq__2h1o,2bsq,2h1o,8,63 | 64 | 67 | 68 | 140 | 143,10,10,2,2,2,False,False,False,C_partial_polymer_raw_coordinate_reuse
+5mlb__5o2s,5mlb,5o2s,6,156 | 164 | 165,8,8,8,8,8,True,True,True,A_complete_polymer_exact
+1gli__3hhb,1gli,3hhb,2,146,4,4,0,0,0,False,False,False,D_no_raw_polymer_coordinate_reuse
+1hdu__1hee,1hdu,1hee,4,307,4,4,4,4,4,True,True,True,A_complete_polymer_exact
+1w20__1w21,1w20,1w21,4,389,4,4,4,4,0,True,True,False,B_complete_polymer_XYZ_equal_metadata_differs
+4rrw__4rrz,4rrw,4rrz,4,552,4,4,4,4,4,True,True,True,A_complete_polymer_exact
+7wvi__8gv4,7wvi,8gv4,4,214 | 226,4,4,4,4,4,True,True,True,A_complete_polymer_exact
+1a0t__1oh2,1a0t,1oh2,3,413,3,3,2,2,2,False,False,False,C_partial_polymer_raw_coordinate_reuse
+1wbh__2c0a,1wbh,2c0a,3,209 | 210 | 214,3,3,3,3,3,True,True,True,A_complete_polymer_exact
+4oor__4ov7,4oor,4ov7,3,70 | 72 | 73,8,8,8,8,8,True,True,True,A_complete_polymer_exact
+1bqq__1buv,1bqq,1buv,2,174 | 184,2,2,2,2,2,True,True,True,A_complete_polymer_exact
+1ce7__2mll,1ce7,2mll,2,241 | 255,2,2,1,1,1,False,False,False,C_partial_polymer_raw_coordinate_reuse
+1npa__1npw,1npa,1npw,2,99,2,2,1,1,1,False,False,False,C_partial_polymer_raw_coordinate_reuse
+1nsg__2fap,1nsg,2fap,2,94 | 107,2,2,0,0,0,False,False,False,D_no_raw_polymer_coordinate_reuse
+1rah__1rai,1rah,1rai,2,310,4,4,2,1,0,False,False,False,C_partial_polymer_raw_coordinate_reuse
+1wbj__2clk,1wbj,2clk,2,267 | 390,2,2,2,2,2,True,True,True,A_complete_polymer_exact
+2gyk__2gzj,2gyk,2gzj,2,83 | 130,4,4,4,4,4,True,True,True,A_complete_polymer_exact
+2qr1__2qrc,2qr1,2qrc,2,91,6,6,6,5,5,True,False,False,C_partial_polymer_raw_coordinate_reuse
+3g9o__3g9p,3g9o,3g9p,2,75,4,4,4,4,4,True,True,True,A_complete_polymer_exact
+6vb4__6viu,6vb4,6viu,2,9 | 99,3,3,2,2,2,False,False,False,C_partial_polymer_raw_coordinate_reuse
+7cjn__7d9m,7cjn,7d9m,2,115,2,2,2,2,2,True,True,True,A_complete_polymer_exact
+1b0z__2pgi,1b0z,2pgi,1,442,1,1,1,1,1,True,True,True,A_complete_polymer_exact
+1ffy__1qu2,1ffy,1qu2,1,917,2,2,2,2,2,True,True,True,A_complete_polymer_exact
+1nv1__1nv5,1nv1,1nv5,1,331,1,1,1,1,1,True,True,True,A_complete_polymer_exact
+1o3f__1o3g,1o3f,1o3g,1,223,1,1,1,1,0,True,True,False,B_complete_polymer_XYZ_equal_metadata_differs
+1po8__1tc8,1po8,1tc8,1,118,1,1,1,0,0,True,False,False,D_no_raw_polymer_coordinate_reuse
+1yyy__1zzz,1yyy,1zzz,1,223,1,1,0,0,0,False,False,False,D_no_raw_polymer_coordinate_reuse
+2hqe__2o4x,2hqe,2o4x,1,217,2,2,0,0,0,False,False,False,D_no_raw_polymer_coordinate_reuse
+2pt2__3f11,2pt2,3f11,1,316,1,1,1,1,1,True,True,True,A_complete_polymer_exact
+3lt8__3lt9,3lt8,3lt9,1,69,1,1,1,1,1,True,True,True,A_complete_polymer_exact
+4f2u__4i9m,4f2u,4i9m,1,304,1,1,1,1,1,True,True,True,A_complete_polymer_exact
+4g6d__4g94,4g6d,4g94,1,62,2,2,1,1,1,False,False,False,C_partial_polymer_raw_coordinate_reuse
+4y72__5hq0,4y72,5hq0,1,264,3,3,3,3,3,True,True,True,A_complete_polymer_exact
+5hrf__8ild,5hrf,8ild,1,178,4,4,4,4,4,True,True,True,A_complete_polymer_exact
+6ebe__6eda,6ebe,6eda,1,257,1,1,1,1,1,True,True,True,A_complete_polymer_exact
+6jy7__6jy9,6jy7,6jy9,1,264,1,1,1,1,1,True,True,True,A_complete_polymer_exact
+6oti__8fr1,6oti,8fr1,1,257,1,1,1,1,1,True,True,True,A_complete_polymer_exact
+6xk7__6xmc,6xk7,6xmc,1,362,1,1,1,1,1,True,True,True,A_complete_polymer_exact
+7kc9__7kdm,7kc9,7kdm,1,258,6,6,6,6,6,True,True,True,A_complete_polymer_exact
