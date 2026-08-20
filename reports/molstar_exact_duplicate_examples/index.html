@@ -1,0 +1,895 @@
+<!doctype html>
+
+<html lang="en">
+
+<head>
+
+    <meta charset="utf-8">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1"
+    >
+
+    <title>
+        COMP702 — Exact BRI Duplicate Examples
+    </title>
+
+    <link
+        rel="stylesheet"
+        href="https://cdn.jsdelivr.net/npm/molstar@5.11.0/build/viewer/molstar.css"
+    >
+
+    <script
+        src="https://cdn.jsdelivr.net/npm/molstar@5.11.0/build/viewer/molstar.js">
+    </script>
+
+
+    <style>
+
+        * {
+            box-sizing: border-box;
+        }
+
+        html,
+        body {
+            margin: 0;
+            width: 100%;
+            height: 100%;
+            font-family:
+                Inter,
+                system-ui,
+                -apple-system,
+                BlinkMacSystemFont,
+                "Segoe UI",
+                sans-serif;
+            background: #f3f4f6;
+        }
+
+
+        #page {
+            height: 100vh;
+            display: grid;
+            grid-template-rows: auto 1fr;
+        }
+
+
+        #top {
+            background: #ffffff;
+            border-bottom: 1px solid #d1d5db;
+            padding: 10px 14px 11px 14px;
+            z-index: 20;
+        }
+
+
+        #title {
+            font-size: 18px;
+            font-weight: 700;
+            margin-bottom: 9px;
+            color: #111827;
+        }
+
+
+        #toolbar {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px 20px;
+            align-items: flex-end;
+        }
+
+
+        .button-group {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+
+
+        .button-group-title {
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            font-weight: 700;
+            color: #6b7280;
+        }
+
+
+        .button-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+        }
+
+
+        button {
+            appearance: none;
+            border: 1px solid #9ca3af;
+            background: #ffffff;
+            color: #111827;
+            padding: 7px 10px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 12.5px;
+            line-height: 1.2;
+            transition:
+                background 0.12s ease,
+                border-color 0.12s ease;
+        }
+
+
+        button:hover {
+            background: #f3f4f6;
+            border-color: #4b5563;
+        }
+
+
+        button.active {
+            background: #e5e7eb;
+            border-color: #111827;
+            font-weight: 700;
+        }
+
+
+        #description {
+            margin-top: 9px;
+            max-width: 1500px;
+            font-size: 13px;
+            line-height: 1.4;
+            color: #374151;
+        }
+
+
+        #legend {
+            margin-top: 5px;
+            font-size: 12px;
+            color: #4b5563;
+        }
+
+
+        .blue-text {
+            color: #2563eb;
+            font-weight: 750;
+        }
+
+
+        .orange-text {
+            color: #f97316;
+            font-weight: 750;
+        }
+
+
+        #viewer {
+            position: relative;
+            min-height: 0;
+            overflow: hidden;
+            background: white;
+        }
+
+
+        #app {
+            position: absolute;
+            inset: 0;
+        }
+
+
+        /*
+         * Labels displayed on top of Mol* only for side-by-side scenes.
+         * They are HTML labels, so they remain readable regardless of
+         * camera rotation or zoom.
+         */
+        #side-labels {
+            position: absolute;
+            left: 0;
+            right: 0;
+            top: 14px;
+
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+
+            pointer-events: none;
+            z-index: 15;
+
+            padding-left: 70px;
+            padding-right: 70px;
+        }
+
+
+        .structure-label {
+            justify-self: center;
+
+            padding: 6px 14px;
+
+            border-radius: 999px;
+
+            background:
+                rgba(255, 255, 255, 0.90);
+
+            box-shadow:
+                0 1px 5px
+                rgba(0, 0, 0, 0.17);
+
+            font-size: 15px;
+            font-weight: 800;
+            letter-spacing: 0.01em;
+        }
+
+
+        #left-label {
+            color: #2563eb;
+            border: 1px solid rgba(37, 99, 235, 0.35);
+        }
+
+
+        #right-label {
+            color: #f97316;
+            border: 1px solid rgba(249, 115, 22, 0.35);
+        }
+
+
+        #side-labels.hidden {
+            display: none;
+        }
+
+
+        #status {
+            position: absolute;
+            right: 12px;
+            bottom: 10px;
+
+            z-index: 15;
+
+            pointer-events: none;
+
+            border-radius: 5px;
+
+            padding: 5px 8px;
+
+            background:
+                rgba(255, 255, 255, 0.88);
+
+            color: #4b5563;
+
+            font-size: 10px;
+
+            box-shadow:
+                0 1px 4px
+                rgba(0, 0, 0, 0.12);
+        }
+
+
+        @media (max-width: 900px) {
+
+            #top {
+                padding: 8px 9px;
+            }
+
+            #title {
+                font-size: 16px;
+            }
+
+            #description {
+                font-size: 12px;
+            }
+
+            #side-labels {
+                padding-left: 30px;
+                padding-right: 30px;
+            }
+
+            .structure-label {
+                font-size: 13px;
+                padding: 5px 9px;
+            }
+        }
+
+    </style>
+
+</head>
+
+
+<body>
+
+<div id="page">
+
+
+    <header id="top">
+
+        <div id="title">
+            COMP702 — Exact Complete-BRI Duplicate Examples
+        </div>
+
+
+        <div id="toolbar">
+
+
+            <div class="button-group">
+
+                <div class="button-group-title">
+                    Pair 1 — 1a0t / 1oh2
+                </div>
+
+                <div class="button-row">
+
+                    <button
+                        id="p1-side"
+                        onclick="
+                            loadScene(
+                                'pair1_side_by_side.mvsj',
+                                'p1-side'
+                            )
+                        "
+                    >
+                        Side by side
+                    </button>
+
+                    <button
+                        id="p1-deposited"
+                        onclick="
+                            loadScene(
+                                'pair1_deposited.mvsj',
+                                'p1-deposited'
+                            )
+                        "
+                    >
+                        Deposited overlay
+                    </button>
+
+                    <button
+                        id="p1-chainb"
+                        onclick="
+                            loadScene(
+                                'pair1_chainB_superposed.mvsj',
+                                'p1-chainb'
+                            )
+                        "
+                    >
+                        Chain B superposition
+                    </button>
+
+                    <button
+                        id="p1-waters"
+                        onclick="
+                            loadScene(
+                                'pair1_waters.mvsj',
+                                'p1-waters'
+                            )
+                        "
+                    >
+                        Water difference
+                    </button>
+
+                </div>
+
+            </div>
+
+
+            <div class="button-group">
+
+                <div class="button-group-title">
+                    Pair 2 — 9eur / 9ewn
+                </div>
+
+                <div class="button-row">
+
+                    <button
+                        id="p2-side"
+                        onclick="
+                            loadScene(
+                                'pair2_side_by_side.mvsj',
+                                'p2-side'
+                            )
+                        "
+                    >
+                        Side by side
+                    </button>
+
+                    <button
+                        id="p2-overlay"
+                        onclick="
+                            loadScene(
+                                'pair2_exact_overlay.mvsj',
+                                'p2-overlay'
+                            )
+                        "
+                    >
+                        Exact overlay
+                    </button>
+
+                </div>
+
+            </div>
+
+
+        </div>
+
+
+        <div id="description">
+            Initialising Mol*…
+        </div>
+
+
+        <div id="legend">
+
+            <span class="blue-text">
+                Blue
+            </span>
+            = first deposition;
+
+            <span class="orange-text">
+                orange
+            </span>
+            = second deposition.
+
+            Side-by-side scenes apply display translation only;
+            molecular geometry is unchanged.
+
+        </div>
+
+    </header>
+
+
+    <main id="viewer">
+
+        <div id="app"></div>
+
+
+        <div
+            id="side-labels"
+            class="hidden"
+        >
+
+            <div
+                id="left-label"
+                class="structure-label"
+            >
+            </div>
+
+            <div
+                id="right-label"
+                class="structure-label"
+            >
+            </div>
+
+        </div>
+
+
+        <div id="status">
+            2026-01-01 snapshot
+        </div>
+
+    </main>
+
+
+</div>
+
+
+<script>
+
+"use strict";
+
+
+let viewer = null;
+let metrics = null;
+
+
+/*
+ * Text and optional left/right visual labels for every scene.
+ */
+const sceneInfo = {
+
+    "pair1_side_by_side.mvsj": {
+
+        left: "1a0t",
+
+        right: "1oh2",
+
+        description:
+            "Side-by-side presentation view. "
+            + "The two deposited structures keep their original "
+            + "orientations; only display translations separate them. "
+            + "Stage 10 independently classified A↔A, B↔B and C↔C "
+            + "as exact complete-BRI duplicates "
+            + "(d_bri_mA = 0)."
+
+    },
+
+
+    "pair1_deposited.mvsj": {
+
+        left: null,
+
+        right: null,
+
+        description:
+            "Direct deposited-coordinate overlay with no alignment. "
+            + "Chains A and C have identical raw-coordinate signatures. "
+            + "Chain B does not, even though Stage 10 gives "
+            + "d_bri_mA = 0 for B↔B."
+
+    },
+
+
+    "pair1_chainB_superposed.mvsj": {
+
+        left: null,
+
+        right: null,
+
+        description:
+            "Chain B only. The N–CA–C atoms used by BRI are shown. "
+            + "1oh2:B is rigidly superposed onto 1a0t:B using a "
+            + "Kabsch transform computed from all 413 × 3 "
+            + "corresponding backbone atoms."
+
+    },
+
+
+    "pair1_waters.mvsj": {
+
+        left: null,
+
+        right: null,
+
+        description:
+            "Deposited structures plus the solvent recorded for 1a0t. "
+            + "The finalized Acta evidence records 330 water atoms "
+            + "for 1a0t and none for 1oh2."
+
+    },
+
+
+    "pair2_side_by_side.mvsj": {
+
+        left: "9eur",
+
+        right: "9ewn",
+
+        description:
+            "Side-by-side presentation view of chain A from each "
+            + "deposition. Only display translations separate the "
+            + "structures. Stage 10 classifies "
+            + "9eur:A ↔ 9ewn:A as an exact complete-BRI duplicate "
+            + "(d_bri_mA = 0)."
+
+    },
+
+
+    "pair2_exact_overlay.mvsj": {
+
+        left: null,
+
+        right: null,
+
+        description:
+            "Direct deposited-coordinate overlay with no alignment. "
+            + "9eur:A and 9ewn:A have d_bri_mA = 0 and the finalized "
+            + "evidence also records identical raw coordinates, "
+            + "B-factors and occupancies."
+
+    }
+
+};
+
+
+/*
+ * Prevent stale local files during development.
+ */
+async function fetchFreshText(path) {
+
+    const separator =
+        path.includes("?")
+        ? "&"
+        : "?";
+
+    const response = await fetch(
+        path
+        + separator
+        + "_="
+        + Date.now(),
+        {
+            cache: "no-store"
+        }
+    );
+
+    if (!response.ok) {
+
+        throw new Error(
+            "Could not load "
+            + path
+            + ": HTTP "
+            + response.status
+        );
+
+    }
+
+    return await response.text();
+
+}
+
+
+async function fetchFreshJson(path) {
+
+    const text =
+        await fetchFreshText(path);
+
+    return JSON.parse(text);
+
+}
+
+
+function setSideLabels(left, right) {
+
+    const container =
+        document.getElementById(
+            "side-labels"
+        );
+
+    const leftNode =
+        document.getElementById(
+            "left-label"
+        );
+
+    const rightNode =
+        document.getElementById(
+            "right-label"
+        );
+
+
+    if (left && right) {
+
+        leftNode.textContent =
+            left;
+
+        rightNode.textContent =
+            right;
+
+        container.classList.remove(
+            "hidden"
+        );
+
+    }
+
+    else {
+
+        leftNode.textContent = "";
+        rightNode.textContent = "";
+
+        container.classList.add(
+            "hidden"
+        );
+
+    }
+
+}
+
+
+function setActiveButton(buttonId) {
+
+    document
+        .querySelectorAll("button")
+        .forEach(
+            button => {
+                button.classList.remove(
+                    "active"
+                );
+            }
+        );
+
+    const active =
+        document.getElementById(
+            buttonId
+        );
+
+    if (active) {
+
+        active.classList.add(
+            "active"
+        );
+
+    }
+
+}
+
+
+function metricDescription(filename) {
+
+    if (!metrics) {
+        return "";
+    }
+
+
+    if (
+        filename
+        ===
+        "pair1_chainB_superposed.mvsj"
+    ) {
+
+        const p =
+            metrics.pair1;
+
+        return (
+            " Raw backbone RMSD before alignment = "
+            + p.raw_backbone_rmsd_A.toFixed(4)
+            + " Å; after rigid alignment = "
+            + p.aligned_backbone_rmsd_A.toFixed(6)
+            + " Å; aligned maximum atom deviation = "
+            + p.aligned_backbone_max_distance_A.toFixed(6)
+            + " Å."
+        );
+
+    }
+
+
+    if (
+        filename
+        ===
+        "pair2_exact_overlay.mvsj"
+    ) {
+
+        const p =
+            metrics.pair2;
+
+        return (
+            " Raw backbone RMSD = "
+            + p.raw_backbone_rmsd_A.toFixed(6)
+            + " Å; maximum corresponding-atom deviation = "
+            + p.raw_backbone_max_distance_A.toFixed(6)
+            + " Å."
+        );
+
+    }
+
+
+    return "";
+
+}
+
+
+async function loadScene(
+    filename,
+    buttonId
+) {
+
+    setActiveButton(
+        buttonId
+    );
+
+    const info =
+        sceneInfo[filename];
+
+    if (!info) {
+        throw new Error(
+            "Unknown scene: " + filename
+        );
+    }
+
+    setSideLabels(
+        info.left,
+        info.right
+    );
+
+    document.getElementById(
+        "description"
+    ).textContent =
+        "Loading " + filename + "…";
+
+    /*
+     * IMPORTANT:
+     * Load the MVSJ FROM ITS URL rather than fetching it into memory.
+     *
+     * Our MVSJ files contain relative structure URLs such as
+     * ./1a0t.cif and ./1oh2.cif.
+     *
+     * Loading from a URL gives MolViewSpec the base URL needed
+     * to resolve those resources correctly.
+     */
+    const sceneUrl =
+        new URL(
+            "./" + filename,
+            window.location.href
+        );
+
+    /*
+     * Cache-bust the MVSJ itself while preserving its directory
+     * as the base location for relative mmCIF URLs.
+     */
+    sceneUrl.searchParams.set(
+        "_",
+        Date.now().toString()
+    );
+
+    console.log(
+        "Loading MolViewSpec:",
+        sceneUrl.href
+    );
+
+    await viewer.loadMvsFromUrl(
+        sceneUrl.href,
+        "mvsj",
+        {
+            replaceExisting: true
+        }
+    );
+
+    document.getElementById(
+        "description"
+    ).textContent =
+        info.description
+        + metricDescription(
+            filename
+        );
+}
+
+async function init() {
+
+    metrics =
+        await fetchFreshJson(
+            "./metrics.json"
+        );
+
+
+    viewer =
+        await molstar.Viewer.create(
+            "app",
+            {
+
+                layoutIsExpanded: false,
+
+                layoutShowControls: true,
+
+                layoutShowRemoteState: false,
+
+                layoutShowSequence: true,
+
+                layoutShowLog: false,
+
+                layoutShowLeftPanel: true,
+
+                viewportShowExpand: true,
+
+                viewportShowSelectionMode: true,
+
+                viewportShowAnimation: false,
+
+                viewportBackgroundColor:
+                    "#ffffff"
+
+            }
+        );
+
+
+    /*
+     * Start on the presentation-friendly view.
+     */
+    await loadScene(
+        "pair1_side_by_side.mvsj",
+        "p1-side"
+    );
+
+}
+
+
+init().catch(
+
+    error => {
+
+        console.error(
+            error
+        );
+
+        document.getElementById(
+            "description"
+        ).textContent =
+            "ERROR: "
+            + error.message;
+
+    }
+
+);
+
+</script>
+
+
+</body>
+
+</html>

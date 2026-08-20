@@ -1,0 +1,167 @@
+{
+  "metadata": {
+    "title": "1a0t:B vs 1oh2:B \u2014 N/CA/C rigid superposition",
+    "version": "1",
+    "timestamp": "2026-08-20T12:06:58.188563+00:00"
+  },
+  "root": {
+    "kind": "root",
+    "children": [
+      {
+        "kind": "download",
+        "params": {
+          "url": "./1a0t.cif"
+        },
+        "children": [
+          {
+            "kind": "parse",
+            "params": {
+              "format": "mmcif"
+            },
+            "children": [
+              {
+                "kind": "structure",
+                "params": {
+                  "type": "model",
+                  "model_index": 0
+                },
+                "children": [
+                  {
+                    "kind": "component",
+                    "params": {
+                      "selector": [
+                        {
+                          "label_asym_id": "B",
+                          "label_atom_id": "N"
+                        },
+                        {
+                          "label_asym_id": "B",
+                          "label_atom_id": "CA"
+                        },
+                        {
+                          "label_asym_id": "B",
+                          "label_atom_id": "C"
+                        }
+                      ]
+                    },
+                    "children": [
+                      {
+                        "kind": "representation",
+                        "params": {
+                          "type": "ball_and_stick"
+                        },
+                        "children": [
+                          {
+                            "kind": "color",
+                            "params": {
+                              "color": "#2563eb"
+                            }
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "kind": "download",
+        "params": {
+          "url": "./1oh2.cif"
+        },
+        "children": [
+          {
+            "kind": "parse",
+            "params": {
+              "format": "mmcif"
+            },
+            "children": [
+              {
+                "kind": "structure",
+                "params": {
+                  "type": "model",
+                  "model_index": 0
+                },
+                "children": [
+                  {
+                    "kind": "transform",
+                    "params": {
+                      "matrix": [
+                        1.0000000000000002,
+                        -2.4303436794477583e-16,
+                        6.679182922496785e-17,
+                        0.0,
+                        1.951570132026437e-16,
+                        1.0000000000000002,
+                        1.0354790330878695e-16,
+                        0.0,
+                        -7.555526661900241e-17,
+                        -4.6320239173294886e-17,
+                        1.0000000000000002,
+                        0.0,
+                        1.7763568394002505e-15,
+                        -3.9968028886505635e-15,
+                        3.552713678800501e-15,
+                        1.0
+                      ]
+                    }
+                  },
+                  {
+                    "kind": "component",
+                    "params": {
+                      "selector": [
+                        {
+                          "label_asym_id": "B",
+                          "label_atom_id": "N"
+                        },
+                        {
+                          "label_asym_id": "B",
+                          "label_atom_id": "CA"
+                        },
+                        {
+                          "label_asym_id": "B",
+                          "label_atom_id": "C"
+                        }
+                      ]
+                    },
+                    "children": [
+                      {
+                        "kind": "representation",
+                        "params": {
+                          "type": "ball_and_stick"
+                        },
+                        "children": [
+                          {
+                            "kind": "color",
+                            "params": {
+                              "color": "#f97316"
+                            }
+                          },
+                          {
+                            "kind": "opacity",
+                            "params": {
+                              "opacity": 0.58
+                            }
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "kind": "canvas",
+        "params": {
+          "background_color": "#ffffff"
+        }
+      }
+    ]
+  }
+}

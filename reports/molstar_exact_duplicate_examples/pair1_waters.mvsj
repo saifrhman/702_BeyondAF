@@ -1,0 +1,197 @@
+{
+  "metadata": {
+    "title": "1a0t vs 1oh2 \u2014 water discrepancy",
+    "version": "1",
+    "timestamp": "2026-08-20T12:06:58.190126+00:00"
+  },
+  "root": {
+    "kind": "root",
+    "children": [
+      {
+        "kind": "download",
+        "params": {
+          "url": "./1a0t.cif"
+        },
+        "children": [
+          {
+            "kind": "parse",
+            "params": {
+              "format": "mmcif"
+            },
+            "children": [
+              {
+                "kind": "structure",
+                "params": {
+                  "type": "model",
+                  "model_index": 0
+                },
+                "children": [
+                  {
+                    "kind": "component",
+                    "params": {
+                      "selector": [
+                        {
+                          "label_asym_id": "A"
+                        },
+                        {
+                          "label_asym_id": "B"
+                        },
+                        {
+                          "label_asym_id": "C"
+                        }
+                      ]
+                    },
+                    "children": [
+                      {
+                        "kind": "representation",
+                        "params": {
+                          "type": "cartoon"
+                        },
+                        "children": [
+                          {
+                            "kind": "color",
+                            "params": {
+                              "color": "#2563eb"
+                            }
+                          },
+                          {
+                            "kind": "opacity",
+                            "params": {
+                              "opacity": 0.48
+                            }
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "kind": "download",
+        "params": {
+          "url": "./1oh2.cif"
+        },
+        "children": [
+          {
+            "kind": "parse",
+            "params": {
+              "format": "mmcif"
+            },
+            "children": [
+              {
+                "kind": "structure",
+                "params": {
+                  "type": "model",
+                  "model_index": 0
+                },
+                "children": [
+                  {
+                    "kind": "component",
+                    "params": {
+                      "selector": [
+                        {
+                          "label_asym_id": "A"
+                        },
+                        {
+                          "label_asym_id": "B"
+                        },
+                        {
+                          "label_asym_id": "C"
+                        }
+                      ]
+                    },
+                    "children": [
+                      {
+                        "kind": "representation",
+                        "params": {
+                          "type": "cartoon"
+                        },
+                        "children": [
+                          {
+                            "kind": "color",
+                            "params": {
+                              "color": "#f97316"
+                            }
+                          },
+                          {
+                            "kind": "opacity",
+                            "params": {
+                              "opacity": 0.38
+                            }
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "kind": "download",
+        "params": {
+          "url": "./1a0t.cif"
+        },
+        "children": [
+          {
+            "kind": "parse",
+            "params": {
+              "format": "mmcif"
+            },
+            "children": [
+              {
+                "kind": "structure",
+                "params": {
+                  "type": "model",
+                  "model_index": 0
+                },
+                "children": [
+                  {
+                    "kind": "component",
+                    "params": {
+                      "selector": "water"
+                    },
+                    "children": [
+                      {
+                        "kind": "representation",
+                        "params": {
+                          "type": "spacefill"
+                        },
+                        "children": [
+                          {
+                            "kind": "color",
+                            "params": {
+                              "color": "#38bdf8"
+                            }
+                          },
+                          {
+                            "kind": "opacity",
+                            "params": {
+                              "opacity": 0.85
+                            }
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "kind": "canvas",
+        "params": {
+          "background_color": "#ffffff"
+        }
+      }
+    ]
+  }
+}

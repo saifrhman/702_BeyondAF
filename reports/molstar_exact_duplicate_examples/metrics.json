@@ -1,0 +1,68 @@
+{
+  "pair1": {
+    "reference": "1a0t:B",
+    "moving": "1oh2:B",
+    "retained_residue_count": 413,
+    "backbone_atom_count": 1239,
+    "stage10_d_brain": 0.0,
+    "stage10_d_bri_mA": 0,
+    "stage10_d_bri_A": 0.0,
+    "stage10_is_zero_duplicate": true,
+    "raw_backbone_rmsd_A": 0.0,
+    "raw_backbone_max_distance_A": 0.0,
+    "aligned_backbone_rmsd_A": 7.127238204999414e-15,
+    "aligned_backbone_max_distance_A": 1.6280579355608324e-14,
+    "transform_1oh2B_to_1a0tB_column_major": [
+      1.0000000000000002,
+      -2.4303436794477583e-16,
+      6.679182922496785e-17,
+      0.0,
+      1.951570132026437e-16,
+      1.0000000000000002,
+      1.0354790330878695e-16,
+      0.0,
+      -7.555526661900241e-17,
+      -4.6320239173294886e-17,
+      1.0000000000000002,
+      0.0,
+      1.7763568394002505e-15,
+      -3.9968028886505635e-15,
+      3.552713678800501e-15,
+      1.0
+    ],
+    "side_by_side_centre_separation_A": 120.359,
+    "side_by_side_left_translation": [
+      -23.276076931084617,
+      -0.22276046221112178,
+      15.594227357901323
+    ],
+    "side_by_side_right_translation": [
+      97.14347357978289,
+      -0.21426670843776685,
+      15.606466478696753
+    ]
+  },
+  "pair2": {
+    "reference": "9eur:A",
+    "moving": "9ewn:A",
+    "retained_residue_count": 300,
+    "backbone_atom_count": 900,
+    "stage10_d_brain": 0.0,
+    "stage10_d_bri_mA": 0,
+    "stage10_d_bri_A": 0.0,
+    "stage10_is_zero_duplicate": true,
+    "raw_backbone_rmsd_A": 0.0,
+    "raw_backbone_max_distance_A": 0.0,
+    "side_by_side_centre_separation_A": 90.86,
+    "side_by_side_left_translation": [
+      -70.06311837455836,
+      -26.494201413427568,
+      13.120677120141316
+    ],
+    "side_by_side_right_translation": [
+      20.79688162544164,
+      -26.494201413427568,
+      13.120677120141316
+    ]
+  }
+}

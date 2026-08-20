@@ -1,0 +1,136 @@
+{
+  "metadata": {
+    "title": "9eur:A vs 9ewn:A \u2014 side by side",
+    "version": "1",
+    "timestamp": "2026-08-20T12:06:58.207069+00:00"
+  },
+  "root": {
+    "kind": "root",
+    "children": [
+      {
+        "kind": "download",
+        "params": {
+          "url": "./9eur.cif"
+        },
+        "children": [
+          {
+            "kind": "parse",
+            "params": {
+              "format": "mmcif"
+            },
+            "children": [
+              {
+                "kind": "structure",
+                "params": {
+                  "type": "model",
+                  "model_index": 0
+                },
+                "children": [
+                  {
+                    "kind": "transform",
+                    "params": {
+                      "translation": [
+                        -70.06311837455836,
+                        -26.494201413427568,
+                        13.120677120141316
+                      ]
+                    }
+                  },
+                  {
+                    "kind": "component",
+                    "params": {
+                      "selector": {
+                        "label_asym_id": "A"
+                      }
+                    },
+                    "children": [
+                      {
+                        "kind": "representation",
+                        "params": {
+                          "type": "cartoon"
+                        },
+                        "children": [
+                          {
+                            "kind": "color",
+                            "params": {
+                              "color": "#2563eb"
+                            }
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "kind": "download",
+        "params": {
+          "url": "./9ewn.cif"
+        },
+        "children": [
+          {
+            "kind": "parse",
+            "params": {
+              "format": "mmcif"
+            },
+            "children": [
+              {
+                "kind": "structure",
+                "params": {
+                  "type": "model",
+                  "model_index": 0
+                },
+                "children": [
+                  {
+                    "kind": "transform",
+                    "params": {
+                      "translation": [
+                        20.79688162544164,
+                        -26.494201413427568,
+                        13.120677120141316
+                      ]
+                    }
+                  },
+                  {
+                    "kind": "component",
+                    "params": {
+                      "selector": {
+                        "label_asym_id": "A"
+                      }
+                    },
+                    "children": [
+                      {
+                        "kind": "representation",
+                        "params": {
+                          "type": "cartoon"
+                        },
+                        "children": [
+                          {
+                            "kind": "color",
+                            "params": {
+                              "color": "#f97316"
+                            }
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "kind": "canvas",
+        "params": {
+          "background_color": "#ffffff"
+        }
+      }
+    ]
+  }
+}

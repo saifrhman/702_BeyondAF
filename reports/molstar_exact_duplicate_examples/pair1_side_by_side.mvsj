@@ -1,0 +1,152 @@
+{
+  "metadata": {
+    "title": "1a0t vs 1oh2 \u2014 side by side",
+    "version": "1",
+    "timestamp": "2026-08-20T12:06:58.172415+00:00"
+  },
+  "root": {
+    "kind": "root",
+    "children": [
+      {
+        "kind": "download",
+        "params": {
+          "url": "./1a0t.cif"
+        },
+        "children": [
+          {
+            "kind": "parse",
+            "params": {
+              "format": "mmcif"
+            },
+            "children": [
+              {
+                "kind": "structure",
+                "params": {
+                  "type": "model",
+                  "model_index": 0
+                },
+                "children": [
+                  {
+                    "kind": "transform",
+                    "params": {
+                      "translation": [
+                        -23.276076931084617,
+                        -0.22276046221112178,
+                        15.594227357901323
+                      ]
+                    }
+                  },
+                  {
+                    "kind": "component",
+                    "params": {
+                      "selector": [
+                        {
+                          "label_asym_id": "A"
+                        },
+                        {
+                          "label_asym_id": "B"
+                        },
+                        {
+                          "label_asym_id": "C"
+                        }
+                      ]
+                    },
+                    "children": [
+                      {
+                        "kind": "representation",
+                        "params": {
+                          "type": "cartoon"
+                        },
+                        "children": [
+                          {
+                            "kind": "color",
+                            "params": {
+                              "color": "#2563eb"
+                            }
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "kind": "download",
+        "params": {
+          "url": "./1oh2.cif"
+        },
+        "children": [
+          {
+            "kind": "parse",
+            "params": {
+              "format": "mmcif"
+            },
+            "children": [
+              {
+                "kind": "structure",
+                "params": {
+                  "type": "model",
+                  "model_index": 0
+                },
+                "children": [
+                  {
+                    "kind": "transform",
+                    "params": {
+                      "translation": [
+                        97.14347357978289,
+                        -0.21426670843776685,
+                        15.606466478696753
+                      ]
+                    }
+                  },
+                  {
+                    "kind": "component",
+                    "params": {
+                      "selector": [
+                        {
+                          "label_asym_id": "A"
+                        },
+                        {
+                          "label_asym_id": "B"
+                        },
+                        {
+                          "label_asym_id": "C"
+                        }
+                      ]
+                    },
+                    "children": [
+                      {
+                        "kind": "representation",
+                        "params": {
+                          "type": "cartoon"
+                        },
+                        "children": [
+                          {
+                            "kind": "color",
+                            "params": {
+                              "color": "#f97316"
+                            }
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "kind": "canvas",
+        "params": {
+          "background_color": "#ffffff"
+        }
+      }
+    ]
+  }
+}
