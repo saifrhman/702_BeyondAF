@@ -319,3 +319,323 @@ def list_directory(
         entries.append(described)
 
     return entries
+
+
+# ===========================================================================
+# Paginated table access
+# ===========================================================================
+#
+# The Artefact Viewer must stay usable against tables with millions of rows.
+# Nothing here ever materialises a whole file: Parquet is read row-group by
+# row-group and stops as soon as the requested page is filled, and CSV is
+# streamed line by line.
+
+#: Hard cap on one page, whatever the caller asks for.
+MAX_PAGE_SIZE = 200
+
+DEFAULT_PAGE_SIZE = 50
+
+#: Rows scanned before a server-side filter gives up, so a filter over a
+#: multi-million-row table can never hang the UI.
+MAX_FILTER_SCAN_ROWS = 200_000
+
+
+def _clamp_page(page: int, page_size: int) -> tuple[int, int]:
+    size = max(1, min(int(page_size or DEFAULT_PAGE_SIZE), MAX_PAGE_SIZE))
+    number = max(1, int(page or 1))
+
+    return number, size
+
+
+def parquet_schema(path: str | Path) -> dict[str, Any]:
+    """Return schema and metadata without reading any row data."""
+
+    import pyarrow.parquet as pq
+
+    target = Path(path)
+
+    try:
+        parquet_file = pq.ParquetFile(str(target))
+    except Exception as exc:  # pragma: no cover - corrupt file
+        raise ArtefactError(f"Could not open Parquet file: {exc}") from exc
+
+    schema = parquet_file.schema_arrow
+
+    metadata: dict[str, str] = {}
+
+    if schema.metadata:
+        for key, value in schema.metadata.items():
+            try:
+                metadata[key.decode("utf-8")] = value.decode("utf-8")
+            except UnicodeDecodeError:
+                metadata[repr(key)] = repr(value)
+
+    return {
+        "columns": [
+            {"name": field.name, "type": str(field.type)}
+            for field in schema
+        ],
+        "column_count": len(schema),
+        "row_count": parquet_file.metadata.num_rows,
+        "row_group_count": parquet_file.num_row_groups,
+        "schema_metadata": metadata,
+        "created_by": parquet_file.metadata.created_by,
+    }
+
+
+def _matches(row: dict[str, Any], needle: str, columns: list[str]) -> bool:
+    lowered = needle.lower()
+
+    for column in columns:
+        value = row.get(column)
+
+        if value is None:
+            continue
+
+        if lowered in str(value).lower():
+            return True
+
+    return False
+
+
+def parquet_page(
+    path: str | Path,
+    *,
+    page: int = 1,
+    page_size: int = DEFAULT_PAGE_SIZE,
+    columns: list[str] | None = None,
+    search: str | None = None,
+    sort_by: str | None = None,
+    descending: bool = False,
+) -> dict[str, Any]:
+    """Return one bounded page of a Parquet table.
+
+    Reads only what the page needs. Sorting is applied to the *scanned window*
+    rather than the whole file, and says so, because globally sorting a
+    multi-million-row table on demand is not something a UI request should do.
+    """
+
+    import pyarrow.parquet as pq
+
+    target = Path(path)
+    number, size = _clamp_page(page, page_size)
+
+    info = parquet_schema(target)
+    available = [column["name"] for column in info["columns"]]
+
+    selected = [c for c in (columns or available) if c in available]
+
+    if not selected:
+        selected = available
+
+    parquet_file = pq.ParquetFile(str(target))
+
+    start = (number - 1) * size
+    end = start + size
+
+    rows: list[dict[str, Any]] = []
+    scanned = 0
+    matched = 0
+    truncated_scan = False
+
+    filtering = bool(search) or bool(sort_by)
+
+    # Sorting needs a window larger than one page to be meaningful.
+    window_end = (
+        min(MAX_FILTER_SCAN_ROWS, max(end, 5 * size)) if sort_by else end
+    )
+
+    for batch in parquet_file.iter_batches(
+        batch_size=min(4096, max(size, 512)),
+        columns=selected,
+    ):
+        if not filtering and scanned >= end:
+            break
+
+        for row in batch.to_pylist():
+            scanned += 1
+
+            if search and not _matches(row, search, selected):
+                continue
+
+            matched += 1
+
+            if sort_by:
+                if len(rows) < window_end:
+                    rows.append(_json_safe(row))
+            elif start < matched <= end:
+                rows.append(_json_safe(row))
+
+            if not sort_by and matched >= end and not search:
+                break
+
+        if scanned >= MAX_FILTER_SCAN_ROWS and filtering:
+            truncated_scan = True
+            break
+
+        if not filtering and scanned >= end:
+            break
+
+    if sort_by and sort_by in selected:
+        def _key(item: dict[str, Any]) -> tuple[int, Any]:
+            value = item.get(sort_by)
+
+            # None sorts last in both directions, and mixed types never raise.
+            return (1, "") if value is None else (0, _sortable(value))
+
+        rows.sort(key=_key, reverse=descending)
+        rows = rows[start:end]
+
+    total = info["row_count"]
+
+    return {
+        "columns": [
+            column for column in info["columns"] if column["name"] in selected
+        ],
+        "rows": rows,
+        "page": number,
+        "page_size": size,
+        "row_count": total,
+        "returned": len(rows),
+        "matched_rows": matched if search else total,
+        "page_count": max(1, (total + size - 1) // size),
+        "search": search,
+        "sort_by": sort_by,
+        "descending": descending,
+        "scanned_rows": scanned,
+        "scan_truncated": truncated_scan,
+        "sort_scope": (
+            "scanned window" if sort_by else None
+        ),
+        "note": (
+            "Sorting and search are applied to a bounded scan of the file, "
+            "not to the whole table."
+            if filtering
+            else None
+        ),
+    }
+
+
+def _sortable(value: Any) -> Any:
+    if isinstance(value, (int, float, bool)):
+        return value
+
+    return str(value)
+
+
+def csv_page(
+    path: str | Path,
+    *,
+    page: int = 1,
+    page_size: int = DEFAULT_PAGE_SIZE,
+    search: str | None = None,
+) -> dict[str, Any]:
+    """Return one bounded page of a CSV/TSV file, streamed line by line."""
+
+    target = Path(path)
+    number, size = _clamp_page(page, page_size)
+
+    delimiter = "\t" if target.suffix.lower() == ".tsv" else ","
+
+    start = (number - 1) * size
+    end = start + size
+
+    rows: list[list[str]] = []
+    columns: list[str] = []
+    matched = 0
+    scanned = 0
+
+    with target.open("r", encoding="utf-8", errors="replace", newline="") as handle:
+        reader = csv.reader(handle, delimiter=delimiter)
+
+        try:
+            columns = next(reader)
+        except StopIteration:
+            columns = []
+
+        for row in reader:
+            scanned += 1
+
+            if search:
+                joined = delimiter.join(row).lower()
+
+                if search.lower() not in joined:
+                    continue
+
+            matched += 1
+
+            if start < matched <= end:
+                rows.append(row)
+
+            if matched >= end and not search:
+                break
+
+            if scanned >= MAX_FILTER_SCAN_ROWS:
+                break
+
+    return {
+        "columns": columns,
+        "rows": rows,
+        "page": number,
+        "page_size": size,
+        "returned": len(rows),
+        "matched_rows": matched,
+        "scanned_rows": scanned,
+        "search": search,
+    }
+
+
+def table_page(
+    path: str | Path,
+    *,
+    page: int = 1,
+    page_size: int = DEFAULT_PAGE_SIZE,
+    search: str | None = None,
+    sort_by: str | None = None,
+    descending: bool = False,
+) -> dict[str, Any]:
+    """Dispatch to the right paginated reader for a tabular artefact."""
+
+    kind = preview_kind(path)
+
+    if kind == "parquet":
+        payload = parquet_page(
+            path,
+            page=page,
+            page_size=page_size,
+            search=search,
+            sort_by=sort_by,
+            descending=descending,
+        )
+        payload["kind"] = "parquet"
+
+        return payload
+
+    if kind == "table":
+        payload = csv_page(path, page=page, page_size=page_size, search=search)
+        payload["kind"] = "table"
+
+        return payload
+
+    raise ArtefactError(f"Not a paginated tabular artefact: {path}")
+
+
+def rows_to_csv(columns: list[str], rows: list[Any]) -> str:
+    """Render the currently displayed rows as CSV.
+
+    This is a **convenience export of the current view**, not the authoritative
+    scientific artefact. The original Parquet remains authoritative.
+    """
+
+    buffer = io.StringIO()
+    writer = csv.writer(buffer)
+
+    writer.writerow(columns)
+
+    for row in rows:
+        if isinstance(row, dict):
+            writer.writerow([row.get(column, "") for column in columns])
+        else:
+            writer.writerow(row)
+
+    return buffer.getvalue()

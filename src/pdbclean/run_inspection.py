@@ -17,6 +17,7 @@ from typing import Any
 
 from pdbclean import artefacts
 from pdbclean.stage_registry import (
+    method_references,
     ROLE_INVESTIGATION,
     ROLE_VALIDATION,
     STAGES_BY_ID,
@@ -179,9 +180,22 @@ def stage_detail(
         "frozen_output": entry.frozen_output or NOT_RECORDED,
     }
 
+    # The scientific explanation is shared across runs; the values shown
+    # alongside it come from this run's own record.
+    description = {
+        "rationale": entry.rationale or NOT_RECORDED,
+        "scientific_method": entry.scientific_method or NOT_RECORDED,
+        "stage_input": entry.stage_input or NOT_RECORDED,
+        "stage_output": entry.stage_output or NOT_RECORDED,
+        "downstream_role": entry.downstream_role or NOT_RECORDED,
+        "implementation_note": entry.implementation_note or NOT_RECORDED,
+        "references": method_references(entry.references),
+    }
+
     if recorded is None:
         return {
             "identity": identity,
+            "description": description,
             "status": {
                 "status": (
                     STATUS_OPTIONAL
@@ -249,6 +263,7 @@ def stage_detail(
 
     return {
         "identity": identity,
+        "description": description,
         "status": {
             "status": _or_not_recorded(recorded.get("status")),
             "validation": _or_not_recorded(recorded.get("validation")),

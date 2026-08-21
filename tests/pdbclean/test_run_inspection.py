@@ -508,3 +508,187 @@ def test_removal_stages_filter_to_removed_chains():
     assert duplicate_navigation("stage_14b")["filters"] == {
         "relationship": "removed"
     }
+
+
+# --------------------------------------------------------------------------
+# Detailed scientific descriptions (section 31)
+# --------------------------------------------------------------------------
+
+
+def _by_key():
+    return {entry.key: entry for entry in canonical_timeline()}
+
+
+def test_every_canonical_stage_has_a_detailed_description():
+    for entry in canonical_timeline():
+        assert entry.rationale, entry.key
+        assert entry.scientific_method, entry.key
+        assert entry.stage_input, entry.key
+        assert entry.stage_output, entry.key
+        assert entry.downstream_role, entry.key
+        assert entry.implementation_note, entry.key
+
+
+def test_descriptions_are_substantial_enough_to_explain_the_method():
+    for entry in canonical_timeline():
+        if entry.role == "input":
+            continue
+
+        assert len(entry.scientific_method) > 150, entry.key
+
+
+def test_every_prerequisite_is_described():
+    entries = _by_key()
+
+    for key in ("prerequisite_a", "prerequisite_b", "prerequisite_c"):
+        assert entries[key].scientific_method
+        assert entries[key].label.startswith("Prerequisite ")
+
+
+def test_stage_three_and_four_have_distinct_descriptions():
+    entries = _by_key()
+
+    three, four = entries["stage_3"], entries["stage_4"]
+
+    assert three.scientific_method != four.scientific_method
+    assert "m x 9" in three.scientific_method
+    assert "BRI_units = round(BRI / p)" in four.scientific_method
+
+
+def test_stage_eight_and_nine_have_distinct_descriptions():
+    entries = _by_key()
+
+    eight, nine = entries["stage_8"], entries["stage_9"]
+
+    assert eight.scientific_method != nine.scientific_method
+    assert "cover tree" in eight.scientific_method
+    assert "representation units" in nine.scientific_method
+
+
+def test_ckdtree_is_described_only_for_brain_filtering():
+    mentions = [
+        entry.key
+        for entry in canonical_timeline()
+        if "cKDTree" in (entry.scientific_method + entry.implementation_note)
+    ]
+
+    assert mentions == ["stage_7"]
+
+    stage_7 = _by_key()["stage_7"]
+
+    assert "never the final complete-BRI search engine" in (
+        stage_7.implementation_note
+    )
+
+
+def test_complete_bri_is_described_as_the_final_classification_basis():
+    entries = _by_key()
+
+    assert "complete BRI" in entries["stage_8"].rationale
+    assert "complete-BRI L-infinity" in entries["stage_10"].scientific_method
+    assert "Brain distance plays no part" in (
+        entries["stage_10"].scientific_method
+    )
+
+
+def test_brain_is_described_as_filtering_only():
+    stage_5 = _by_key()["stage_5"]
+
+    assert "filtering and indexing layer only" in stage_5.scientific_method
+    assert "never classifies duplicates" in stage_5.scientific_method
+
+
+def test_components_are_described_as_not_equivalence_classes():
+    stage_14a = _by_key()["stage_14a"]
+
+    assert "NOT a duplicate equivalence class" in (
+        stage_14a.scientific_method
+    )
+    assert "not transitive" in stage_14a.scientific_method
+
+
+def test_direct_edge_requirement_is_described():
+    stage_14b = _by_key()["stage_14b"]
+
+    assert "DIRECT-EDGE" in stage_14b.scientific_method
+    assert "NO transitive removal" in stage_14b.scientific_method
+    assert "m = 1 are retained" in stage_14b.scientific_method
+
+
+def test_investigation_stages_are_described_as_not_deletion_relations():
+    entries = _by_key()
+
+    for key in ("stage_11", "stage_12", "stage_13"):
+        text = entries[key].downstream_role + entries[key].note
+
+        assert "NOT" in text or "not a deletion relation" in text.lower()
+
+
+def test_inclusive_threshold_is_described():
+    stage_10 = _by_key()["stage_10"]
+
+    assert "inclusive" in stage_10.scientific_method
+    assert "d <= tau" in stage_10.scientific_method
+
+
+def test_pair_counts_are_distinguished_from_chain_counts():
+    stage_10 = _by_key()["stage_10"]
+
+    assert "not the number of chains" in stage_10.scientific_method
+
+
+def test_precision_is_distinguished_from_the_threshold():
+    stage_4 = _by_key()["stage_4"]
+
+    assert "NOT a duplicate threshold" in stage_4.scientific_method
+
+
+def test_comp702_choices_are_not_attributed_to_papers():
+    """A computational choice must be labelled as one."""
+
+    entries = _by_key()
+
+    assert "not a quantisation step prescribed by the paper" in (
+        entries["stage_4"].implementation_note
+    )
+    assert "COMP702 engineering implementation" in (
+        entries["stage_7"].implementation_note
+    )
+    assert "COMP702" in entries["stage_14b"].implementation_note
+
+
+def test_references_resolve_to_real_records():
+    from pdbclean.stage_registry import METHOD_REFERENCES, method_references
+
+    for entry in canonical_timeline():
+        for key in entry.references:
+            assert key in METHOD_REFERENCES, (entry.key, key)
+
+        for reference in method_references(entry.references):
+            assert reference["doi"]
+            assert reference["authors"]
+            assert reference["year"]
+
+
+def test_bri_stages_cite_the_match_paper():
+    entries = _by_key()
+
+    for key in ("stage_3", "stage_5"):
+        assert "anosova_match_2025" in entries[key].references
+
+
+def test_duplicate_stages_cite_the_acta_paper():
+    entries = _by_key()
+
+    for key in ("stage_8", "stage_10", "stage_13"):
+        assert "wlodawer_acta_2025" in entries[key].references
+
+
+def test_stage_detail_exposes_the_description(historical_run):
+    detail = stage_detail(historical_run.record, "stage_7", repo_root=REPO)
+
+    description = detail["description"]
+
+    assert "cKDTree" in description["implementation_note"]
+    assert description["rationale"]
+    assert description["references"][0]["doi"] == "10.46793/match.94-1.097A"

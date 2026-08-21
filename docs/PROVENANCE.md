@@ -141,7 +141,14 @@ pdbclean status --run <run-id> --json
 ```
 
 The UI's **Runs** page shows the same records, including both hashes and the
-per-leaf configuration sources.
+per-leaf configuration sources, and lets any stage artefact be opened in the
+Artefact Viewer.
+
+**Inspection is read-only.** Opening a run, a stage or an artefact never writes
+`run.json`, appends an event, re-resolves a snapshot, recomputes a hash, changes
+a validation status or launches a job. Generated Mol* scenes are written to a
+disposable cache outside every release and run directory, and are not
+provenance.
 
 ---
 

@@ -10,8 +10,11 @@
 <script src="https://cdn.jsdelivr.net/npm/molstar@5.11.0/build/viewer/molstar.js"></script>
 <style>
     body {
+        /* One row per top-level child. #app owns the only 1fr row, so the
+         * viewer can never be squeezed to zero height by a sibling being
+         * shown -- which is exactly what collapsed it before. */
         display: grid;
-        grid-template-rows: auto auto 1fr;
+        grid-template-rows: auto auto auto 1fr;
         height: 100vh;
         overflow: hidden;
     }
@@ -74,19 +77,77 @@
         max-width: 56ch;
     }
 
-    #app {
-        position: relative;
-        min-height: 0;
+    #source-provenance {
+        border-bottom: 1px solid var(--border);
+        background: var(--panel-alt);
+        font-size: 11.5px;
+        max-height: 26vh;
+        overflow: auto;
     }
 
-    #app > * {
+    #source-provenance summary {
+        padding: 6px 14px;
+        cursor: pointer;
+        color: var(--muted);
+    }
+
+    #source-provenance-body {
+        padding: 0 14px 10px;
+    }
+
+    #app {
+        position: relative;
+        /* min-height:0 lets the grid row shrink; the explicit minimum keeps
+         * a usable viewport even in a short window. */
+        min-height: 320px;
+    }
+
+    #status {
+        position: absolute;
+        inset: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        pointer-events: none;
+        z-index: 5;
+    }
+
+    #status .box {
+        pointer-events: auto;
+        background: var(--panel);
+        border: 1px solid var(--border-strong);
+        padding: 14px 18px;
+        max-width: 60ch;
+        font-size: 12.5px;
+        color: var(--text);
+    }
+
+    #status .box h4 {
+        margin: 0 0 6px;
+        font-size: 12px;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+        color: var(--faint);
+    }
+
+    #status .box pre {
+        margin: 8px 0 0;
+        font-size: 11px;
+        white-space: pre-wrap;
+        word-break: break-word;
+        color: var(--muted);
+        max-height: 40vh;
+        overflow: auto;
+    }
+
+    #molstar-host {
         position: absolute;
         inset: 0;
     }
 
-    #fallback {
-        padding: 16px;
-        color: var(--muted);
+    #molstar-host .msp-plugin {
+        position: absolute;
+        inset: 0;
     }
 </style>
 </head>
@@ -99,6 +160,8 @@
         <b id="v-distance">&mdash;</b></span>
     <span class="item">Stage 14 <b id="v-rel">&mdash;</b></span>
     <span class="item">representative <b id="v-rep">&mdash;</b></span>
+    <span class="item">snapshot <b id="v-snapshot">&mdash;</b></span>
+    <span class="item">chains <b id="v-chains">&mdash;</b></span>
     <span class="item">science config <b id="v-sha">&mdash;</b></span>
 </div>
 
@@ -111,7 +174,15 @@
     </span>
 </div>
 
-<div id="app"><div id="fallback">Loading viewer&hellip;</div></div>
+<details id="source-provenance" hidden>
+    <summary>Source provenance</summary>
+    <div id="source-provenance-body"></div>
+</details>
+
+<div id="app">
+    <div id="molstar-host"></div>
+    <div id="status"><div class="box">Starting viewer&hellip;</div></div>
+</div>
 
 <script>
 "use strict";
@@ -125,8 +196,14 @@ function text(id, value) {
             : value;
 }
 
-const pairA = params.get("a") || "";
-const pairB = params.get("b") || "";
+const pairA = params.get("a")
+    || (params.get("pdb_id_a")
+        ? params.get("pdb_id_a") + ":" + params.get("chain_a")
+        : "");
+const pairB = params.get("b")
+    || (params.get("pdb_id_b")
+        ? params.get("pdb_id_b") + ":" + params.get("chain_b")
+        : "");
 const distance = params.get("d");
 
 text("pair-label", pairA + "  ↔  " + pairB);
@@ -146,6 +223,75 @@ text("v-sha", (params.get("sha") || "").slice(0, 16));
 
 let viewer = null;
 
+/* ---------------------------------------------------------------- status
+ *
+ * The Mol* host must survive every failure. These helpers draw over it and
+ * never replace it, so a load error leaves an explanatory panel and a Retry
+ * button rather than an empty area.
+ */
+
+function setStatus(message, detail) {
+    const holder = document.getElementById("status");
+
+    if (!holder) {
+        return;
+    }
+
+    holder.hidden = false;
+    holder.innerHTML = "";
+
+    const box = document.createElement("div");
+
+    box.className = "box";
+
+    if (detail) {
+        const heading = document.createElement("h4");
+
+        heading.textContent = message;
+        box.appendChild(heading);
+
+        const pre = document.createElement("pre");
+
+        pre.textContent = detail;
+        box.appendChild(pre);
+    } else {
+        box.textContent = message;
+    }
+
+    holder.appendChild(box);
+}
+
+function clearStatus() {
+    const holder = document.getElementById("status");
+
+    if (holder) {
+        holder.hidden = true;
+        holder.innerHTML = "";
+    }
+}
+
+function showError(message, detail, retry) {
+    setStatus(message, detail);
+
+    if (!retry) {
+        return;
+    }
+
+    const box = document.querySelector("#status .box");
+    const button = document.createElement("button");
+
+    button.className = "action";
+    button.textContent = "Retry";
+    button.style.marginTop = "10px";
+    button.addEventListener("click", function () {
+        setStatus("Retrying\u2026");
+        retry();
+    });
+
+    box.appendChild(document.createElement("br"));
+    box.appendChild(button);
+}
+
 async function loadScene(url) {
     if (!viewer) {
         return;
@@ -156,6 +302,16 @@ async function loadScene(url) {
 
 async function init() {
     const sceneKey = params.get("scene");
+    const holder = document.getElementById("view-buttons");
+
+    /* Two paths:
+     *   1. an on-demand pair, generated from this run's snapshot;
+     *   2. a prepared example scene, by key.
+     */
+    if (params.get("pdb_id_a")) {
+        await initPair(holder);
+        return;
+    }
 
     let scenes = [];
 
@@ -165,8 +321,7 @@ async function init() {
 
         scenes = payload.scenes || [];
     } catch (error) {
-        document.getElementById("fallback").textContent =
-            "Could not load prepared scenes: " + error.message;
+        showError("Could not load prepared scenes", String(error.message));
         return;
     }
 
@@ -175,15 +330,303 @@ async function init() {
     });
 
     if (!scene) {
-        document.getElementById("fallback").textContent =
-            "No prepared Mol* scene exists for this pair. Prepared scenes "
-            + "live in reports/molstar_exact_duplicate_examples/.";
+        showError(
+            "No scene for this pair",
+            "Prepared scenes live in "
+            + "reports/molstar_exact_duplicate_examples/."
+        );
         return;
     }
 
-    document.getElementById("app").innerHTML = "";
+    await createViewer();
 
-    viewer = await molstar.Viewer.create("app", {
+    scene.views.forEach(function (view, index) {
+        addViewButton(holder, view.label, index === 0, function () {
+            return loadScene(view.url);
+        });
+    });
+
+    await loadScene(scene.views[0].url);
+}
+
+/* ------------------------------------------------- on-demand pair viewing */
+
+async function initPair(holder) {
+    const query = new URLSearchParams();
+
+    [
+        "pdb_id_a", "chain_a", "pdb_id_b", "chain_b",
+        "snapshot", "run_id", "model_id", "d_bri",
+        "classification", "relationship", "representative",
+    ].forEach(function (name) {
+        const value = params.get(name);
+
+        if (value !== null && value !== "") {
+            query.set(name, value);
+        }
+    });
+
+    setStatus("Resolving snapshot source\u2026");
+
+    let availability;
+
+    try {
+        const response = await fetch(
+            "/api/pair/availability?" + query.toString()
+        );
+        availability = await response.json();
+    } catch (error) {
+        showError(
+            "Could not check pair availability",
+            String(error.message),
+            function () { initPair(holder); }
+        );
+        return;
+    }
+
+    if (!availability.available) {
+        const missing = (availability.missing_structures || []).join(", ");
+
+        showError(
+            "This pair cannot be visualised",
+            (availability.reason_text || availability.reason || "")
+            + (missing ? "\n\nMissing: " + missing : "")
+        );
+        return;
+    }
+
+    setStatus("Preparing Mol* viewer\u2026");
+
+    try {
+        await createViewer();
+    } catch (error) {
+        showError(
+            "Mol* could not start",
+            String(error && error.message ? error.message : error),
+            function () { initPair(holder); }
+        );
+        return;
+    }
+
+    holder.innerHTML = "";
+
+    let first = true;
+
+    (availability.views || []).forEach(function (view) {
+        const wasFirst = first;
+        first = false;
+
+        addViewButton(holder, view.label, wasFirst, function () {
+            return loadPairScene(query, view.key);
+        });
+    });
+
+    await loadPairScene(
+        query,
+        params.get("view") || (availability.views[0] || {}).key
+    );
+}
+
+async function loadPairScene(query, view) {
+    const request = new URLSearchParams(query);
+
+    request.set("view", view);
+
+    setStatus("Loading structures\u2026");
+
+    let payload;
+
+    try {
+        const response = await fetch("/api/pair/scene?" + request.toString());
+
+        payload = await response.json();
+
+        if (!response.ok || payload.error) {
+            throw new Error(payload.error || response.statusText);
+        }
+    } catch (error) {
+        showError(
+            "Could not prepare the scene",
+            String(error && error.message ? error.message : error),
+            function () { loadPairScene(query, view); }
+        );
+        return;
+    }
+
+    /* Provenance: make it obvious which run and snapshot these structures
+     * belong to, and that classification came from complete-BRI. */
+    const provenance = payload.provenance || {};
+
+    text("v-class", (provenance.classification || "").replace(/_/g, " "));
+    text(
+        "v-distance",
+        provenance.d_bri_units === null
+            || provenance.d_bri_units === undefined
+            ? null
+            : provenance.d_bri_units + " units  ("
+                + (Number(provenance.d_bri_units) / 1000).toFixed(4) + " Å)"
+    );
+    text("v-rel", provenance.relationship);
+    text("v-rep", provenance.representative);
+
+    const snapshotCell = document.getElementById("v-snapshot");
+
+    if (snapshotCell) {
+        snapshotCell.textContent = provenance.snapshot_id || "—";
+    }
+
+    renderChainNames(provenance);
+    renderSourceProvenance(provenance);
+
+    setStatus("Rendering\u2026");
+
+    /* Rewrite the scene's structure URLs to the allowlisted structure route
+     * so the browser loads exactly the files the server resolved. */
+    const urls = payload.structure_urls || {};
+    const scene = rewriteStructureUrls(payload.scene, urls);
+
+    try {
+        await viewer.loadMvsData(
+            JSON.stringify(scene), "mvsj", { replaceExisting: true }
+        );
+    } catch (error) {
+        /* The Mol* host stays mounted; only the overlay changes. */
+        showError(
+            "Structure could not be rendered",
+            String(error && error.message ? error.message : error),
+            function () { loadPairScene(query, view); }
+        );
+        return;
+    }
+
+    clearStatus();
+}
+
+/* Chain identifiers are two different namespaces and often differ. Show both
+ * and state which one selects the deposited chain. */
+function renderChainNames(provenance) {
+    const a = provenance.chain_a || {};
+    const b = provenance.chain_b || {};
+
+    function render(chain) {
+        if (!chain.label_asym_id) {
+            return "—";
+        }
+
+        return chain.auth_asym_id && chain.auth_asym_id !== chain.label_asym_id
+            ? chain.label_asym_id + " (auth " + chain.auth_asym_id + ")"
+            : chain.label_asym_id;
+    }
+
+    text("v-chains", render(a) + "  /  " + render(b));
+
+    const cell = document.getElementById("v-chains");
+
+    if (cell) {
+        cell.title =
+            "Selected on label_asym_id, the identifier PDBClean computed BRI "
+            + "for. auth_asym_id shown where it differs.";
+    }
+}
+
+/* Prove the structures on screen are the ones the pipeline parsed. */
+function renderSourceProvenance(provenance) {
+    const box = document.getElementById("source-provenance");
+    const body = document.getElementById("source-provenance-body");
+
+    if (!box || !body) {
+        return;
+    }
+
+    body.innerHTML = "";
+
+    const rows = [];
+
+    rows.push(["Run", provenance.run_id]);
+    rows.push(["Resolved snapshot", provenance.snapshot_id]);
+
+    [["A", provenance.structure_a, provenance.chain_a],
+     ["B", provenance.structure_b, provenance.chain_b]].forEach(
+        function (entry) {
+            const tag = entry[0];
+            const structure = entry[1] || {};
+            const chain = entry[2] || {};
+            const object = structure.source_object || {};
+
+            rows.push([tag + " · PDB", structure.pdb_id]);
+            rows.push([tag + " · label_asym_id", chain.label_asym_id]);
+            rows.push([tag + " · auth_asym_id", chain.auth_asym_id]);
+            rows.push([tag + " · model", chain.model_id]);
+            rows.push([tag + " · source origin", structure.origin]);
+            rows.push([tag + " · source key", object.s3_key]);
+            rows.push([tag + " · source ETag", object.etag]);
+            rows.push([tag + " · local file", structure.path]);
+        }
+    );
+
+    const list = document.createElement("dl");
+
+    list.className = "kv";
+
+    rows.forEach(function (row) {
+        if (row[1] === null || row[1] === undefined || row[1] === "") {
+            return;
+        }
+
+        const term = document.createElement("dt");
+        const value = document.createElement("dd");
+
+        term.textContent = row[0];
+        value.textContent = String(row[1]);
+
+        list.appendChild(term);
+        list.appendChild(value);
+    });
+
+    body.appendChild(list);
+    box.hidden = false;
+}
+
+function rewriteStructureUrls(node, urls) {
+    if (Array.isArray(node)) {
+        return node.map(function (item) {
+            return rewriteStructureUrls(item, urls);
+        });
+    }
+
+    if (node && typeof node === "object") {
+        const copy = {};
+
+        Object.keys(node).forEach(function (key) {
+            copy[key] = rewriteStructureUrls(node[key], urls);
+        });
+
+        if (copy.kind === "download" && copy.params && copy.params.url) {
+            const name = String(copy.params.url)
+                .split("/").pop().replace(/\.cif$/, "");
+
+            if (urls[name]) {
+                copy.params.url = urls[name];
+            }
+        }
+
+        return copy;
+    }
+
+    return node;
+}
+
+/* ------------------------------------------------------------- plumbing */
+
+async function createViewer() {
+    if (viewer) {
+        return viewer;
+    }
+
+    /* Mount into a dedicated host so the status overlay is never destroyed. */
+    document.getElementById("molstar-host").innerHTML = "";
+
+    viewer = await molstar.Viewer.create("molstar-host", {
         layoutIsExpanded: false,
         layoutShowControls: true,
         layoutShowRemoteState: false,
@@ -193,34 +636,36 @@ async function init() {
         viewportShowSelectionMode: false,
     });
 
-    const holder = document.getElementById("view-buttons");
+    return viewer;
+}
 
-    scene.views.forEach(function (view, index) {
-        const button = document.createElement("button");
+function addViewButton(holder, label, active, load) {
+    const button = document.createElement("button");
 
-        button.className = "action";
-        button.textContent = view.label;
-        button.setAttribute("aria-pressed", index === 0 ? "true" : "false");
+    button.className = "action";
+    button.textContent = label;
+    button.setAttribute("aria-pressed", active ? "true" : "false");
 
-        button.addEventListener("click", async function () {
-            holder.querySelectorAll("button").forEach(function (other) {
-                other.setAttribute("aria-pressed", "false");
-            });
-
-            button.setAttribute("aria-pressed", "true");
-
-            await loadScene(view.url);
+    button.addEventListener("click", async function () {
+        holder.querySelectorAll("button").forEach(function (other) {
+            other.setAttribute("aria-pressed", "false");
         });
 
-        holder.appendChild(button);
+        button.setAttribute("aria-pressed", "true");
+
+        await load();
     });
 
-    await loadScene(scene.views[0].url);
+    holder.appendChild(button);
 }
 
 init().catch(function (error) {
-    document.getElementById("app").innerHTML =
-        "<div id=\"fallback\">Viewer failed: " + error.message + "</div>";
+    /* Never replace #app: that would remove the Mol* host and leave a blank
+     * area, which is precisely the failure this page used to show. */
+    showError(
+        "Viewer failed to start",
+        String(error && error.message ? error.message : error)
+    );
 });
 </script>
 </body>

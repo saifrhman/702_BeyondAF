@@ -159,6 +159,544 @@ function initTheme() {
     });
 }
 
+
+
+/* Open the pair viewer for a recorded duplicate pair. The scene is generated
+ * on demand from this run's snapshot; Mol* never reclassifies the pair. */
+function openPairViewer(row, molstar) {
+    const query = new URLSearchParams(molstar.query || {});
+
+    query.set("view", (molstar.views && molstar.views[0]) || "side_by_side");
+
+    if (state.resolved) {
+        query.set(
+            "sha", state.resolved.scientific_config_sha256 || ""
+        );
+    }
+
+    window.open("/viewer.html?" + query.toString(), "_blank", "noopener");
+}
+
+
+/* Render the detailed scientific description of a stage. Shared across runs;
+ * the run-specific values are shown separately by the caller. */
+function stageDocumentation(description) {
+    if (!description) {
+        return null;
+    }
+
+    const holder = el("div", { class: "stage-doc" });
+
+    function section(title, body) {
+        if (!body || body === "not recorded") {
+            return;
+        }
+
+        holder.appendChild(el("h5", { text: title }));
+        holder.appendChild(el("p", { text: body }));
+    }
+
+    section("Purpose", description.rationale);
+    section("Scientific method", description.scientific_method);
+    section("Input", description.stage_input);
+    section("Output", description.stage_output);
+    section("Scientific role", description.downstream_role);
+    section("Implementation", description.implementation_note);
+
+    const references = description.references || [];
+
+    if (references.length) {
+        holder.appendChild(el("h5", { text: "Method references" }));
+
+        const refs = el("div", { class: "refs" });
+
+        references.forEach(function (reference) {
+            const line = el("div");
+
+            line.appendChild(
+                document.createTextNode(
+                    reference.authors + " (" + reference.year + "). "
+                    + reference.title + ". " + reference.venue + ". "
+                )
+            );
+
+            line.appendChild(
+                el("a", {
+                    href: "https://doi.org/" + reference.doi,
+                    target: "_blank",
+                    rel: "noopener",
+                    text: reference.doi,
+                })
+            );
+
+            if (reference.relevance) {
+                line.appendChild(el("br"));
+                line.appendChild(
+                    el("span", { class: "note", text: reference.relevance })
+                );
+            }
+
+            refs.appendChild(line);
+        });
+
+        holder.appendChild(refs);
+    }
+
+    return holder;
+}
+
+/* ================================================== ARTEFACT VIEWER
+ *
+ * One reusable viewer, used by every page that shows an artefact path:
+ * Gold release, Pipeline, Runs, stage details and the Duplicate Explorer.
+ * Nothing here writes: it reads bounded pages from the server and offers the
+ * original file for download.
+ */
+
+const artefactState = {
+    path: null,
+    context: null,
+    page: 1,
+    pageSize: 50,
+    sortBy: null,
+    descending: false,
+    search: "",
+    columns: [],
+    rows: [],
+};
+
+/* Any artefact path in any table becomes a button that opens the viewer. */
+function artefactLink(path, label, context) {
+    const button = el("button", {
+        class: "artefact-link",
+        text: label || path.split("/").slice(-2).join("/"),
+        title: path,
+    });
+
+    button.addEventListener("click", function (event) {
+        event.stopPropagation();
+        openArtefact(path, context || {});
+    });
+
+    return button;
+}
+
+function closeArtefact() {
+    const overlay = $("artefact-overlay");
+
+    if (overlay) {
+        overlay.remove();
+    }
+
+    document.removeEventListener("keydown", artefactEscape);
+}
+
+function artefactEscape(event) {
+    if (event.key === "Escape") {
+        closeArtefact();
+    }
+}
+
+async function openArtefact(path, context) {
+    closeArtefact();
+
+    artefactState.path = path;
+    artefactState.context = context || {};
+    artefactState.page = 1;
+    artefactState.sortBy = null;
+    artefactState.descending = false;
+    artefactState.search = "";
+
+    const panel = el("div", { id: "artefact-panel" }, [
+        el("header", {}, [
+            el("span", { class: "name", text: path.split("/").pop() }),
+            el("span", { class: "spacer" }),
+            el("button", { class: "action", id: "artefact-download",
+                           text: "Download original" }),
+            el("button", { class: "action", id: "artefact-close",
+                           text: "Close" }),
+        ]),
+        el("div", { id: "artefact-meta" }, [
+            el("div", { class: "note", text: "loading…" }),
+        ]),
+        el("div", { id: "artefact-body" }),
+        el("div", { id: "artefact-footer" }),
+    ]);
+
+    const overlay = el("div", { id: "artefact-overlay" }, [panel]);
+
+    overlay.addEventListener("click", function (event) {
+        if (event.target === overlay) {
+            closeArtefact();
+        }
+    });
+
+    document.body.appendChild(overlay);
+    document.addEventListener("keydown", artefactEscape);
+
+    $("artefact-close").addEventListener("click", closeArtefact);
+
+    try {
+        const meta = await api(
+            "/api/artefact?path=" + encodeURIComponent(path)
+        );
+
+        renderArtefactMeta(meta);
+
+        $("artefact-download").addEventListener("click", function () {
+            /* Streams the recorded bytes, not a re-encoded export. */
+            window.location.href = meta.download_url;
+        });
+
+        if (meta.preview_kind === "parquet" || meta.preview_kind === "table") {
+            await loadArtefactPage(1);
+        } else {
+            renderArtefactStatic(meta);
+        }
+    } catch (error) {
+        $("artefact-meta").innerHTML = "";
+        $("artefact-meta").appendChild(
+            el("div", { class: "fail-block", text: error.message })
+        );
+    }
+}
+
+function renderArtefactMeta(meta) {
+    const holder = $("artefact-meta");
+
+    holder.innerHTML = "";
+
+    const kv = el("dl", { class: "kv" });
+
+    function add(label, value) {
+        if (value === null || value === undefined || value === "") {
+            return;
+        }
+
+        kv.appendChild(el("dt", { text: label }));
+        kv.appendChild(el("dd", { text: String(value) }));
+    }
+
+    const context = artefactState.context || {};
+    const provenance = meta.provenance || {};
+
+    /* Provenance first: it must be obvious which run and stage produced the
+     * table being inspected. */
+    add("Run", context.run_id || provenance.run_id);
+    add("Stage", context.stage || provenance.stage);
+    add("Snapshot", context.snapshot || provenance.snapshot_id);
+    add("Scientific SHA256", provenance.scientific_config_sha256);
+    add("Resolved config SHA256", provenance.resolved_config_sha256);
+    add("Producer", context.producer);
+    add("Validation", context.validation);
+
+    add("File", meta.name);
+    add("Path", meta.path);
+    add("Size", num(meta.bytes) + " bytes");
+    add("SHA256", meta.sha256);
+
+    if (meta.schema) {
+        add("Rows", num(meta.schema.row_count));
+        add("Columns", meta.schema.column_count);
+        add("Row groups", meta.schema.row_group_count);
+        add("Written by", meta.schema.created_by);
+    }
+
+    holder.appendChild(kv);
+}
+
+function renderArtefactStatic(meta) {
+    const body = $("artefact-body");
+    const footer = $("artefact-footer");
+
+    body.innerHTML = "";
+    footer.innerHTML = "";
+
+    const preview = meta.preview || {};
+
+    if (preview.truncated && preview.reason) {
+        body.appendChild(
+            el("div", { class: "preview-note", text: preview.reason })
+        );
+    }
+
+    if (preview.kind === "json") {
+        body.appendChild(
+            el("pre", { text: JSON.stringify(preview.content, null, 2) })
+        );
+    } else if (preview.kind === "text") {
+        body.appendChild(el("pre", { text: preview.content }));
+    } else {
+        body.appendChild(
+            el("div", {
+                class: "note",
+                text:
+                    preview.reason
+                    || "No inline viewer for this file type. The original can "
+                       + "still be downloaded.",
+            })
+        );
+    }
+
+    footer.appendChild(
+        el("span", { class: "note", text: meta.preview_kind })
+    );
+}
+
+async function loadArtefactPage(page) {
+    const body = $("artefact-body");
+    const footer = $("artefact-footer");
+
+    artefactState.page = page;
+
+    const query = new URLSearchParams({
+        path: artefactState.path,
+        page: String(page),
+        page_size: String(artefactState.pageSize),
+    });
+
+    if (artefactState.search) {
+        query.set("search", artefactState.search);
+    }
+
+    if (artefactState.sortBy) {
+        query.set("sort_by", artefactState.sortBy);
+
+        if (artefactState.descending) {
+            query.set("descending", "1");
+        }
+    }
+
+    body.innerHTML = "";
+    body.appendChild(el("div", { class: "note", text: "loading…" }));
+
+    try {
+        const payload = await api("/api/artefact/table?" + query.toString());
+
+        artefactState.columns = payload.columns;
+        artefactState.rows = payload.rows;
+
+        renderArtefactTable(payload);
+        renderArtefactFooter(payload);
+    } catch (error) {
+        body.innerHTML = "";
+        body.appendChild(
+            el("div", { class: "fail-block", text: error.message })
+        );
+    }
+}
+
+function renderArtefactTable(payload) {
+    const body = $("artefact-body");
+
+    body.innerHTML = "";
+
+    if (payload.note) {
+        body.appendChild(
+            el("div", { class: "preview-note", text: payload.note })
+        );
+    }
+
+    const parquet = payload.kind === "parquet";
+
+    const names = parquet
+        ? payload.columns.map(function (c) { return c.name; })
+        : payload.columns;
+
+    const head = el("tr", {}, names.map(function (name, index) {
+        const type = parquet ? payload.columns[index].type : null;
+
+        const th = el("th", {
+            title: type ? name + " : " + type : name,
+            text: name,
+        });
+
+        if (parquet) {
+            th.setAttribute(
+                "aria-sort",
+                artefactState.sortBy === name
+                    ? (artefactState.descending ? "descending" : "ascending")
+                    : "none"
+            );
+
+            th.addEventListener("click", function () {
+                if (artefactState.sortBy === name) {
+                    artefactState.descending = !artefactState.descending;
+                } else {
+                    artefactState.sortBy = name;
+                    artefactState.descending = false;
+                }
+
+                loadArtefactPage(1);
+            });
+        }
+
+        return th;
+    }));
+
+    const rows = payload.rows.map(function (row) {
+        const values = parquet
+            ? names.map(function (name) { return row[name]; })
+            : row;
+
+        return el("tr", {}, values.map(function (value) {
+            return el("td", {
+                title: value === null || value === undefined
+                    ? ""
+                    : String(value),
+                text: value === null || value === undefined
+                    ? "—"
+                    : String(value),
+            });
+        }));
+    });
+
+    body.appendChild(
+        el("table", { class: "compact" }, [
+            el("thead", {}, [head]),
+            el("tbody", {}, rows),
+        ])
+    );
+}
+
+function renderArtefactFooter(payload) {
+    const footer = $("artefact-footer");
+
+    footer.innerHTML = "";
+
+    const prev = el("button", { class: "action", text: "Previous" });
+    const next = el("button", { class: "action", text: "Next" });
+
+    prev.disabled = payload.page <= 1;
+    next.disabled = payload.returned < payload.page_size;
+
+    prev.addEventListener("click", function () {
+        loadArtefactPage(Math.max(1, payload.page - 1));
+    });
+
+    next.addEventListener("click", function () {
+        loadArtefactPage(payload.page + 1);
+    });
+
+    footer.appendChild(prev);
+    footer.appendChild(
+        el("span", {
+            class: "mono",
+            text:
+                "page " + num(payload.page)
+                + (payload.page_count ? " / " + num(payload.page_count) : "")
+                + "  ·  " + num(payload.row_count || payload.matched_rows)
+                + " rows",
+        })
+    );
+    footer.appendChild(next);
+
+    const size = el("select");
+
+    [25, 50, 100, 200].forEach(function (value) {
+        const option = el("option", { value: String(value),
+                                      text: String(value) });
+
+        if (value === artefactState.pageSize) {
+            option.selected = true;
+        }
+
+        size.appendChild(option);
+    });
+
+    size.addEventListener("change", function () {
+        artefactState.pageSize = Number(size.value);
+        loadArtefactPage(1);
+    });
+
+    footer.appendChild(el("label", { class: "inline" }, [
+        el("span", { text: "rows" }),
+        size,
+    ]));
+
+    const search = el("input", {
+        type: "text",
+        placeholder: "search rows…",
+        value: artefactState.search,
+    });
+
+    search.addEventListener("change", function () {
+        artefactState.search = search.value.trim();
+        loadArtefactPage(1);
+    });
+
+    footer.appendChild(search);
+
+    /* Convenience export of what is on screen. The original Parquet remains
+     * the authoritative artefact. */
+    const exportButton = el("button", {
+        class: "action",
+        text: "Export view as CSV",
+        title:
+            "Convenience export of the rows currently displayed. Not the "
+            + "authoritative scientific artefact — download the original for "
+            + "that.",
+    });
+
+    exportButton.addEventListener("click", function () {
+        exportCurrentView(payload);
+    });
+
+    footer.appendChild(exportButton);
+
+    footer.appendChild(
+        el("span", {
+            class: "note",
+            text:
+                "Bounded server-side paging. "
+                + (payload.scan_truncated
+                    ? "Search scan was truncated. "
+                    : "")
+                + "Original Parquet is authoritative.",
+        })
+    );
+}
+
+function exportCurrentView(payload) {
+    const parquet = payload.kind === "parquet";
+
+    const names = parquet
+        ? payload.columns.map(function (c) { return c.name; })
+        : payload.columns;
+
+    const lines = [names.join(",")];
+
+    payload.rows.forEach(function (row) {
+        const values = parquet
+            ? names.map(function (name) { return row[name]; })
+            : row;
+
+        lines.push(
+            values.map(function (value) {
+                const text = value === null || value === undefined
+                    ? ""
+                    : String(value);
+
+                return /[",\n]/.test(text)
+                    ? '"' + text.replace(/"/g, '""') + '"'
+                    : text;
+            }).join(",")
+        );
+    });
+
+    const blob = new Blob([lines.join("\n")], { type: "text/csv" });
+    const url = URL.createObjectURL(blob);
+    const anchor = el("a", {
+        href: url,
+        download: artefactState.path.split("/").pop() + ".view.csv",
+    });
+
+    document.body.appendChild(anchor);
+    anchor.click();
+    anchor.remove();
+    URL.revokeObjectURL(url);
+}
+
 /* --------------------------------------------------------------- routing */
 
 function showView(name) {
@@ -816,33 +1354,60 @@ function renderDuplicateRows(payload) {
 
     payload.rows.forEach(function (row) {
         const scene = sceneFor(row);
+        const molstar = row.molstar || {};
 
         const viewCell = el("td");
 
-        if (scene) {
-            const link = el("a", {
-                href:
-                    "/viewer.html?scene=" + encodeURIComponent(scene.key)
-                    + "&a=" + encodeURIComponent(row.pdb_id_a + ":" + row.chain_a)
-                    + "&b=" + encodeURIComponent(row.pdb_id_b + ":" + row.chain_b)
-                    + "&d=" + encodeURIComponent(String(row.d_bri_mA))
-                    + "&cls=" + encodeURIComponent(row.classification)
-                    + "&rel=" + encodeURIComponent(row.relationship)
-                    + "&rep=" + encodeURIComponent(row.representative || "")
-                    + "&sha=" + encodeURIComponent(
-                        state.resolved
-                            ? state.resolved.scientific_config_sha256
-                            : ""
-                    ),
-                target: "_blank",
-                rel: "noopener",
-                text: "View pair",
+        /* Prefer on-demand generation against this run's snapshot; fall back
+         * to a prepared example scene; otherwise state the specific reason. */
+        if (molstar.available) {
+            const button = el("button", {
+                class: "link",
+                text: "View in Mol*",
+                title: molstar.requires_materialisation
+                    ? "Source objects for this run's snapshot will be "
+                      + "fetched on first view and cached. Visual inspection "
+                      + "only."
+                    : "Open this pair from this run's snapshot. Visual "
+                      + "inspection only.",
             });
 
-            viewCell.appendChild(link);
-        } else {
+            button.addEventListener("click", function (event) {
+                event.stopPropagation();
+                openPairViewer(row, molstar);
+            });
+
+            viewCell.appendChild(button);
+        } else if (scene) {
             viewCell.appendChild(
-                el("span", { class: "note", text: "no prepared scene" })
+                el("a", {
+                    href:
+                        "/viewer.html?scene=" + encodeURIComponent(scene.key)
+                        + "&a=" + encodeURIComponent(row.pdb_id_a + ":" + row.chain_a)
+                        + "&b=" + encodeURIComponent(row.pdb_id_b + ":" + row.chain_b)
+                        + "&d=" + encodeURIComponent(String(row.d_bri_mA))
+                        + "&cls=" + encodeURIComponent(row.classification)
+                        + "&rel=" + encodeURIComponent(row.relationship)
+                        + "&rep=" + encodeURIComponent(row.representative || "")
+                        + "&sha=" + encodeURIComponent(
+                            state.resolved
+                                ? state.resolved.scientific_config_sha256
+                                : ""
+                        ),
+                    target: "_blank",
+                    rel: "noopener",
+                    text: "View prepared scene",
+                })
+            );
+        } else {
+            /* Never a bare "no prepared scene": say exactly what is missing. */
+            viewCell.appendChild(
+                el("span", {
+                    class: "molstar-reason",
+                    title: molstar.reason_text || "",
+                    text: (molstar.reason || "structure unavailable")
+                        .replace(/_/g, " "),
+                })
             );
         }
 
@@ -998,9 +1563,20 @@ async function loadRelease() {
         const body = el("tbody");
 
         (release.artifacts || []).forEach(function (artifact) {
+            const absolute =
+                artifact.absolute_path
+                || ((payload.release_path || "") + "/" + artifact.path);
+
             body.appendChild(
                 el("tr", {}, [
-                    el("td", { class: "mono", text: artifact.path }),
+                    el("td", {}, [
+                        artefactLink(absolute, artifact.path, {
+                            stage: "Stage 14c — Final Gold release",
+                            snapshot: payload.snapshot,
+                            producer: "scripts/build_stage14_final_release.py",
+                            validation: "validation_pass",
+                        }),
+                    ]),
                     el("td", { class: "num", text: num(artifact.bytes) }),
                     el("td", { class: "mono", text: artifact.sha256 }),
                 ])
@@ -1366,7 +1942,14 @@ async function loadStageDetail(runId, stage, container) {
             cell.appendChild(el("p", { class: "note", text: id.note }));
         }
 
+        /* Run-specific facts first, then the shared scientific explanation. */
         cell.appendChild(grid);
+
+        const documentation = stageDocumentation(detail.description);
+
+        if (documentation) {
+            cell.appendChild(documentation);
+        }
 
         /* --------------------------------- duplicate / Mol* navigation */
 
@@ -1418,30 +2001,35 @@ async function loadStageDetail(runId, stage, container) {
             files.forEach(function (file) {
                 const action = el("td");
 
-                if (file.previewable) {
-                    const view = el("button", {
-                        class: "link",
-                        text: "preview",
-                    });
+                const open = el("button", {
+                    class: "link",
+                    text: file.previewable ? "inspect" : "metadata",
+                });
 
-                    view.addEventListener("click", function (event) {
-                        event.stopPropagation();
-                        previewArtefact(file, cell);
+                open.addEventListener("click", function (event) {
+                    event.stopPropagation();
+                    openArtefact(file.path, {
+                        run_id: runId,
+                        stage: stage.display,
+                        producer: stage.producer,
                     });
+                });
 
-                    action.appendChild(view);
-                } else {
-                    action.appendChild(
-                        el("span", { class: "note", text: "metadata only" })
-                    );
-                }
+                action.appendChild(open);
 
                 listBody.appendChild(
                     el("tr", {}, [
-                        el("td", {
-                            class: "mono",
-                            text: file.relative_path || file.name,
-                        }),
+                        el("td", {}, [
+                            artefactLink(
+                                file.path,
+                                file.relative_path || file.name,
+                                {
+                                    run_id: runId,
+                                    stage: stage.display,
+                                    producer: stage.producer,
+                                }
+                            ),
+                        ]),
                         el("td", { class: "num", text: num(file.bytes) }),
                         el("td", {
                             class: "mono",
@@ -1710,19 +2298,43 @@ function renderAbout() {
             );
         }
 
-        body.appendChild(
-            el("tr", { class: "role-" + stage.role }, [
-                name,
-                el("td", {}, [
-                    el("span", { class: "layer-tag", text: stage.layer }),
-                ]),
-                el("td", {
-                    class: "mono",
-                    text: stage.producer || "—",
-                }),
-                purpose,
-            ])
-        );
+        const row = el("tr", {
+            class: "stage-row role-" + stage.role,
+            "aria-expanded": "false",
+            tabindex: "0",
+        }, [
+            name,
+            el("td", {}, [
+                el("span", { class: "layer-tag", text: stage.layer }),
+            ]),
+            el("td", { class: "mono", text: stage.producer || "—" }),
+            purpose,
+        ]);
+
+        const detail = el("tr", { class: "stage-detail", hidden: "" }, [
+            el("td", { colspan: "4" }, [
+                stageDocumentation(stage) || el("div", { class: "note",
+                    text: "No detailed description recorded." }),
+            ]),
+        ]);
+
+        function toggle() {
+            const open = row.getAttribute("aria-expanded") === "true";
+
+            row.setAttribute("aria-expanded", open ? "false" : "true");
+            detail.hidden = open;
+        }
+
+        row.addEventListener("click", toggle);
+        row.addEventListener("keydown", function (event) {
+            if (event.key === "Enter" || event.key === " ") {
+                event.preventDefault();
+                toggle();
+            }
+        });
+
+        body.appendChild(row);
+        body.appendChild(detail);
     });
 }
 

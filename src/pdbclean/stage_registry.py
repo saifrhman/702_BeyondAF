@@ -757,6 +757,34 @@ class CanonicalStage:
 
     note: str = ""
 
+    # -- detailed scientific description -------------------------------
+    #
+    # Written from the executable implementation and the frozen provenance.
+    # Papers are cited for the scientific rationale only; a COMP702
+    # computational choice is never attributed to a paper.
+
+    #: What scientific problem this stage addresses.
+    rationale: str = ""
+
+    #: Exactly what operation is performed, in method terms.
+    scientific_method: str = ""
+
+    #: What arrives from upstream.
+    stage_input: str = ""
+
+    #: What the stage emits.
+    stage_output: str = ""
+
+    #: How the next stage consumes the result.
+    downstream_role: str = ""
+
+    #: Implementation notes: which code performs it, and which parts are
+    #: COMP702 engineering rather than method.
+    implementation_note: str = ""
+
+    #: Compact method references, e.g. ``("anosova_match_2025",)``.
+    references: tuple[str, ...] = ()
+
     @property
     def display(self) -> str:
         """``"Stage 3 - Complete BRI"``: the label used across the whole UI."""
@@ -1098,6 +1126,13 @@ def canonical_catalogue() -> list[dict[str, Any]]:
             "purpose": entry.purpose,
             "frozen_output": entry.frozen_output,
             "note": entry.note,
+            "rationale": entry.rationale,
+            "scientific_method": entry.scientific_method,
+            "stage_input": entry.stage_input,
+            "stage_output": entry.stage_output,
+            "downstream_role": entry.downstream_role,
+            "implementation_note": entry.implementation_note,
+            "references": method_references(entry.references),
         }
         for entry in canonical_timeline()
     ]
@@ -1136,3 +1171,740 @@ def producer_canonical_label(stage_id: str) -> str:
     numbers = [entry.label.replace("Stage ", "") for entry in entries]
 
     return f"Stage {numbers[0]}-{numbers[-1]}"
+
+
+# ---------------------------------------------------------------------------
+# Method references
+# ---------------------------------------------------------------------------
+#
+# Cited for scientific rationale only. Where a step is a COMP702 computational
+# choice rather than something a paper prescribes, the stage's
+# `implementation_note` says so explicitly.
+
+METHOD_REFERENCES: dict[str, dict[str, str]] = {
+    "anosova_match_2025": {
+        "key": "anosova_match_2025",
+        "authors": "Anosova et al.",
+        "title": (
+            "A Complete and Bi-Continuous Invariant of Protein Backbones "
+            "under Rigid Motion"
+        ),
+        "venue": "MATCH Communications in Mathematical and in Computer "
+                 "Chemistry, 94(1), 97",
+        "year": "2025",
+        "doi": "10.46793/match.94-1.097A",
+        "relevance": (
+            "Defines the complete backbone rigid invariant and the average "
+            "invariant, and establishes their completeness and continuity."
+        ),
+    },
+    "wlodawer_acta_2025": {
+        "key": "wlodawer_acta_2025",
+        "authors": "Wlodawer et al.",
+        "title": (
+            "Duplicate entries in the Protein Data Bank: how to detect and "
+            "handle them"
+        ),
+        "venue": "Acta Crystallographica Section D",
+        "year": "2025",
+        "doi": "10.1107/S2059798325001883",
+        "relevance": (
+            "Motivates duplicate detection in the PDB and characterises the "
+            "categories of duplicate and near-duplicate deposition."
+        ),
+    },
+}
+
+
+def method_references(keys: tuple[str, ...]) -> list[dict[str, str]]:
+    """Resolve reference keys to their bibliographic records."""
+
+    return [
+        METHOD_REFERENCES[key] for key in keys if key in METHOD_REFERENCES
+    ]
+
+
+# ---------------------------------------------------------------------------
+# Detailed scientific descriptions
+# ---------------------------------------------------------------------------
+#
+# Keyed by canonical stage key. Applied to CANONICAL_TIMELINE below, so the
+# timeline stays the single source the UI, CLI and provenance all read.
+
+_DESCRIPTIONS: dict[str, dict[str, Any]] = {
+    "prerequisite_a": {
+        "rationale": (
+            "The PDB changes daily. A result is only reproducible if it names "
+            "the exact archive state it was computed from, so a run must be "
+            "bound to one immutable snapshot before any data is read."
+        ),
+        "scientific_method": (
+            "The archive publishes dated snapshots. The configured selection "
+            "mode is resolved once: 'latest_complete' discovers the newest "
+            "complete snapshot and immediately pins it to its concrete "
+            "YYYYMMDD identity; an explicit identity is used as given. The "
+            "resolved identity, the mode that produced it, the bucket and a "
+            "verified sample coordinate key are written to provenance. A "
+            "resumed run reads that pinned identity and never re-resolves "
+            "'latest', so it cannot silently drift to a newer archive state."
+        ),
+        "stage_input": "A selection mode, or an explicit snapshot identity.",
+        "stage_output": (
+            "A pinned snapshot identity in the resolved run configuration and "
+            "in provenance. No data files."
+        ),
+        "downstream_role": (
+            "Every later stage reads only from this snapshot, and the "
+            "identity forms part of the run's scientific hash."
+        ),
+        "implementation_note": (
+            "COMP702 orchestration. pdbclean.snapshot_selection."
+        ),
+    },
+    "prerequisite_b": {
+        "rationale": (
+            "Before any scientific filtering, the run needs an immutable "
+            "inventory of what the snapshot actually contained, so that every "
+            "later decision can be traced back to a specific source object."
+        ),
+        "scientific_method": (
+            "The snapshot's object listing is enumerated and recorded: PDB "
+            "identifier, S3 source key, compressed byte size and ETag. This "
+            "is an inventory only. No entry is excluded, no structure is "
+            "parsed and no quality judgement is made at this layer."
+        ),
+        "stage_input": "The pinned snapshot identity.",
+        "stage_output": (
+            "source_manifest.parquet — one row per source object, with its "
+            "verified identity."
+        ),
+        "downstream_role": (
+            "Supplies the object identity that Silver parsing reconstructs "
+            "from, and the provenance every Gold chain record carries."
+        ),
+        "implementation_note": (
+            "COMP702 data engineering. scripts/pdbclean/create_manifest.py."
+        ),
+    },
+    "prerequisite_c": {
+        "rationale": (
+            "Scientific filtering needs a deterministic in-memory "
+            "representation of each entry, but storing a second full copy of "
+            "the archive would double storage for no scientific gain."
+        ),
+        "scientific_method": (
+            "Each mmCIF object is parsed deterministically by a pinned "
+            "parser: models, chains in the canonical label_asym_id namespace, "
+            "residues and atom sites, preserving author chain identifiers and "
+            "entity identifiers alongside the canonical ones. The result is "
+            "not persisted; it is reconstructed on demand from the immutable "
+            "Bronze object identity."
+        ),
+        "stage_input": "Bronze source objects, by verified identity.",
+        "stage_output": (
+            "Nothing persisted, by design. Verified transitively: every Gold "
+            "chain record carries the source key and ETag it was parsed from."
+        ),
+        "downstream_role": (
+            "Supplies the deposited model/chain structures that structural "
+            "cleaning applies its rules to."
+        ),
+        "implementation_note": (
+            "COMP702 data engineering. pdbclean.mmcif_parser."
+        ),
+    },
+    "stage_1": {
+        "rationale": (
+            "A geometric invariant is only meaningful for a backbone that is "
+            "actually complete and unambiguous. Entries contain non-protein "
+            "polymers, alternate conformations, gaps and missing backbone "
+            "atoms, all of which would make a computed invariant describe "
+            "something other than a single well-defined backbone."
+        ),
+        "scientific_method": (
+            "Protocol 3.2 applies six rules, each recording an explicit "
+            "accept/reject decision per chain:\\n\\n"
+            "Q001 protein eligibility — the entry must be a polypeptide, "
+            "determined from _entity_poly.type.\\n"
+            "Q002 disorder — chains carrying alternate conformations or "
+            "duplicated N/CA/C backbone atoms are rejected, because the "
+            "backbone would not be uniquely defined.\\n"
+            "Q003 residue continuity — the residue numbering (label_seq_id) "
+            "must be continuous, since a gap breaks the consecutive-triple "
+            "geometry the invariant is built from.\\n"
+            "Q004 backbone atoms — every retained residue must carry all "
+            "three of N, CA and C.\\n"
+            "Q005 backbone distance — consecutive backbone atoms must be at "
+            "least the configured minimum apart, rejecting coincident atoms.\\n"
+            "Q006 amino acids — residue names must map to the canonical "
+            "twenty via the pinned mapping.\\n\\n"
+            "Model scope is fixed to a single deposited model, so that one "
+            "chain contributes exactly one backbone."
+        ),
+        "stage_input": "Parsed deposited structures for the pinned snapshot.",
+        "stage_output": (
+            "quality/merged/accepted.parquet with the retained chains and "
+            "their exact retained residue ranges, plus a rejected table "
+            "recording which rule excluded each chain."
+        ),
+        "downstream_role": (
+            "Defines the candidate population whose geometry is validated in "
+            "Stage 2."
+        ),
+        "implementation_note": (
+            "Rules and thresholds are COMP702 protocol decisions, pinned "
+            "against the BRI v1.2.2 reference behaviour by a differential "
+            "test. pdbclean.cleaning."
+        ),
+    },
+    "stage_2": {
+        "rationale": (
+            "A chain can satisfy every bookkeeping rule and still be "
+            "geometrically degenerate — collinear or coincident backbone "
+            "atoms — which makes the local frames the invariant depends on "
+            "numerically unstable or undefined."
+        ),
+        "scientific_method": (
+            "Each accepted chain's backbone is checked for degeneracy. The "
+            "N-CA-C triangle must have all angles above the configured "
+            "minimum, and consecutive backbone atom distances must exceed the "
+            "configured minimum. Chains failing either check are quarantined "
+            "with an explicit recorded reason rather than being silently "
+            "dropped or silently included."
+        ),
+        "stage_input": "Accepted chains from Stage 1.",
+        "stage_output": (
+            "finalized/eligible.parquet — the canonical eligible population — "
+            "plus a quarantined table with per-chain geometric reasons."
+        ),
+        "downstream_role": (
+            "The eligible population is the denominator for every later "
+            "accounting check and the input to complete BRI."
+        ),
+        "implementation_note": (
+            "Thresholds are COMP702 numerical-stability choices. "
+            "pdbclean.geometric_validation."
+        ),
+    },
+    "stage_3": {
+        "rationale": (
+            "Comparing backbones by coordinates is meaningless without "
+            "removing the arbitrary rigid placement of each deposited "
+            "structure. A complete invariant under rigid motion allows two "
+            "backbones to be compared directly, with equality of the "
+            "invariant corresponding to congruence of the backbones."
+        ),
+        "scientific_method": (
+            "For a backbone of m residues, the complete backbone rigid "
+            "invariant is an m x 9 matrix. Each row describes one residue's "
+            "geometry in a local frame built from its neighbours, so the "
+            "representation is invariant under rotation and translation of "
+            "the whole structure while remaining complete: it determines the "
+            "backbone up to rigid motion. Completeness is what makes it "
+            "usable as the authoritative comparison basis, rather than a "
+            "lossy descriptor that could conflate distinct backbones."
+        ),
+        "stage_input": "The canonical eligible chain population.",
+        "stage_output": (
+            "bri/finalized/bri.parquet — one m x 9 invariant per eligible "
+            "chain."
+        ),
+        "downstream_role": (
+            "Complete BRI is the authoritative geometric representation used "
+            "for the final duplicate decision in Stages 8-10."
+        ),
+        "implementation_note": (
+            "Definition from Anosova et al. Computed by pdbclean.bri against "
+            "the pinned BRI v1.2.2 implementation, with a differential gate."
+        ),
+        "references": ("anosova_match_2025",),
+    },
+    "stage_4": {
+        "rationale": (
+            "Floating-point comparison of geometry is not reproducible across "
+            "platforms and cannot support exact equality. Representing the "
+            "invariant on a fixed grid makes distances exact integers, so "
+            "'identical' and 'within threshold' are decidable rather than "
+            "approximate."
+        ),
+        "scientific_method": (
+            "The invariant is represented on a configured precision grid p:\\n\\n"
+            "    BRI_units = round(BRI / p)\\n\\n"
+            "At the validated default p = 0.001 A this is exactly "
+            "round(1000 x BRI), and one representation unit is one "
+            "milliangstrom. All later distance arithmetic is exact integer "
+            "arithmetic in these units.\\n\\n"
+            "Representation precision is NOT a duplicate threshold. p is how "
+            "finely geometry is recorded; the near-duplicate threshold is a "
+            "separate configured value compared against the resulting "
+            "distance."
+        ),
+        "stage_input": "The complete BRI computed in Stage 3.",
+        "stage_output": (
+            "The same artefact as Stage 3: the representation is applied at "
+            "the point of computation, and the exact integer conversion is "
+            "verified lossless on load."
+        ),
+        "downstream_role": (
+            "Every subsequent comparison, in Brain filtering and in the "
+            "complete-BRI search, operates on these exact integer units."
+        ),
+        "implementation_note": (
+            "The 0.001 A grid is a COMP702 computational choice matching the "
+            "pinned BRI v1.2.2 canonicalisation (numpy.around(..., 3)); it is "
+            "not a quantisation step prescribed by the paper. Integer "
+            "conversion in pdbclean.full_bri_compare asserts losslessness."
+        ),
+    },
+    "stage_5": {
+        "rationale": (
+            "Comparing every pair of chains by their full m x 9 invariants "
+            "would be quadratic in the population and prohibitively "
+            "expensive. A cheap summary that provably lower-bounds the full "
+            "distance allows most non-matching pairs to be discarded without "
+            "ever computing the expensive comparison."
+        ),
+        "scientific_method": (
+            "Brain is the 9-dimensional average invariant: the column means "
+            "of the complete BRI matrix, excluding its first row. It is a "
+            "single 9-vector per chain regardless of chain length. Because it "
+            "is an average of the same coordinates the full invariant is "
+            "built from, a bound on the full distance implies a bound on the "
+            "Brain distance, which is what makes it a safe filter.\\n\\n"
+            "Brain is defined only for m >= 2. Chains of length 1 have no "
+            "Brain vector and are handled separately.\\n\\n"
+            "Brain is a filtering and indexing layer only. It never "
+            "classifies duplicates."
+        ),
+        "stage_input": (
+            "The represented complete BRI for every eligible chain."
+        ),
+        "stage_output": (
+            "brain/finalized/brain.parquet — one 9-vector per chain with "
+            "m >= 2, and an explicit record of the m = 1 chains as undefined."
+        ),
+        "downstream_role": (
+            "Indexed in Stage 7 to generate candidate pairs cheaply."
+        ),
+        "implementation_note": (
+            "Average invariant from Anosova et al. Computed from the "
+            "canonical represented BRI by pdbclean.brain, which rejects input "
+            "not on the representation grid."
+        ),
+        "references": ("anosova_match_2025",),
+    },
+    "stage_6": {
+        "rationale": (
+            "Two complete BRI matrices can only be compared elementwise if "
+            "they have the same number of rows. Chains of different lengths "
+            "have no correspondence between their invariants under this "
+            "comparison, so comparing them is not merely expensive but "
+            "undefined."
+        ),
+        "scientific_method": (
+            "The eligible population is partitioned into buckets by exact "
+            "retained residue count m. All later comparison happens strictly "
+            "inside one bucket. The partition is verified to cover the "
+            "population exactly once, with no chain lost or duplicated.\\n\\n"
+            "Chains with m = 1 form their own bucket. They have no Brain "
+            "vector and bypass Brain filtering; they are all retained by the "
+            "deduplication policy."
+        ),
+        "stage_input": "The eligible population with its chain lengths.",
+        "stage_output": (
+            "finalized/bucket_index.parquet — bucket membership per chain, "
+            "plus per-bucket population counts."
+        ),
+        "downstream_role": (
+            "Scopes candidate generation: the prefilter is run once per "
+            "bucket."
+        ),
+        "implementation_note": (
+            "Correctness requirement, not an optimisation. "
+            "pdbclean.length_buckets_cli."
+        ),
+    },
+    "stage_7": {
+        "rationale": (
+            "Even within one length bucket, exhaustive pairwise comparison of "
+            "complete BRI matrices is quadratic and dominated by pairs that "
+            "are nowhere near each other. Candidate generation exists to "
+            "discard those cheaply while provably keeping every pair that "
+            "could still qualify."
+        ),
+        "scientific_method": (
+            "Within each exact-length bucket, chains are indexed by their "
+            "9-dimensional Brain vectors and queried under the L-infinity "
+            "metric at the configured Brain threshold. Because the bucket "
+            "shares a common denominator (m - 1), the threshold is expressed "
+            "exactly as tau_units x (m - 1) in integer representation-unit "
+            "sums, so the query radius is exact rather than floating point.\\n\\n"
+            "The index query is followed by an exact integer post-filter, so "
+            "the emitted candidate set contains all and only the pairs "
+            "satisfying the Brain criterion.\\n\\n"
+            "This stage produces CANDIDATES ONLY. No pair is classified here. "
+            "The filter is lossless with respect to the final criterion: a "
+            "pair discarded here could not have satisfied the complete-BRI "
+            "threshold, which is what makes the pipeline's answer identical "
+            "to exhaustive search while being tractable."
+        ),
+        "stage_input": (
+            "Brain vectors and the exact chain-length buckets."
+        ),
+        "stage_output": (
+            "finalized/candidates.parquet — candidate pairs, with per-bucket "
+            "counts and the m = 1 bypass recorded."
+        ),
+        "downstream_role": (
+            "The candidate set is the input population for the exact "
+            "complete-BRI search in Stage 8."
+        ),
+        "implementation_note": (
+            "SciPy cKDTree (p=inf, eps=0) plus an exact integer post-filter "
+            "is a COMP702 engineering implementation of the Brain filtering "
+            "step. cKDTree is used ONLY here, and is never the final "
+            "complete-BRI search engine. pdbclean.brain_prefilter."
+        ),
+        "references": ("anosova_match_2025",),
+    },
+    "stage_8": {
+        "rationale": (
+            "The final duplicate decision must rest on complete BRI, the "
+            "complete invariant, and not on the cheap Brain summary used for "
+            "filtering. Complete BRI is the authoritative classification "
+            "basis; this stage performs that comparison exactly, over the "
+            "reduced candidate population."
+        ),
+        "scientific_method": (
+            "For each candidate pair the complete BRI matrices are compared "
+            "under the L-infinity metric: the distance is the maximum "
+            "absolute difference over all m x 9 entries. The search is a "
+            "radius query at the configured near-duplicate threshold, "
+            "executed with a compressed cover tree, which returns exactly the "
+            "pairs within the radius — it is an exact structure, not an "
+            "approximate nearest-neighbour heuristic.\\n\\n"
+            "Because complete BRI is a complete invariant, a distance of "
+            "zero corresponds to congruent backbones."
+        ),
+        "stage_input": (
+            "Candidate pairs from Stage 7 and the represented complete BRI."
+        ),
+        "stage_output": (
+            "finalized/candidate_near_duplicates.parquet — qualifying pairs "
+            "with their exact distances, plus the m = 1 pair table."
+        ),
+        "downstream_role": (
+            "Supplies the distances that Stage 10 classifies."
+        ),
+        "implementation_note": (
+            "Elkin-Kurlin compressed cover tree; the production search "
+            "engine. COMP702 implementation choice for exact fast search. "
+            "pdbclean.compressed_cover_tree, pdbclean.full_bri_nn_production."
+        ),
+        "references": ("anosova_match_2025", "wlodawer_acta_2025"),
+    },
+    "stage_9": {
+        "rationale": (
+            "The authoritative distance must be stored in a form that is "
+            "exactly reproducible and exactly comparable, so that a "
+            "classification can never depend on floating-point rounding."
+        ),
+        "scientific_method": (
+            "Distances are emitted as exact integers in representation units "
+            "on the configured precision grid. At the validated p = 0.001 A "
+            "one unit is one milliangstrom, so a stored value of 10 is "
+            "exactly 0.010 A. The angstrom value is derived from the integer, "
+            "never the other way round.\\n\\n"
+            "This stored integer distance is the authoritative complete-BRI "
+            "L-infinity value for the pair."
+        ),
+        "stage_input": "The distances produced by the Stage 8 search.",
+        "stage_output": (
+            "The same artefact as Stage 8: the search emits its distances "
+            "already represented."
+        ),
+        "downstream_role": (
+            "Classification and the redundancy graph both compare these "
+            "integers directly."
+        ),
+        "implementation_note": (
+            "Exact integer representation is a COMP702 computational choice. "
+            "Historical artefacts name the column d_bri_mA, correct for the "
+            "0.001 A grid those runs used."
+        ),
+    },
+    "stage_10": {
+        "rationale": (
+            "A distance alone does not say whether two depositions are "
+            "duplicates. This stage applies the explicit, configured "
+            "criterion that turns an exact distance into a recorded "
+            "scientific classification."
+        ),
+        "scientific_method": (
+            "Each tested pair is classified from its exact complete-BRI "
+            "L-infinity distance d, in representation units:\\n\\n"
+            "    d == 0            exact duplicate — congruent backbones\\n"
+            "    0 < d <= tau      non-zero near duplicate\\n"
+            "    d > tau           not a near duplicate\\n\\n"
+            "The comparison is inclusive: a pair at exactly tau IS a near "
+            "duplicate. Classification is always on complete BRI; the Brain "
+            "distance plays no part in it.\\n\\n"
+            "Pair counts are counts of PAIRS, not of chains. One chain can "
+            "participate in many pairs, so the number of near-duplicate pairs "
+            "is not the number of chains any policy would remove."
+        ),
+        "stage_input": "Complete-BRI distances for every tested pair.",
+        "stage_output": (
+            "finalized/candidate_classifications.parquet — per-pair flags for "
+            "exact, near and non-zero-near, with population accounting."
+        ),
+        "downstream_role": (
+            "Qualifying pairs become the edges of the Stage 14a redundancy "
+            "graph. Investigation stages read the same table."
+        ),
+        "implementation_note": (
+            "The inclusive threshold is a COMP702 configured decision. "
+            "pdbclean.duplicate_classification."
+        ),
+        "references": ("wlodawer_acta_2025",),
+    },
+    "stage_11": {
+        "rationale": (
+            "Geometric duplication is a mathematical statement about "
+            "backbones. Whether a duplicate pair is scientifically "
+            "interesting — a re-deposition, a re-refinement, a related "
+            "experiment — needs deposition metadata, not geometry."
+        ),
+        "scientific_method": (
+            "Detected pairs are joined against deposition metadata "
+            "(experimental method, resolution, deposition relationships) and "
+            "reviewed in the style of the Acta duplicate analysis. The output "
+            "characterises the detected population; it does not decide which "
+            "chains are removed."
+        ),
+        "stage_input": "Classified pairs and downstream entry metadata.",
+        "stage_output": (
+            "acta_downstream_investigation_v2 — review tables and summaries."
+        ),
+        "downstream_role": (
+            "Feeds the written analysis. Explicitly NOT an input to the "
+            "Stage-14 deletion relation."
+        ),
+        "implementation_note": (
+            "Investigation pass, not orchestrated on the release path."
+        ),
+        "references": ("wlodawer_acta_2025",),
+    },
+    "stage_12": {
+        "rationale": (
+            "A pipeline that reports duplicates must be shown to be correct. "
+            "These gates provide the evidence that the fast path agrees with "
+            "the exhaustive one and that the safety properties actually hold."
+        ),
+        "scientific_method": (
+            "The validation evidence covers: candidate safety, that the Brain "
+            "prefilter discards no pair that could satisfy the complete-BRI "
+            "criterion; threshold boundary behaviour, that pairs exactly at "
+            "the threshold are included; fast-versus-oracle agreement, that "
+            "the cover-tree search returns the same pairs as brute force on "
+            "test populations; direct-edge semantics, that every removal is "
+            "justified by its own qualifying edge; and that connectedness is "
+            "never treated as duplicate equivalence."
+        ),
+        "stage_input": "Outputs of the search, classification and selection.",
+        "stage_output": (
+            "acta_manual_review_manifest_v2 — validation manifests and "
+            "verdicts."
+        ),
+        "downstream_role": (
+            "Supports publication of the release. Not a deletion relation."
+        ),
+        "implementation_note": (
+            "Validation pass, not orchestrated on the release path."
+        ),
+    },
+    "stage_13": {
+        "rationale": (
+            "Automatic classification says two backbones are congruent. It "
+            "does not say what happened scientifically. A manually reviewed "
+            "subset gives the qualitative account behind the counts."
+        ),
+        "scientific_method": (
+            "A selected subset of deposition pairs is reviewed by hand and "
+            "categorised — exact congruence, non-zero near duplication, m = 1 "
+            "cases, and cases resolved by examining the depositions "
+            "themselves. The review is deliberately a subset, chosen for "
+            "scientific interest."
+        ),
+        "stage_input": "Classified pairs and deposition metadata.",
+        "stage_output": "acta_detailed_review_v2 — the reviewed subset.",
+        "downstream_role": (
+            "Feeds the written analysis. This subset is explicitly NOT the "
+            "global Stage-14 deletion relation and is never used as one."
+        ),
+        "implementation_note": (
+            "Manual investigation pass, not orchestrated."
+        ),
+        "references": ("wlodawer_acta_2025",),
+    },
+    "stage_14_input": {
+        "rationale": (
+            "Choosing which chain of a duplicate group to keep requires "
+            "deposition-level information that geometry does not provide."
+        ),
+        "scientific_method": (
+            "Entry-level metadata — experimental method, resolution and "
+            "related deposition attributes — is assembled per entry so that "
+            "candidate representatives can be ranked deterministically."
+        ),
+        "stage_input": "The snapshot's entry metadata.",
+        "stage_output": "finalized/entry_metadata.parquet.",
+        "downstream_role": (
+            "Supplies the quality ordering used by representative selection."
+        ),
+        "implementation_note": (
+            "An input to Stage 14, not a scientific stage of its own."
+        ),
+    },
+    "stage_14a": {
+        "rationale": (
+            "Redundancy is a relation over many chains, not a property of a "
+            "single pair. Representing it as a graph makes the structure of "
+            "the redundancy explicit and auditable."
+        ),
+        "scientific_method": (
+            "An undirected graph is built over chains with m >= 2. Each "
+            "qualifying complete-BRI near-duplicate pair contributes exactly "
+            "one edge; every edge is asserted to satisfy the threshold and "
+            "the minimum chain length. Connected components are computed and "
+            "characterised, including whether each component is a clique.\\n\\n"
+            "A connected component is NOT a duplicate equivalence class. "
+            "Near-duplication is not transitive: two chains joined by a path "
+            "may be far apart, so component membership alone never justifies "
+            "removing a chain."
+        ),
+        "stage_input": (
+            "Qualifying near-duplicate pairs and the m = 1 pair table."
+        ),
+        "stage_output": (
+            "stage14_geometric_graph — component summary, per-node component "
+            "assignment, and a global summary recording the threshold used."
+        ),
+        "downstream_role": (
+            "The graph is the structure representative selection walks."
+        ),
+        "implementation_note": (
+            "COMP702 redundancy-resolution design. "
+            "scripts/build_stage14_geometric_graph.py."
+        ),
+    },
+    "stage_14b": {
+        "rationale": (
+            "Given a group of mutually redundant chains, exactly one should "
+            "be retained — but only where the geometric evidence actually "
+            "justifies removing the others. A naive 'keep one per component' "
+            "rule would delete chains that were never shown to be duplicates "
+            "of the chain that survived."
+        ),
+        "scientific_method": (
+            "Within each component, candidate representatives are ranked "
+            "deterministically by quality using entry metadata, with a fixed "
+            "tie-break so the outcome does not depend on input order.\\n\\n"
+            "A clique component is fully connected, so one representative "
+            "covers every other member directly.\\n\\n"
+            "A non-clique component is covered by a greedy DIRECT-EDGE cover: "
+            "a chain may only be removed in favour of a representative it "
+            "shares an actual qualifying edge with. Where one representative "
+            "cannot cover the whole component, additional representatives are "
+            "retained. This is why non-clique components can legitimately "
+            "keep more than one chain.\\n\\n"
+            "Two invariants are enforced and audited: every removed chain has "
+            "its own direct edge, within threshold, to the chain it was "
+            "assigned to; and there is NO transitive removal. Chains with "
+            "m = 1 are retained unconditionally."
+        ),
+        "stage_input": (
+            "The redundancy graph, qualifying edges, the accepted chain "
+            "population and entry metadata."
+        ),
+        "stage_output": (
+            "representative_mapping.parquet — the per-chain decision, its "
+            "assigned representative and the direct edge distance justifying "
+            "it — plus representatives.parquet and a summary asserting the "
+            "direct-edge property held for every removal."
+        ),
+        "downstream_role": (
+            "Determines the retained population that the Gold release "
+            "publishes."
+        ),
+        "implementation_note": (
+            "COMP702 representative policy v1, a project decision rather than "
+            "a published algorithm. scripts/select_stage14_representatives.py."
+        ),
+        "references": ("wlodawer_acta_2025",),
+    },
+    "stage_14c": {
+        "rationale": (
+            "A result is only usable if it is published as an immutable, "
+            "fully audited artefact whose every removal can be re-checked "
+            "independently."
+        ),
+        "scientific_method": (
+            "The retained chain dataset is written together with the "
+            "removed-chain audit, the representative mapping and the edge "
+            "tables. The release manifest records the population counts, the "
+            "threshold and criterion used, the model scope, the policy "
+            "version and hash, and explicit statements of the semantics that "
+            "were NOT applied: no transitive removal, connectedness not "
+            "treated as equivalence, no m = 1 deduplication, and the Stage-13 "
+            "review subset not used as a global edge set.\\n\\n"
+            "Publication happens only after every upstream validation gate "
+            "has passed. Expectation gates, where configured for a known "
+            "snapshot, must match exactly."
+        ),
+        "stage_input": (
+            "The representative mapping and the full chain population."
+        ),
+        "stage_output": (
+            "An immutable release: data/retained_chains.parquet, "
+            "audit/removed_chain_audit.parquet, the representative mapping "
+            "and edge tables, release_manifest.json and _SUCCESS, all with "
+            "recorded SHA256 digests."
+        ),
+        "downstream_role": (
+            "The published deduplicated dataset used by downstream work."
+        ),
+        "implementation_note": (
+            "COMP702 release engineering. "
+            "scripts/build_stage14_final_release.py."
+        ),
+    },
+}
+
+
+def _apply_descriptions() -> tuple[CanonicalStage, ...]:
+    """Attach the detailed descriptions to the canonical timeline."""
+
+    import dataclasses
+
+    enriched = []
+
+    for entry in CANONICAL_TIMELINE:
+        detail = _DESCRIPTIONS.get(entry.key)
+
+        enriched.append(
+            dataclasses.replace(entry, **detail) if detail else entry
+        )
+
+    return tuple(enriched)
+
+
+CANONICAL_TIMELINE = _apply_descriptions()
+
+CANONICAL_BY_PRODUCER = {}
+
+for _entry in CANONICAL_TIMELINE:
+    if _entry.producer is not None:
+        CANONICAL_BY_PRODUCER.setdefault(_entry.producer, []).append(_entry)
+
+del _entry

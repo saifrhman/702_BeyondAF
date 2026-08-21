@@ -55,6 +55,9 @@ against the CLI's, so a divergence fails the build.
 | `pdbclean.run_inspection` | Read-only historical-run timeline and per-stage audit detail. |
 | `pdbclean.artefacts` | Bounded, read-only previews of stage artefacts (JSON, CSV/TSV, Parquet, text). |
 | `pdbclean.snapshot_store` | Durable content-addressed preservation and disposable hot materialisation. |
+| `pdbclean.molstar_scenes` | The validated Mol* scene core, extracted verbatim from the preparation script. |
+| `pdbclean.molstar_service` | On-demand, snapshot-correct scene generation with a disposable cache. |
+| `pdbclean.source_index` | Bronze source-object and chain-namespace resolution for a run's snapshot. |
 | `pdbclean.cli` | The `pdbclean` command. |
 | `pdbclean.ui` | A stdlib `ThreadingHTTPServer` over exactly the modules above. |
 
@@ -259,9 +262,52 @@ each pair's relationship (`removed` / `retained` / `unaffected`). It filters and
 displays; it never re-classifies, and the counts it reports come from the stage
 summaries the pipeline already wrote.
 
-Mol\* is wired in for **human inspection only**. The viewer loads prepared
-MolViewSpec scenes from `reports/molstar_exact_duplicate_examples/`; the UI
-reads that directory's existing `metrics.json` and `.mvsj` files without
-modifying them. A rendered view never determines whether two chains are
-duplicates — that comes from the complete-BRI calculation and nothing else, and
-the viewer says so on screen.
+Mol\* is wired in for **human inspection only**, and now works on demand for
+any detected pair whose structures are locally available, rather than only for
+pre-generated example scenes.
+
+`pdbclean.molstar_scenes` holds the scene core — mmCIF backbone extraction,
+Kabsch superposition, MolViewSpec builders — extracted verbatim in behaviour
+from `reports/molstar_exact_duplicate_examples/prepare_scenes.py`, which is a
+script that executes at import. A test asserts the extracted core still
+reproduces the frozen `.mvsj` transform matrices and `metrics.json` figures, so
+the two cannot drift.
+
+**Source availability is separate from Gold retention.** Stage-14 removal
+excludes a chain from the deduplicated training population; it does not delete
+the deposited structure. Resolution therefore goes through the run's *source*
+layer and never consults `retained_chains.parquet`.
+
+`pdbclean.source_index` supplies that layer from the run's own records: the
+Bronze manifest gives each entry's snapshot-scoped object key, ETag and size,
+and the accepted-chain table gives both chain namespaces
+(`label_asym_id` / `auth_asym_id`, which differ for most removed chains). Both
+use Arrow filter pushdown, so one lookup does not load a 246k-row manifest.
+
+`pdbclean.molstar_service` resolves each structure from *this run's* snapshot
+(hot cache, then durable store, then prepared examples, then materialised on
+demand from the Bronze source object with its ETag verified — never an undated
+"current entry" fetch),
+builds the requested view, and caches the result under a key covering run,
+snapshot, pair and view. The cache is derived data: deleting it loses nothing,
+and generating a scene changes no configuration hash and touches no release.
+
+A rendered view never determines whether two chains are duplicates — that comes
+from the complete-BRI calculation alone, and both the service payload and the
+viewer say so.
+
+---
+
+## 9a. Artefact inspection
+
+`pdbclean.artefacts` provides one bounded, read-only access layer used by every
+UI surface that shows an artefact: metadata and hashing, format detection,
+Parquet schema, and paginated table access that reads row groups until the
+requested page is filled rather than materialising the file. Page size is
+capped; search and sort run over a bounded scan window and report that they did.
+
+The server exposes it behind a strict allowlist covering only the configured
+output, release, run, durable-snapshot, hot-cache and Mol* report roots.
+`Path.resolve()` collapses traversal and follows symlinks *before* the
+containment check, so neither can escape. Repository source files are not
+readable. Downloads return the recorded bytes unmodified.

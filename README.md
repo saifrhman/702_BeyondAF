@@ -664,7 +664,7 @@ test suite asserts this against a live server.
 | **Duplicate Explorer** | Filter by PDB ID, chain, classification, Stage-14 relationship, chain length and distance. It filters and displays; it never re-classifies, and its counts come from the stage summaries. |
 | **Gold release** | Shown only once every gate has passed. Nothing is displayed for a run that has not completed. |
 | **Runs** | Every run's provenance, with the full historical drill-down of [§12](#12-historical-run-workflow). |
-| **Method** | The canonical pipeline and the Bronze/Silver/Gold lifecycle, generated from the same registry the planner uses. |
+| **Method** | The canonical pipeline and the Bronze/Silver/Gold lifecycle, generated from the same registry the planner uses. Each stage expands to its full scientific description. |
 
 **Stage identity.** Every view labels stages canonically — `Stage 5 — Brain`,
 never a bare `Brain` — and always in canonical pipeline order, never
@@ -677,10 +677,106 @@ switches without reloading or losing UI state, and is applied before first paint
 so there is no flash. It is a viewing preference only: it never enters the
 scientific configuration and cannot change either hash.
 
-**Mol\*.** Prepared MolViewSpec scenes are integrated for visual inspection of
-duplicate pairs. **Mol\* is inspection only and never determines duplicate
-classification** — complete-BRI L∞ remains authoritative, and the viewer says
-so on screen.
+### 11.1 Artefact Viewer
+
+Every supported artefact path shown anywhere in the UI — Gold release, Pipeline,
+Runs, stage details, Duplicate Explorer — is clickable and opens the same
+viewer. There is one implementation, not one per page.
+
+| Format | View |
+|--------|------|
+| `.parquet` | schema, column types, row count, row-group count, writer, and the **actual rows**, paginated |
+| `.json` | formatted, parsed |
+| `.csv` / `.tsv` | paginated table |
+| `.yaml`, `.txt`, `.log`, `_SUCCESS` | read-only text, bounded |
+| anything else | metadata, path and hash only — never rendered |
+
+The viewer header shows the artefact's provenance: run, stage, snapshot, both
+configuration hashes, producing script, validation status, SHA256, size and row
+count, so it is always clear which run and stage produced the table on screen.
+
+**Paging is server-side and bounded.** A page is read from the file's row
+groups and the read stops once the page is filled; the whole table is never
+materialised. Page size is capped at 200 rows. Page 1 of the 3.24-million-row
+classification table returns in tens of milliseconds. Search and sort operate
+over a bounded scan window and the viewer says so rather than implying the
+whole table was sorted.
+
+**Download original** returns the recorded bytes unmodified — the same SHA256
+as the artefact on disk, with a proper `Content-Disposition` filename. A
+separate *Export view as CSV* is offered for the rows currently displayed; it is
+labelled a convenience export, and the original Parquet remains the
+authoritative scientific artefact.
+
+**Path safety.** The viewer is not a filesystem browser. It reads only from the
+configured output, release, run, durable-snapshot, hot-cache and Mol* report
+roots. Absolute paths outside those roots, `../` traversal, symlinks escaping a
+root, and repository source files are all refused with `403`.
+
+### 11.2 Duplicate Explorer and Mol\*
+
+Each row exposes two distinct things, deliberately kept apart:
+
+* **Open source table** — the authoritative Parquet the row came from, opened in
+  the Artefact Viewer. This is the scientific evidence.
+* **View in Mol\*** — visual inspection of the pair. This is not evidence.
+
+Scenes are generated **on demand** from the run's own snapshot and cached; no
+pre-generated `.mvsj` is required. Available views are side-by-side, superposed
+(Kabsch on paired backbone atoms, for display only), chains-only and deposited
+context.
+
+The representation follows the chain: many detected duplicates are only two or
+three residues long, and a cartoon ribbon draws nothing for a dipeptide, so
+chains shorter than 12 residues render as ball-and-stick and longer ones as
+cartoon. The viewer reports its progress (resolving source, loading structures,
+rendering) and, if a load fails, keeps the Mol\* host mounted and shows the
+reason with a Retry button rather than collapsing to an empty panel. The cache is keyed by run, snapshot, pair and view, is safe to delete,
+and is never a scientific artefact.
+
+**Source availability is not Gold retention.** These are different questions
+and the code keeps them apart:
+
+| Question | Answer comes from |
+|---|---|
+| *Can we inspect this deposited structure?* | the run's **source** layer |
+| *Was this chain kept in the deduplicated training dataset?* | Stage-14 retention |
+
+Stage-14 removal means "not retained in the geometrically deduplicated Gold
+training population". It does **not** mean the deposited structure was lost. A
+removed chain is exactly as inspectable as a retained one; its retained/removed
+status is shown as metadata and never gates visualisation.
+
+**Snapshot correctness.** Structures resolve in this order — hot cache →
+durable store → prepared examples → the run's own **Bronze source manifest**.
+The manifest gives the snapshot-scoped object key and ETag, e.g.
+`20260101/pub/pdb/data/structures/divided/mmCIF/ac/7acj.cif.gz`, so a missing
+structure is materialised **on demand, one entry at a time**, and its ETag is
+verified against the run's manifest before display. A mismatch is refused
+rather than shown. Nothing undated is ever fetched, so a historical run cannot
+silently display a newer revision.
+
+All 1,072,751 near-duplicate pairs in the frozen release span 7,259 distinct
+entries, **100% of which are present in that run's Bronze manifest** — so every
+pair is source-resolvable without bulk-copying the snapshot.
+
+**Chain namespaces.** PDBClean's canonical identity is `label_asym_id`, which
+is what BRI was computed on and what the viewer selects. Deposited files also
+carry `auth_asym_id`, and the two differ often — for 73.5% of removed chains in
+the frozen release (`7acr` is label `Z`, auth `W`). Both are resolved from the
+run's own cleaning output and displayed; the viewer never assumes they match.
+
+Where a structure genuinely cannot be resolved the row gives the specific
+reason — `source not materialised`, `source manifest missing`,
+`not in snapshot`, `source fetch failed`, `chain not found` — never a bare
+"no prepared scene". The pair page has an expandable **Source provenance**
+panel showing run, snapshot, both chain identifiers, source key, ETag and the
+local file, so the structure on screen is traceable to the run.
+
+**Mol\* is inspection only and never determines duplicate classification.**
+Complete-BRI L∞ remains authoritative; the viewer shows the recorded
+classification, distance, representative relation, run and snapshot, and says so
+on screen.
 
 ---
 
@@ -706,11 +802,16 @@ generated or reused, with the reason.
 
 Fields the run did not record display as **not recorded**. Nothing is invented.
 
-Artefacts are browsable in place: JSON is formatted, CSV/TSV is previewed as a
-bounded table, Parquet shows schema, row count, key/value metadata and a
-bounded row sample, text and logs open in a read-only viewer, and anything else
-shows metadata, path and hash only. Previews are capped so a large dataset is
-never loaded into the browser.
+Every stage also carries its full **scientific description** — purpose,
+method, input, output, scientific role, implementation notes and method
+references — shared across runs and shown alongside that run's actual values.
+The descriptions are written to be detailed enough to explain the methodology
+directly from the UI.
+
+Artefacts are clickable and open in the Artefact Viewer ([§11.1](#111-artefact-viewer)):
+Stage 10's classification table, Stage 14b's representative mapping, Stage 14c's
+retained-chain dataset and removed-chain audit, and so on — each showing the
+actual records, with the original file downloadable.
 
 **Historical inspection is strictly read-only.** Opening a run or a stage never
 modifies `run.json`, appends an event, modifies outputs or manifests,
@@ -774,6 +875,12 @@ Release: `outputs/releases/PDBClean-20260101-protocol3.2-comp702-v1-dedup-v1`
 | removed-chain audit | `4cb3bea6c6a61f27de60818d097cf72c0c047f603d13f76c8286bbae647d3360` |
 | release manifest | `1e6d6b249b6530fb501351fe6bd8d78647d3dad549db67e3fde486c2e3f8b918` |
 | `_SUCCESS` | `945c6c34358b127ea07365384f6f50429af315a26d9878233e4638cacf34c400` |
+
+Every artefact in this table is clickable in the UI's Gold release page and
+opens in the Artefact Viewer — `retained_chains.parquet`,
+`removed_chain_audit.parquet`, `representative_mapping.parquet` and the
+near-duplicate edge tables all show their actual records, with the original file
+downloadable.
 
 **This release is immutable**, and the pipeline wrappers refuse to overwrite
 it. These counts are the acceptance gates for *this snapshot only* — they are

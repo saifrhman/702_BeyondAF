@@ -759,6 +759,28 @@ def gold_release_summary(plan: PipelinePlan) -> dict[str, Any]:
     payload["release_directory"] = observation.directory
     payload["retained_manifest"] = observation.primary_output_path
 
+    # The manifest records artefact paths relative to the release directory.
+    # Resolve them so the Artefact Viewer can open each one, and report which
+    # are actually present without altering the recorded manifest.
+    if observation.directory:
+        release_root = Path(observation.directory)
+
+        resolved_artifacts = []
+
+        for artifact in payload.get("artifacts", []) or []:
+            entry = dict(artifact)
+            relative = entry.get("path")
+
+            if relative:
+                absolute = release_root / relative
+                entry["absolute_path"] = str(absolute)
+                entry["exists"] = absolute.is_file()
+
+            resolved_artifacts.append(entry)
+
+        if resolved_artifacts:
+            payload["artifacts"] = resolved_artifacts
+
     return payload
 
 

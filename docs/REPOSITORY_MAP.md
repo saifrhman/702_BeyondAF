@@ -91,6 +91,9 @@ duplicates.py          the Duplicate Explorer
 run_inspection.py      read-only historical-run timeline and stage audit
 artefacts.py           bounded, read-only artefact previews
 snapshot_store.py      durable preservation + disposable hot cache
+molstar_scenes.py      validated Mol* scene core (extracted verbatim)
+molstar_service.py     on-demand snapshot-correct scene generation
+source_index.py        Bronze source objects + label/auth chain mapping
 cli.py                 the `pdbclean` command
 ui/                    the web UI (stdlib HTTP server + static assets)
 ```

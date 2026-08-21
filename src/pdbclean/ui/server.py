@@ -21,7 +21,7 @@ from http import HTTPStatus
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from typing import Any
-from urllib.parse import parse_qs, unquote, urlparse
+from urllib.parse import parse_qs, quote, unquote, urlparse
 
 from pdbclean import pipeline as pipeline_module
 from pdbclean.defaults import DEFAULTS_VERSION, validated_defaults
@@ -43,6 +43,12 @@ from pdbclean.run_inspection import (
     duplicate_navigation,
     run_timeline,
     stage_detail,
+)
+from pdbclean.molstar_service import (
+    MolstarSceneService,
+    MolstarServiceError,
+    PairRequest,
+    locator_for_run,
 )
 from pdbclean.run_provenance import RunProvenance, list_runs
 from pdbclean.runconfig import (
@@ -83,8 +89,17 @@ STRUCTURE_SUFFIXES = frozenset(
 )
 
 
+#: Largest artefact the server will stream to a browser. Above this the UI
+#: reports the path so the file can be copied directly instead.
+MAX_DOWNLOAD_BYTES = 512 * 1024 * 1024
+
+
 class UIError(RuntimeError):
     """Raised for a request the UI cannot satisfy."""
+
+
+class ArtefactForbidden(UIError):
+    """Raised when a requested path lies outside the allowed roots."""
 
 
 class UIState:
@@ -137,6 +152,59 @@ class UIState:
             )
 
         return resolved
+
+    def scene_cache_root(self, resolved: ResolvedRunConfig) -> Path:
+        """Disposable Mol* scene cache. Never a scientific artefact."""
+
+        configured = resolved.get("storage.hot_cache_root") or (
+            "outputs/snapshot_cache"
+        )
+
+        root = Path(configured)
+
+        if not root.is_absolute():
+            root = self.repo_root / root
+
+        return root / "molstar_scenes"
+
+    def molstar(
+        self,
+        resolved: ResolvedRunConfig,
+        *,
+        snapshot_id: str | None = None,
+    ) -> MolstarSceneService:
+        """Scene service scoped to one run's snapshot."""
+
+        snapshot = snapshot_id or resolved.get("snapshot.snapshot_id")
+
+        def _root(dotted: str, fallback: str) -> Path:
+            value = resolved.get(dotted) or fallback
+            candidate = Path(value)
+
+            return (
+                candidate
+                if candidate.is_absolute()
+                else self.repo_root / candidate
+            )
+
+        return MolstarSceneService(
+            locator=locator_for_run(
+                repo_root=self.repo_root,
+                snapshot_id=str(snapshot) if snapshot else None,
+                hot_cache_root=_root(
+                    "storage.hot_cache_root", "outputs/snapshot_cache"
+                ),
+                durable_root=_root(
+                    "storage.durable_snapshot_root", "outputs/snapshot_store"
+                ),
+                # The run's own Bronze manifest supplies the immutable
+                # source-object identity for this snapshot.
+                output_root=_root("storage.output_root", "outputs/pdbclean"),
+                bucket_url=resolved.get("snapshot.bucket_url"),
+                protocol=resolved.get("release.protocol_version"),
+            ),
+            cache_root=self.scene_cache_root(resolved),
+        )
 
     def paths(self, resolved: ResolvedRunConfig) -> PipelinePaths:
         return PipelinePaths.from_config(resolved, repo_root=self.repo_root)
@@ -323,6 +391,26 @@ class Handler(BaseHTTPRequestHandler):
             self._api_artefact(query)
             return
 
+        if route == "/api/artefact/table":
+            self._api_artefact_table(query)
+            return
+
+        if route == "/api/artefact/download":
+            self._api_artefact_download(query)
+            return
+
+        if route == "/api/structure":
+            self._api_structure(query)
+            return
+
+        if route == "/api/pair/availability":
+            self._api_pair_availability(query)
+            return
+
+        if route == "/api/pair/scene":
+            self._api_pair_scene(query)
+            return
+
         if route.startswith("/api/runs/"):
             remainder = route[len("/api/runs/"):]
             parts = [part for part in remainder.split("/") if part]
@@ -442,6 +530,80 @@ class Handler(BaseHTTPRequestHandler):
         result = explorer.query(filters)
         result["summary"] = explorer.summary()
         result["scenes"] = _scene_index(self.state.repo_root)
+
+        # Per-row Mol* availability, resolved against THIS run's snapshot.
+        # Every row gets either a usable action or a specific reason -- never
+        # a bare "no prepared scene".
+        service = self.state.molstar(resolved)
+        cache: dict[tuple[str, str], dict[str, Any]] = {}
+
+        for row in result["rows"]:
+            request = PairRequest(
+                pdb_id_a=row["pdb_id_a"],
+                chain_a=row["chain_a"],
+                pdb_id_b=row["pdb_id_b"],
+                chain_b=row["chain_b"],
+                snapshot_id=str(resolved.get("snapshot.snapshot_id") or ""),
+                model_id=row.get("model_a", 1),
+                chain_length=row.get("chain_length"),
+                d_bri_units=row.get("d_bri_mA"),
+                classification=row.get("classification"),
+                relationship=row.get("relationship"),
+                representative=row.get("representative"),
+            )
+
+            key = (row["pdb_id_a"], row["pdb_id_b"])
+
+            if key not in cache:
+                availability = service.availability(request)
+                cache[key] = {
+                    "available": availability["available"],
+                    "reason": availability["reason"],
+                    "reason_text": availability["reason_text"],
+                    "views": [
+                        view["key"] for view in availability.get("views", [])
+                    ],
+                }
+
+            row["molstar"] = dict(cache[key])
+            row["molstar"]["query"] = {
+                "pdb_id_a": request.pdb_id_a,
+                "chain_a": request.chain_a,
+                "pdb_id_b": request.pdb_id_b,
+                "chain_b": request.chain_b,
+                "snapshot": request.snapshot_id,
+                "model_id": request.model_id,
+                "d_bri": request.d_bri_units,
+                "classification": request.classification,
+                "relationship": request.relationship,
+                "representative": request.representative or "",
+            }
+
+        # The authoritative tables behind these rows, openable in the viewer.
+        result["source_tables"] = [
+            {
+                "path": path,
+                "name": Path(path).name,
+                "role": role,
+            }
+            for role, paths in (
+                ("classification", explorer.source.classification_paths),
+                ("near_duplicates", explorer.source.near_duplicate_paths),
+            )
+            for path in [str(candidate) for candidate in paths]
+            if Path(path).is_file()
+        ]
+
+        mapping = explorer.source.representative_mapping_path
+
+        if mapping is not None:
+            result["source_tables"].append(
+                {
+                    "path": str(mapping),
+                    "name": mapping.name,
+                    "role": "representative_mapping",
+                }
+            )
 
         self._json(result)
 
@@ -600,25 +762,31 @@ class Handler(BaseHTTPRequestHandler):
 
         self._json(detail)
 
-    def _api_artefact(self, query: dict[str, list[str]]) -> None:
-        """Bounded, read-only preview of one artefact of one run."""
+    # -- artefact access (allowlisted, read-only) -----------------------
 
-        path = _single(query, "path")
+    def _scene_cache_root(self) -> Path:
+        return self.state.scene_cache_root(self.state.resolve())
 
-        if not path:
-            self._error("An artefact path is required")
-            return
+    def _allowed_artefact_roots(self) -> list[Path]:
+        """The only directories the server will ever read a file from.
 
-        target = Path(path).resolve()
+        Deliberately NOT the repository root: this is a provenance viewer, not
+        a filesystem browser. Only pipeline outputs, releases, run provenance,
+        the durable/hot snapshot stores and the Mol* report assets are
+        reachable.
+        """
 
-        # Only ever read from directories this pipeline owns.
         resolved = self.state.resolve()
-        allowed: list[Path] = [self.state.repo_root.resolve()]
+        repo = self.state.repo_root.resolve()
+
+        roots: list[Path] = []
 
         for dotted in (
             "storage.output_root",
             "storage.release_root",
             "storage.run_root",
+            "storage.durable_snapshot_root",
+            "storage.hot_cache_root",
         ):
             value = resolved.get(dotted)
 
@@ -628,32 +796,338 @@ class Handler(BaseHTTPRequestHandler):
             candidate = Path(value)
 
             if not candidate.is_absolute():
-                candidate = self.state.repo_root / candidate
+                candidate = repo / candidate
 
-            allowed.append(candidate.resolve())
+            roots.append(candidate)
+
+        # Prepared Mol* assets and generated scenes.
+        roots.append(repo / "reports" / "molstar_exact_duplicate_examples")
+        roots.append(self._scene_cache_root())
+
+        allowed: list[Path] = []
+
+        for root in roots:
+            try:
+                allowed.append(root.resolve())
+            except OSError:  # pragma: no cover - unreadable mount
+                continue
+
+        return allowed
+
+    def _resolve_artefact_path(self, raw: str) -> Path:
+        """Resolve a requested path, or refuse it.
+
+        ``Path.resolve()`` collapses ``..`` and follows symlinks before the
+        containment check, so neither traversal nor a symlink pointing outside
+        an allowed root can escape.
+        """
+
+        if not raw:
+            raise UIError("An artefact path is required")
+
+        target = Path(raw)
+
+        if not target.is_absolute():
+            target = self.state.repo_root / target
+
+        try:
+            target = target.resolve()
+        except OSError as exc:
+            raise UIError(f"Could not resolve artefact path: {exc}") from exc
+
+        allowed = self._allowed_artefact_roots()
 
         if not any(
             target == root or root in target.parents for root in allowed
         ):
-            self._error(
-                "Artefact is outside the configured pipeline roots",
-                HTTPStatus.FORBIDDEN,
+            raise ArtefactForbidden(
+                "Artefact is outside the directories this viewer may read."
             )
+
+        return target
+
+    def _api_artefact(self, query: dict[str, list[str]]) -> None:
+        """Metadata plus a bounded preview of one artefact."""
+
+        try:
+            target = self._resolve_artefact_path(_single(query, "path") or "")
+        except ArtefactForbidden as exc:
+            self._error(str(exc), HTTPStatus.FORBIDDEN)
             return
 
         if not target.is_file():
             self._error(f"No such artefact: {target}", HTTPStatus.NOT_FOUND)
             return
 
+        payload = artefact_module.describe(target)
+        payload["preview_kind"] = artefact_module.preview_kind(target)
+        payload["download_url"] = (
+            "/api/artefact/download?path=" + quote(str(target))
+        )
+        payload["provenance"] = self._artefact_provenance(target)
+
+        if payload["preview_kind"] == "parquet":
+            try:
+                payload["schema"] = artefact_module.parquet_schema(target)
+            except artefact_module.ArtefactError as exc:
+                self._error(str(exc))
+                return
+        else:
+            try:
+                payload["preview"] = artefact_module.preview(
+                    target, limit=_int(query, "limit") or 50
+                )["preview"]
+            except artefact_module.ArtefactError as exc:
+                self._error(str(exc))
+                return
+
+        self._json(payload)
+
+    def _api_artefact_table(self, query: dict[str, list[str]]) -> None:
+        """One bounded page of a tabular artefact."""
+
         try:
-            self._json(
-                artefact_module.preview(
-                    target,
-                    limit=_int(query, "limit") or 50,
-                )
+            target = self._resolve_artefact_path(_single(query, "path") or "")
+        except ArtefactForbidden as exc:
+            self._error(str(exc), HTTPStatus.FORBIDDEN)
+            return
+
+        if not target.is_file():
+            self._error(f"No such artefact: {target}", HTTPStatus.NOT_FOUND)
+            return
+
+        descending = _flag(query, "descending")
+
+        try:
+            payload = artefact_module.table_page(
+                target,
+                page=_int(query, "page") or 1,
+                page_size=_int(query, "page_size")
+                or artefact_module.DEFAULT_PAGE_SIZE,
+                search=_single(query, "search"),
+                sort_by=_single(query, "sort_by"),
+                descending=descending,
             )
         except artefact_module.ArtefactError as exc:
             self._error(str(exc))
+            return
+
+        payload["path"] = str(target)
+        payload["name"] = target.name
+
+        self._json(payload)
+
+    def _api_artefact_download(self, query: dict[str, list[str]]) -> None:
+        """Serve the original artefact bytes, unmodified."""
+
+        try:
+            target = self._resolve_artefact_path(_single(query, "path") or "")
+        except ArtefactForbidden as exc:
+            self._error(str(exc), HTTPStatus.FORBIDDEN)
+            return
+
+        if not target.is_file():
+            self._error(f"No such artefact: {target}", HTTPStatus.NOT_FOUND)
+            return
+
+        size = target.stat().st_size
+
+        if size > MAX_DOWNLOAD_BYTES:
+            self._error(
+                f"Artefact is {size} bytes, above the "
+                f"{MAX_DOWNLOAD_BYTES}-byte download limit. Copy it from "
+                f"{target} directly instead.",
+                HTTPStatus.REQUEST_ENTITY_TOO_LARGE,
+            )
+            return
+
+        # The bytes on disk, byte for byte. Never a re-encoded export.
+        body = target.read_bytes()
+
+        content_type = (
+            mimetypes.guess_type(target.name)[0] or "application/octet-stream"
+        )
+
+        self._send(
+            HTTPStatus.OK,
+            body,
+            content_type,
+            extra_headers={
+                "Content-Disposition": (
+                    f'attachment; filename="{target.name}"'
+                ),
+                "X-Artefact-Path": str(target),
+            },
+        )
+
+    def _artefact_provenance(self, target: Path) -> dict[str, Any]:
+        """Best-effort provenance for an artefact, from records only.
+
+        Reads nothing but existing summaries and run records, and never
+        writes. Absent facts are reported as null rather than invented.
+        """
+
+        provenance: dict[str, Any] = {
+            "run_id": None,
+            "stage": None,
+            "snapshot_id": None,
+            "resolved_config_sha256": None,
+            "scientific_config_sha256": None,
+            "producer": None,
+            "validation": None,
+        }
+
+        # A stage summary sitting beside the artefact names the snapshot and
+        # the protocol the artefact belongs to.
+        for parent in list(target.parents)[:3]:
+            summary = parent / "global_summary.json"
+
+            if summary.is_file():
+                try:
+                    loaded = json.loads(summary.read_text(encoding="utf-8"))
+                except (OSError, ValueError):
+                    continue
+
+                provenance["snapshot_id"] = loaded.get("snapshot")
+                provenance["stage"] = loaded.get("summary_schema_name")
+                break
+
+        # A release manifest names the release identity.
+        for parent in list(target.parents)[:3]:
+            manifest = parent / "release_manifest.json"
+
+            if manifest.is_file():
+                try:
+                    loaded = json.loads(manifest.read_text(encoding="utf-8"))
+                except (OSError, ValueError):
+                    continue
+
+                provenance["snapshot_id"] = loaded.get("snapshot")
+                provenance["stage"] = "Stage 14c — Final Gold release"
+                provenance["release_name"] = loaded.get("release_name")
+                break
+
+        # A run directory names the run and both configuration hashes.
+        for parent in list(target.parents)[:4]:
+            record_path = parent / "run.json"
+
+            if record_path.is_file():
+                try:
+                    record = json.loads(
+                        record_path.read_text(encoding="utf-8")
+                    )
+                except (OSError, ValueError):
+                    continue
+
+                provenance["run_id"] = record.get("run_id")
+                provenance["resolved_config_sha256"] = record.get(
+                    "resolved_config_sha256"
+                )
+                provenance["scientific_config_sha256"] = record.get(
+                    "scientific_config_sha256"
+                )
+                provenance["snapshot_id"] = (
+                    record.get("snapshot") or {}
+                ).get("snapshot_id") or provenance["snapshot_id"]
+                break
+
+        return provenance
+
+    # -- Mol* on demand -------------------------------------------------
+
+    def _pair_from_query(self, query: dict[str, list[str]]) -> PairRequest:
+        def _get(name: str) -> str:
+            value = _single(query, name)
+
+            if not value:
+                raise UIError(f"Missing pair parameter: {name}")
+
+            return value
+
+        return PairRequest(
+            pdb_id_a=_get("pdb_id_a"),
+            chain_a=_get("chain_a"),
+            pdb_id_b=_get("pdb_id_b"),
+            chain_b=_get("chain_b"),
+            snapshot_id=_single(query, "snapshot"),
+            run_id=_single(query, "run_id"),
+            model_id=_int(query, "model_id") or 1,
+            chain_length=_int(query, "chain_length"),
+            d_bri_units=_int(query, "d_bri"),
+            classification=_single(query, "classification"),
+            relationship=_single(query, "relationship"),
+            representative=_single(query, "representative"),
+        )
+
+    def _api_pair_availability(self, query: dict[str, list[str]]) -> None:
+        """Can this pair be visualised, and if not, precisely why not."""
+
+        resolved = self.state.resolve(snapshot=_single(query, "snapshot"))
+        request = self._pair_from_query(query)
+
+        service = self.state.molstar(
+            resolved, snapshot_id=request.snapshot_id
+        )
+
+        payload = service.availability(request)
+        payload["pair"] = request.to_dict()
+
+        self._json(payload)
+
+    def _api_pair_scene(self, query: dict[str, list[str]]) -> None:
+        """Generate (or reuse) a Mol* scene for one recorded pair."""
+
+        resolved = self.state.resolve(snapshot=_single(query, "snapshot"))
+        request = self._pair_from_query(query)
+        view = _single(query, "view") or "side_by_side"
+
+        service = self.state.molstar(
+            resolved, snapshot_id=request.snapshot_id
+        )
+
+        try:
+            payload = service.scene(request, view)
+        except MolstarServiceError as exc:
+            self._error(str(exc), HTTPStatus.NOT_FOUND)
+            return
+
+        # Structures are served from the allowlisted roots by /structures/.
+        payload["structure_urls"] = {
+            source["pdb_id"]: (
+                "/api/structure?path=" + quote(source["path"])
+            )
+            for source in (
+                payload["provenance"]["structure_a"],
+                payload["provenance"]["structure_b"],
+            )
+        }
+
+        self._json(payload)
+
+    def _api_structure(self, query: dict[str, list[str]]) -> None:
+        """Serve one allowlisted structure file to the viewer."""
+
+        try:
+            target = self._resolve_artefact_path(_single(query, "path") or "")
+        except ArtefactForbidden as exc:
+            self._error(str(exc), HTTPStatus.FORBIDDEN)
+            return
+
+        if not target.is_file() or target.suffix.lower() not in {
+            ".cif",
+            ".bcif",
+            ".pdb",
+            ".mmcif",
+        }:
+            self._error("Not a servable structure", HTTPStatus.NOT_FOUND)
+            return
+
+        self._send(
+            HTTPStatus.OK,
+            target.read_bytes(),
+            "chemical/x-mmcif",
+            extra_headers={"X-Structure-Path": str(target)},
+        )
 
     def _api_scenes(self) -> None:
         self._json({"scenes": _scene_index(self.state.repo_root)})
