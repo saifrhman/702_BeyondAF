@@ -42,7 +42,7 @@ fi
 
 module load miniforge3/25.3.0-python3.12.10
 eval "$(conda shell.bash hook)"
-conda activate "$HOME/fastscratch/envs/bri_env_1.2.2"
+conda activate "${PDBCLEAN_CONDA_ENV:-$HOME/fastscratch/envs/bri_env_1.2.2}"
 
 cd "$REPOSITORY_ROOT"
 

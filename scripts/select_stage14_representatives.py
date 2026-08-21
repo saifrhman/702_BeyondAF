@@ -13,6 +13,11 @@ import pyarrow.parquet as pq
 import yaml
 
 
+# Validated COMP702 default.  Supplying --threshold-mA uses a configured value
+# instead; omitting it reproduces the frozen run exactly.
+DEFAULT_NEAR_DUPLICATE_THRESHOLD_MA = 10
+
+
 def sha256(path):
     h = hashlib.sha256()
     with path.open("rb") as f:
@@ -30,6 +35,39 @@ def parse_args():
     p.add_argument("--metadata", type=Path, required=True)
     p.add_argument("--config", type=Path, required=True)
     p.add_argument("--output-dir", type=Path, required=True)
+
+    p.add_argument(
+        "--threshold-mA",
+        type=int,
+        default=DEFAULT_NEAR_DUPLICATE_THRESHOLD_MA,
+        help=(
+            "Inclusive complete-BRI near-duplicate threshold in exact integer "
+            "milliangstroms. Must agree with the representative policy and "
+            "with the Stage-14 graph. Defaults to the validated COMP702 value "
+            f"({DEFAULT_NEAR_DUPLICATE_THRESHOLD_MA} mA = 0.010 A)."
+        ),
+    )
+
+    p.add_argument(
+        "--m1-retained-chain-count",
+        type=int,
+        default=None,
+        help=(
+            "Number of m = 1 chains, all of which are retained. Derived from "
+            "the Stage-6 length-bucket summary when not supplied."
+        ),
+    )
+
+    p.add_argument(
+        "--expected-canonical-input-chains",
+        type=int,
+        default=None,
+        help=(
+            "Dataset-version gate: the canonical eligible chain population. "
+            "Omitted means no external gate; the internal accounting "
+            "assertions still run."
+        ),
+    )
 
     return p.parse_args()
 
@@ -140,9 +178,16 @@ def main():
     ) as f:
         policy = yaml.safe_load(f)
 
+    # The policy file and the run configuration must agree.  A mismatch means
+    # the deletion relation and the policy were derived from different
+    # thresholds, which would be a silent scientific change.
     assert (
         policy["scientific_scope"]["threshold"]["value_mA"]
-        == 10
+        == args.threshold_mA
+    ), (
+        "Representative policy threshold "
+        f"{policy['scientific_scope']['threshold']['value_mA']} mA does not "
+        f"match the configured threshold {args.threshold_mA} mA"
     )
 
     assert (
@@ -163,12 +208,86 @@ def main():
     # Frozen graph nodes
     # ========================================================
 
+    # Population counts are read from the upstream Stage-14 graph summary
+    # rather than restated as literals, so the accounting gate always checks
+    # against what the graph actually contained for this run.
+    graph_summary = json.loads(
+        (
+            args.graph_dir
+            / "global_summary.json"
+        ).read_text(encoding="utf-8")
+    )
+
+    assert (
+        graph_summary["threshold"]
+        == f"d_bri_mA <= {args.threshold_mA}"
+    ), (
+        "Stage-14 graph was built with "
+        f"{graph_summary['threshold']!r}, which does not match the "
+        f"configured threshold d_bri_mA <= {args.threshold_mA}"
+    )
+
+    assert (
+        graph_summary[
+            "connectedness_treated_as_duplicate_equivalence"
+        ]
+        is False
+    )
+
+    graph_edge_count = int(
+        graph_summary["source_edge_count"]
+    )
+    graph_edge_node_count = int(
+        graph_summary["edge_participating_node_count"]
+    )
+    graph_edge_component_count = int(
+        graph_summary["edge_component_count"]
+    )
+    graph_no_edge_node_count = int(
+        graph_summary["no_edge_node_count"]
+    )
+    graph_mge2_node_count = int(
+        graph_summary["canonical_mge2_node_count"]
+    )
+
+    # The m=1 population is upstream provenance, not a literal.  Stage 6
+    # records it next to the graph inside the same protocol root; an explicit
+    # override is available for reruns that relocate that output.
+    m1_retained_count = args.m1_retained_chain_count
+
+    if m1_retained_count is None:
+        stage6_summary_path = (
+            args.graph_dir.parent
+            / "length_buckets"
+            / "global_summary.json"
+        )
+
+        if stage6_summary_path.is_file():
+            m1_retained_count = int(
+                json.loads(
+                    stage6_summary_path.read_text(
+                        encoding="utf-8"
+                    )
+                )["m1_chain_count"]
+            )
+
+    if (
+        m1_retained_count is None
+        and args.expected_canonical_input_chains is None
+    ):
+        raise SystemExit(
+            "Cannot determine the m=1 population. Supply "
+            "--m1-retained-chain-count or "
+            "--expected-canonical-input-chains, or make the Stage-6 "
+            f"length-bucket summary readable at {stage6_summary_path}"
+        )
+
     graph_rows = pq.read_table(
         args.graph_dir
         / "edge_node_components.parquet"
     ).to_pylist()
 
-    assert len(graph_rows) == 99_854
+    assert len(graph_rows) == graph_edge_node_count
 
     graph_by_key = {
         canonical_key(r): r
@@ -307,7 +426,7 @@ def main():
             assert q in graph_by_key
             assert s in graph_by_key
 
-            assert 0 <= dist <= 10
+            assert 0 <= dist <= args.threshold_mA
 
             assert (
                 graph_by_key[q]["component_id"]
@@ -544,7 +663,7 @@ def main():
                     representative
                 ]
 
-                assert 0 <= distance <= 10
+                assert 0 <= distance <= args.threshold_mA
             else:
                 distance = 0
 
@@ -803,7 +922,7 @@ def main():
     # Global safety audit
     # ========================================================
 
-    assert len(mapping_rows) == 99_854
+    assert len(mapping_rows) == graph_edge_node_count
 
     retained_edge_reps = sum(
         r["action"]
@@ -819,7 +938,7 @@ def main():
     assert (
         retained_edge_reps
         + removed
-        == 99_854
+        == graph_edge_node_count
     )
 
     assert (
@@ -832,22 +951,43 @@ def main():
             assert (
                 0
                 <= int(r["direct_d_bri_mA"])
-                <= 10
+                <= args.threshold_mA
             )
 
-    # 477,906 m>=2 no-edge chains + selected representatives.
+    # m>=2 no-edge chains + selected representatives, both taken from the
+    # upstream graph summary rather than from literals.
     retained_mge2 = (
-        477_906
+        graph_no_edge_node_count
         + retained_edge_reps
     )
 
-    # 764 m=1 chains are all retained.
-    retained_total = (
+    assert (
         retained_mge2
-        + 764
+        + removed
+        == graph_mge2_node_count
     )
 
-    original_total = 578_524
+    # Every m=1 chain is retained: BRI geometry is degenerate at m=1, so m=1
+    # chains never take part in deduplication.  The m=1 population is the
+    # canonical eligible population minus the m>=2 population.
+    if args.expected_canonical_input_chains is not None:
+        original_total = args.expected_canonical_input_chains
+    else:
+        original_total = (
+            graph_mge2_node_count
+            + m1_retained_count
+        )
+
+    retained_m1 = original_total - graph_mge2_node_count
+
+    assert retained_m1 >= 0, (
+        "Canonical input chain count is smaller than the m>=2 population"
+    )
+
+    retained_total = (
+        retained_mge2
+        + retained_m1
+    )
 
     assert (
         retained_total
@@ -939,13 +1079,13 @@ def main():
             ),
 
         "source_graph_edge_count":
-            1_068_256,
+            graph_edge_count,
 
         "source_graph_edge_nodes":
-            99_854,
+            graph_edge_node_count,
 
         "source_graph_edge_components":
-            20_789,
+            graph_edge_component_count,
 
         "clique_components":
             clique_components,
@@ -972,7 +1112,7 @@ def main():
             removed,
 
         "retained_mge2_no_edge_chains":
-            477_906,
+            graph_no_edge_node_count,
 
         "retained_mge2_representatives":
             retained_edge_reps,
@@ -981,7 +1121,7 @@ def main():
             retained_mge2,
 
         "retained_m1_total":
-            764,
+            retained_m1,
 
         "canonical_input_chain_count":
             original_total,
@@ -1000,7 +1140,7 @@ def main():
             ),
 
         "duplicate_threshold":
-            "d_bri_mA <= 10",
+            f"d_bri_mA <= {args.threshold_mA}",
 
         "connectedness_treated_as_equivalence":
             False,
@@ -1105,12 +1245,12 @@ def main():
 
     print(
         "m>=2 no-edge chains retained:",
-        "477,906",
+        f"{graph_no_edge_node_count:,}",
     )
 
     print(
         "m=1 chains retained:",
-        "764",
+        f"{retained_m1:,}",
     )
 
     print()
@@ -1146,7 +1286,7 @@ def main():
     )
 
     print(
-        "Every removed chain has direct <=10 mA edge:",
+        f"Every removed chain has direct <={args.threshold_mA} mA edge:",
         "YES",
     )
 

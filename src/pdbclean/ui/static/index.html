@@ -1,0 +1,442 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PDBClean &mdash; COMP702 geometric redundancy pipeline</title>
+<link rel="stylesheet" href="/app.css">
+<script>
+/* Apply the stored theme before first paint. UI-only: never sent to the
+   backend and never part of any run configuration. */
+(function () {
+    try {
+        var stored = window.localStorage.getItem("pdbclean.theme");
+        if (stored === "dark" || stored === "light") {
+            document.documentElement.setAttribute("data-theme", stored);
+        }
+    } catch (error) { /* private mode: fall back to prefers-color-scheme */ }
+})();
+</script>
+</head>
+<body>
+<div id="shell">
+
+  <header>
+    <h1>PDBClean</h1>
+    <span class="sub">COMP702 geometric redundancy pipeline</span>
+    <span class="spacer"></span>
+    <div class="facts">
+      <span>snapshot <b id="fact-snapshot">&mdash;</b></span>
+      <span>d<sub>BRI</sub> threshold <b id="fact-threshold">&mdash;</b></span>
+      <span>science config <b id="fact-sha">&mdash;</b></span>
+      <span>defaults <b id="fact-defaults">&mdash;</b></span>
+      <button id="theme-toggle" type="button"
+              aria-label="Switch between light and dark theme">theme</button>
+    </div>
+  </header>
+
+  <nav>
+    <div class="group">Configure</div>
+    <button data-view="config" aria-current="true">Run configuration</button>
+    <div class="group">Inspect</div>
+    <button data-view="pipeline">Pipeline</button>
+    <button data-view="duplicates">Duplicate Explorer</button>
+    <button data-view="release">Gold release</button>
+    <div class="group">History</div>
+    <button data-view="runs">Runs</button>
+    <button data-view="about">Method</button>
+  </nav>
+
+  <main>
+
+    <!-- ============================================ RUN CONFIGURATION -->
+    <section id="view-config">
+      <h2>Run configuration</h2>
+      <p class="lede">
+        Values resolve in a fixed order: built-in validated defaults, then a
+        configuration file, then explicit overrides. Leaving a field alone uses
+        the default that reproduces the validated COMP702 pipeline. The
+        resolved configuration below &mdash; not the input file &mdash; is what
+        a run executes and what is written to provenance.
+      </p>
+
+      <fieldset>
+        <legend>Dataset</legend>
+        <div class="field-grid">
+          <div>
+            <label for="cfg-profile">Configuration profile</label>
+            <select id="cfg-profile"></select>
+          </div>
+          <div>
+            <label for="cfg-snapshot">PDB snapshot</label>
+            <select id="cfg-snapshot">
+              <option value="">latest complete snapshot (default)</option>
+            </select>
+          </div>
+          <div>
+            <label for="cfg-snapshot-manual">Explicit snapshot (YYYY-MM-DD)</label>
+            <input type="text" id="cfg-snapshot-manual" placeholder="e.g. 2026-01-01">
+          </div>
+          <div>
+            <label for="cfg-model">Model scope</label>
+            <input type="number" id="cfg-model" min="1" step="1">
+          </div>
+        </div>
+        <div class="actions">
+          <button class="action" id="btn-list-snapshots">List available snapshots</button>
+          <span class="note" id="snapshot-note"></span>
+        </div>
+      </fieldset>
+
+      <fieldset>
+        <legend>Structural filtering</legend>
+        <div class="field-grid">
+          <div>
+            <label for="cfg-q005">Q005 minimum backbone distance (&Aring;)</label>
+            <input type="text" id="cfg-q005">
+          </div>
+          <div>
+            <label for="cfg-angle">Minimum N&ndash;CA&ndash;C angle (degrees)</label>
+            <input type="text" id="cfg-angle">
+          </div>
+        </div>
+        <p class="note">
+          Q001 protein-entry, Q002 disorder, Q003 residue-continuity, Q004
+          backbone-atom and Q006 amino-acid rules are enabled and are shown in
+          the resolved configuration below.
+        </p>
+      </fieldset>
+
+      <fieldset>
+        <legend>BRI and duplicate detection</legend>
+        <div class="field-grid">
+          <div>
+            <label for="cfg-precision">BRI representation precision p (&Aring;)</label>
+            <input type="text" id="cfg-precision">
+            <p class="note">
+              Validated default: 0.001&nbsp;&Aring;. Changing this creates an
+              <b>experimental</b> scientific configuration.
+            </p>
+          </div>
+          <div>
+            <label for="cfg-brain">Brain filtering threshold (&Aring;)</label>
+            <input type="text" id="cfg-brain">
+            <p class="note">Validated default: 0.010&nbsp;&Aring;.</p>
+          </div>
+          <div>
+            <label for="cfg-near">Complete-BRI near-duplicate threshold &tau; (&Aring;)</label>
+            <input type="text" id="cfg-near">
+            <p class="note">Validated default: 0.010&nbsp;&Aring;, inclusive.</p>
+          </div>
+        </div>
+        <p class="note">
+          These are three distinct concepts.
+          <b>Representation precision p</b> is the grid complete BRI is
+          <i>represented</i> on &mdash; it is not a duplicate threshold.
+          <b>Brain filtering threshold</b> bounds the lossless prefilter;
+          Brain is used only for filtering.
+          <b>Complete-BRI threshold &tau;</b> is the final, inclusive
+          near-duplicate criterion, and final duplicate classification is
+          always based on complete-BRI L<sub>&infin;</sub>.
+        </p>
+        <p class="note">
+          Each threshold must be an exact whole number of representation units
+          on the configured grid, so it can never be silently rounded. At the
+          validated p&nbsp;=&nbsp;0.001&nbsp;&Aring; one unit is
+          1&nbsp;m&Aring; and &tau;&nbsp;=&nbsp;0.010&nbsp;&Aring; is 10 units.
+        </p>
+        <div id="precision-note"></div>
+      </fieldset>
+
+      <div class="actions">
+        <button class="action primary" id="btn-resolve">Resolve configuration</button>
+        <button class="action" id="btn-reset">Reset to defaults</button>
+        <button class="action" id="btn-plan-from-config">Show pipeline plan</button>
+      </div>
+
+      <div id="config-error"></div>
+
+      <h3>Resolved configuration</h3>
+      <div class="scroll-x">
+        <table id="resolved-table" class="compact">
+          <thead>
+            <tr>
+              <th>Parameter</th>
+              <th>Resolved value</th>
+              <th>Supplied by</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+
+      <dl class="kv" id="resolved-identity"></dl>
+
+      <h3>resolved_run.yaml</h3>
+      <p class="note">
+        This is the machine-readable configuration a run executes. The CLI
+        produces exactly the same document from the same selections.
+      </p>
+      <pre id="resolved-yaml">&mdash;</pre>
+
+      <div class="actions">
+        <button class="action" id="btn-start-run">Create run and freeze provenance</button>
+      </div>
+      <div id="run-result"></div>
+    </section>
+
+    <!-- ==================================================== PIPELINE -->
+    <section id="view-pipeline" hidden>
+      <h2>Pipeline</h2>
+      <p class="lede">
+        Each stage reports what it produced and whether its validation gate
+        passed. A stage may only start once every upstream stage has passed;
+        an output produced under a different scientific configuration is never
+        silently reused.
+      </p>
+
+      <div class="lifecycle" id="lifecycle"></div>
+
+      <div id="plan-status"></div>
+
+      <div class="scroll-x">
+        <table id="plan-table">
+          <thead>
+            <tr>
+              <th>Canonical</th>
+              <th>Stage</th>
+              <th>Layer</th>
+              <th>Status</th>
+              <th>Validation</th>
+              <th>Action</th>
+              <th class="num">Input</th>
+              <th class="num">Output</th>
+              <th class="num">Bytes</th>
+              <th>Slurm</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- ========================================== DUPLICATE EXPLORER -->
+    <section id="view-duplicates" hidden>
+      <h2>Duplicate Explorer</h2>
+      <p class="lede">
+        Pairs detected by the complete-BRI L<sub>&infin;</sub> search. The
+        classification shown is the one the pipeline recorded; this view
+        filters and displays, it never re-classifies.
+      </p>
+
+      <fieldset>
+        <legend>Filters</legend>
+        <div class="field-grid">
+          <div>
+            <label for="dup-pdb">PDB ID</label>
+            <input type="text" id="dup-pdb" placeholder="e.g. 1a0t">
+          </div>
+          <div>
+            <label for="dup-chain">Chain (label_asym_id)</label>
+            <input type="text" id="dup-chain" placeholder="e.g. A">
+          </div>
+          <div>
+            <label for="dup-class">Classification</label>
+            <select id="dup-class">
+              <option value="">all near duplicates</option>
+              <option value="exact">exact duplicates only</option>
+              <option value="nonzero">non-zero near duplicates only</option>
+            </select>
+          </div>
+          <div>
+            <label for="dup-rel">Stage-14 relationship</label>
+            <select id="dup-rel">
+              <option value="">any</option>
+              <option value="removed">involves a removed chain</option>
+              <option value="retained">both retained</option>
+              <option value="unaffected">not in the graph</option>
+            </select>
+          </div>
+          <div>
+            <label for="dup-minlen">Minimum chain length</label>
+            <input type="number" id="dup-minlen" min="1" step="1">
+          </div>
+          <div>
+            <label for="dup-maxlen">Maximum chain length</label>
+            <input type="number" id="dup-maxlen" min="1" step="1">
+          </div>
+          <div>
+            <label for="dup-mind">Minimum distance (m&Aring;)</label>
+            <input type="number" id="dup-mind" min="0" step="1">
+          </div>
+          <div>
+            <label for="dup-maxd">Maximum distance (m&Aring;)</label>
+            <input type="number" id="dup-maxd" min="0" step="1">
+          </div>
+        </div>
+        <div class="actions">
+          <button class="action primary" id="btn-dup-search">Search</button>
+          <button class="action" id="btn-dup-clear">Clear filters</button>
+          <label class="inline">
+            <span>rows</span>
+            <select id="dup-limit">
+              <option>50</option>
+              <option>100</option>
+              <option>250</option>
+            </select>
+          </label>
+        </div>
+      </fieldset>
+
+      <div id="dup-summary"></div>
+
+      <div class="pager">
+        <button class="action" id="dup-prev">Previous</button>
+        <span id="dup-range">&mdash;</span>
+        <button class="action" id="dup-next">Next</button>
+      </div>
+
+      <div class="scroll-x">
+        <table id="dup-table">
+          <thead>
+            <tr>
+              <th>PDB A</th>
+              <th>Chain A</th>
+              <th>PDB B</th>
+              <th>Chain B</th>
+              <th class="num">Model</th>
+              <th class="num">Length</th>
+              <th class="num">d (m&Aring;)</th>
+              <th class="num">d (&Aring;)</th>
+              <th>Classification</th>
+              <th>Stage 14</th>
+              <th>Representative</th>
+              <th class="num">Direct d</th>
+              <th>View</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- ================================================ GOLD RELEASE -->
+    <section id="view-release" hidden>
+      <h2>Gold release</h2>
+      <p class="lede">
+        Published only after every validation gate passes. Nothing here is
+        shown for a configuration whose release has not been produced.
+      </p>
+      <div id="release-body"></div>
+    </section>
+
+    <!-- ======================================================== RUNS -->
+    <section id="view-runs" hidden>
+      <h2>Runs</h2>
+      <p class="lede">
+        Every run gets its own directory, its own resolved configuration and
+        its own append-only event log. Historical provenance is never
+        overwritten.
+      </p>
+      <div class="scroll-x">
+        <table id="runs-table">
+          <thead>
+            <tr>
+              <th>Run ID</th>
+              <th>Created</th>
+              <th>Status</th>
+              <th>Snapshot</th>
+              <th>Science SHA256</th>
+              <th>Config SHA256</th>
+              <th class="num">Stages</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+      <div id="run-detail"></div>
+    </section>
+
+    <!-- ====================================================== METHOD -->
+    <section id="view-about" hidden>
+      <h2>Method</h2>
+      <p class="lede">
+        The scientific pipeline, as implemented. This page describes what the
+        code does; it is generated from the same stage registry the planner
+        uses.
+      </p>
+
+      <h3>Bronze / Silver / Gold</h3>
+      <table class="compact">
+        <thead>
+          <tr><th>Layer</th><th>Contents</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><span class="layer-tag">Bronze</span></td>
+            <td>
+              Immutable source inventory for the selected snapshot: PDB ID, S3
+              key, compressed size, ETag, manifest timestamp. No scientific
+              filtering happens in this layer.
+            </td>
+          </tr>
+          <tr>
+            <td><span class="layer-tag">Silver</span></td>
+            <td>
+              The deterministic parsed representation. Intentionally not
+              persisted: it is reconstructed from the immutable Bronze object
+              identity by the versioned parser, so the archive is not copied
+              twice.
+            </td>
+          </tr>
+          <tr>
+            <td><span class="layer-tag">Gold</span></td>
+            <td>
+              Scientifically derived outputs: accepted and rejected chains,
+              geometric validation, complete BRI, Brain, candidate pairs,
+              complete-BRI distances, classifications, representative mapping,
+              removed-chain audit and the final retained-chain release.
+            </td>
+          </tr>
+        </tbody>
+      </table>
+
+      <h3>Canonical pipeline</h3>
+      <p class="note">
+        Prerequisites are lettered, not numbered, so they are never mistaken
+        for scientific stages. Stages 3 and 4 share one producer, as do
+        Stages 8 and 9; both canonical identities are shown because they are
+        distinct scientific concepts. Stages 14a&ndash;c are engineering
+        subdivisions of scientific Stage&nbsp;14. Stages 11&ndash;13 are
+        investigation and validation passes and are never a deletion relation.
+      </p>
+      <div class="scroll-x">
+        <table class="compact" id="about-stages">
+          <thead>
+            <tr>
+              <th>Canonical stage</th><th>Layer</th>
+              <th>Producer</th><th>Purpose</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+
+      <h3>Fixed by definition</h3>
+      <p class="note">
+        Brain is 9-dimensional by Definition 5.1; the metric is
+        L<sub>&infin;</sub>; the final classification basis is complete BRI;
+        and both thresholds are inclusive. These are not exposed as controls
+        because changing them would change the scientific method rather than
+        its configuration.
+      </p>
+    </section>
+
+  </main>
+</div>
+
+<div id="toast" hidden></div>
+
+<script src="/app.js"></script>
+</body>
+</html>

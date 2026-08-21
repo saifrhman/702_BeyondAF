@@ -18,6 +18,10 @@ from pdbclean.brain_prefilter import (
     brain_integer_numerators,
 )
 from pdbclean.config import load_config
+from pdbclean.defaults import (
+    brain_filter_threshold_milliangstrom,
+    require_implemented_precision,
+)
 from pdbclean.length_buckets import (
     validate_stage5_brain_publication,
 )
@@ -120,6 +124,35 @@ BUCKET_SCHEMA = pa.schema(
 )
 
 
+def _format_threshold_angstrom(threshold_mA: int) -> str:
+    """Render an integer-milliangstrom threshold as an angstrom string.
+
+    ``10`` renders as ``"0.010"``, exactly reproducing the literal that the
+    frozen Stage-7 publication carries in its Parquet schema metadata.
+    """
+
+    return f"{threshold_mA / 1000.0:.3f}"
+
+
+def _candidate_schema(threshold_mA: int) -> pa.Schema:
+    """Return the Stage-7 candidate schema for a configured threshold.
+
+    The schema's declared threshold must describe the threshold the data was
+    actually produced with, so it is derived from the resolved configuration
+    rather than from a literal.  At the validated default (10 mA) this
+    reproduces the frozen metadata byte for byte.
+    """
+
+    metadata = {
+        key.decode("utf-8"): value.decode("utf-8")
+        for key, value in (CANDIDATE_SCHEMA.metadata or {}).items()
+    }
+
+    metadata["threshold_angstrom"] = _format_threshold_angstrom(threshold_mA)
+
+    return CANDIDATE_SCHEMA.with_metadata(metadata)
+
+
 def _write_json_atomic(payload, path: Path) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
 
@@ -169,6 +202,25 @@ def main() -> int:
 
     config = load_config(args.config).data
     protocol = config["release"]["protocol_version"]
+
+    # The Brain filtering threshold comes from the resolved configuration.
+    # A legacy protocol configuration has no `brain_filter` section, so the
+    # validated default is used, which is exactly what the frozen Stage-7
+    # publication was produced with.
+    # The Brain prefilter works in exact integer milliangstrom sums, so it
+    # is only valid on the implemented precision grid.
+    require_implemented_precision(config, stage="stage7_brain_prefilter")
+
+    brain_tau_mA = brain_filter_threshold_milliangstrom(
+        {
+            "brain_filter": config.get(
+                "brain_filter",
+                {"threshold_angstrom": BRAIN_PREFILTER_TAU_ANGSTROM},
+            )
+        }
+    )
+
+    brain_tau_angstrom = brain_tau_mA / 1000.0
 
     storage_root = Path(
         config["storage"]["output_root"]
@@ -292,9 +344,11 @@ def main() -> int:
     if candidate_tmp.exists():
         candidate_tmp.unlink()
 
+    candidate_schema = _candidate_schema(brain_tau_mA)
+
     writer = pq.ParquetWriter(
         candidate_tmp,
-        CANDIDATE_SCHEMA,
+        candidate_schema,
         compression="zstd",
         version="2.6",
         use_dictionary=True,
@@ -332,6 +386,7 @@ def main() -> int:
             result = brain_candidate_pairs(
                 vectors,
                 m=m,
+                tau_mA=brain_tau_mA,
             )
 
             pairs = result.pairs
@@ -393,7 +448,7 @@ def main() -> int:
             )
 
             exact_radius = (
-                BRAIN_PREFILTER_TAU_MA
+                brain_tau_mA
                 * (m - 1)
             )
 
@@ -416,7 +471,7 @@ def main() -> int:
 
             if np.any(
                 d_brain
-                > BRAIN_PREFILTER_TAU_ANGSTROM
+                > brain_tau_angstrom
             ):
                 raise RuntimeError(
                     f"Stage-7 floating distance violation for m={m}"
@@ -614,7 +669,13 @@ def main() -> int:
             args.pipeline_git_commit
         ),
         "brain_threshold_angstrom": (
-            BRAIN_PREFILTER_TAU_ANGSTROM
+            brain_tau_angstrom
+        ),
+        "brain_threshold_mA": (
+            brain_tau_mA
+        ),
+        "brain_threshold_operator": (
+            "less_than_or_equal"
         ),
         "metric": "L_infinity",
         "search_implementation": (

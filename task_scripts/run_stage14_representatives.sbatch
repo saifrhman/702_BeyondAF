@@ -7,59 +7,37 @@
 #SBATCH --output=logs/stage14_reps_%j.out
 #SBATCH --error=logs/stage14_reps_%j.err
 
+# Stage 14: representative selection.
+#
+# Every path and every scientific argument is derived from the resolved run
+# configuration, so this wrapper cannot drift from the CLI or the UI.
+#
+#   sbatch task_scripts/run_stage14_representatives.sbatch
+#   PDBCLEAN_PROFILE=<profile.yaml> sbatch task_scripts/...
+#
+# Submit from the repository root, or export PDBCLEAN_REPO_ROOT.
+
 set -euo pipefail
 
-cd "$HOME/fastscratch/COMP702_pdbclean_pipeline"
+source "${PDBCLEAN_REPO_ROOT:-${SLURM_SUBMIT_DIR:-$PWD}}/task_scripts/stage14_common.sh"
 
-PYTHON_ENV="${COMP702_PYTHON:-$HOME/fastscratch/envs/bri_env_1.2.2/bin/python}"
+pdbclean_banner "STAGE-14 REPRESENTATIVE SELECTION"
 
-if [[ ! -x "$PYTHON_ENV" ]]; then
-    echo "ERROR: Python not executable: $PYTHON_ENV"
+GRAPH="$(pdbclean_stage_argument representative_selection --graph-dir)"
+OUT="$(pdbclean_stage_argument representative_selection --output-dir)"
+
+if [[ ! -e "$GRAPH/_SUCCESS" ]]; then
+    echo "ERROR: upstream Stage-14 graph has not passed: $GRAPH" >&2
     exit 1
 fi
-
-mapfile -t ROOTS < <(
-    find outputs/pdbclean \
-      -mindepth 2 \
-      -maxdepth 2 \
-      -type d \
-      -name 'protocol3.2-comp702-v1' \
-      -print
-)
-
-if [[ ${#ROOTS[@]} -ne 1 ]]; then
-    echo "ERROR: expected exactly one protocol root; found ${#ROOTS[@]}"
-    printf '%s\n' "${ROOTS[@]}"
-    exit 1
-fi
-
-ROOT="${ROOTS[0]}"
-
-GRAPH="$ROOT/stage14_geometric_graph"
-FULL_BRI="$ROOT/full_bri_nn"
-ACCEPTED="$ROOT/quality/merged/accepted.parquet"
-META="$ROOT/downstream_metadata/finalized/entry_metadata.parquet"
-
-OUT="$ROOT/stage14_representative_selection_v1"
 
 if [[ -e "$OUT" ]]; then
-    echo "ERROR: Stage-14 representative output already exists: $OUT"
+    echo "ERROR: Stage-14 representative output already exists: $OUT" >&2
+    echo "Refusing to overwrite a completed stage." >&2
     exit 1
 fi
 
-echo "===== STAGE-14 REPRESENTATIVE JOB ====="
-echo "Host: $(hostname)"
-echo "Started: $(date --iso-8601=seconds)"
-echo "Git HEAD: $(git rev-parse HEAD)"
-echo
-
-"$PYTHON_ENV" scripts/select_stage14_representatives.py \
-  --graph-dir "$GRAPH" \
-  --edges "$FULL_BRI/finalized/candidate_near_duplicates.parquet" \
-  --accepted "$ACCEPTED" \
-  --metadata "$META" \
-  --config config/pdbclean/stage14_representative_policy_v1.yaml \
-  --output-dir "$OUT"
+pdbclean_run_stage representative_selection
 
 echo
 echo "Finished: $(date --iso-8601=seconds)"

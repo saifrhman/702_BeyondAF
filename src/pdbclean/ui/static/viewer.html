@@ -1,0 +1,227 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PDBClean &mdash; pair viewer</title>
+<link rel="stylesheet" href="/app.css">
+<link rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/molstar@5.11.0/build/viewer/molstar.css">
+<script src="https://cdn.jsdelivr.net/npm/molstar@5.11.0/build/viewer/molstar.js"></script>
+<style>
+    body {
+        display: grid;
+        grid-template-rows: auto auto 1fr;
+        height: 100vh;
+        overflow: hidden;
+    }
+
+    #bar {
+        display: flex;
+        align-items: baseline;
+        gap: 20px;
+        flex-wrap: wrap;
+        padding: 7px 14px;
+        border-bottom: 1px solid var(--border-strong);
+        background: var(--panel);
+    }
+
+    #bar .pair {
+        font-family: var(--mono);
+        font-size: 13px;
+        font-weight: 600;
+    }
+
+    #bar .item {
+        font-size: 11.5px;
+        color: var(--muted);
+    }
+
+    #bar .item b {
+        font-family: var(--mono);
+        font-weight: 500;
+        color: var(--text);
+    }
+
+    #views {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        padding: 6px 14px;
+        border-bottom: 1px solid var(--border);
+        background: var(--panel-alt);
+        flex-wrap: wrap;
+    }
+
+    #views .label {
+        font-size: 10.5px;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+        color: var(--faint);
+        margin-right: 4px;
+    }
+
+    #views button[aria-pressed="true"] {
+        border-color: var(--accent);
+        background: var(--accent-bg);
+        font-weight: 600;
+    }
+
+    #views .caveat {
+        margin-left: auto;
+        font-size: 11px;
+        color: var(--muted);
+        max-width: 56ch;
+    }
+
+    #app {
+        position: relative;
+        min-height: 0;
+    }
+
+    #app > * {
+        position: absolute;
+        inset: 0;
+    }
+
+    #fallback {
+        padding: 16px;
+        color: var(--muted);
+    }
+</style>
+</head>
+<body>
+
+<div id="bar">
+    <span class="pair" id="pair-label">&mdash;</span>
+    <span class="item">classification <b id="v-class">&mdash;</b></span>
+    <span class="item">complete-BRI L<sub>&infin;</sub>
+        <b id="v-distance">&mdash;</b></span>
+    <span class="item">Stage 14 <b id="v-rel">&mdash;</b></span>
+    <span class="item">representative <b id="v-rep">&mdash;</b></span>
+    <span class="item">science config <b id="v-sha">&mdash;</b></span>
+</div>
+
+<div id="views">
+    <span class="label">Scene</span>
+    <span id="view-buttons"></span>
+    <span class="caveat">
+        Mol* is for human inspection only. Duplicate classification comes from
+        the complete-BRI calculation and is never derived from this view.
+    </span>
+</div>
+
+<div id="app"><div id="fallback">Loading viewer&hellip;</div></div>
+
+<script>
+"use strict";
+
+const params = new URLSearchParams(window.location.search);
+
+function text(id, value) {
+    document.getElementById(id).textContent =
+        value === null || value === undefined || value === ""
+            ? "—"
+            : value;
+}
+
+const pairA = params.get("a") || "";
+const pairB = params.get("b") || "";
+const distance = params.get("d");
+
+text("pair-label", pairA + "  ↔  " + pairB);
+text(
+    "v-class",
+    (params.get("cls") || "").replace(/_/g, " ")
+);
+text(
+    "v-distance",
+    distance === null
+        ? null
+        : distance + " mÅ  (" + (Number(distance) / 1000).toFixed(4) + " Å)"
+);
+text("v-rel", params.get("rel"));
+text("v-rep", params.get("rep"));
+text("v-sha", (params.get("sha") || "").slice(0, 16));
+
+let viewer = null;
+
+async function loadScene(url) {
+    if (!viewer) {
+        return;
+    }
+
+    await viewer.loadMvsFromUrl(url, "mvsj", { replaceExisting: true });
+}
+
+async function init() {
+    const sceneKey = params.get("scene");
+
+    let scenes = [];
+
+    try {
+        const response = await fetch("/api/scenes");
+        const payload = await response.json();
+
+        scenes = payload.scenes || [];
+    } catch (error) {
+        document.getElementById("fallback").textContent =
+            "Could not load prepared scenes: " + error.message;
+        return;
+    }
+
+    const scene = scenes.find(function (entry) {
+        return entry.key === sceneKey;
+    });
+
+    if (!scene) {
+        document.getElementById("fallback").textContent =
+            "No prepared Mol* scene exists for this pair. Prepared scenes "
+            + "live in reports/molstar_exact_duplicate_examples/.";
+        return;
+    }
+
+    document.getElementById("app").innerHTML = "";
+
+    viewer = await molstar.Viewer.create("app", {
+        layoutIsExpanded: false,
+        layoutShowControls: true,
+        layoutShowRemoteState: false,
+        layoutShowSequence: true,
+        layoutShowLog: false,
+        viewportShowExpand: true,
+        viewportShowSelectionMode: false,
+    });
+
+    const holder = document.getElementById("view-buttons");
+
+    scene.views.forEach(function (view, index) {
+        const button = document.createElement("button");
+
+        button.className = "action";
+        button.textContent = view.label;
+        button.setAttribute("aria-pressed", index === 0 ? "true" : "false");
+
+        button.addEventListener("click", async function () {
+            holder.querySelectorAll("button").forEach(function (other) {
+                other.setAttribute("aria-pressed", "false");
+            });
+
+            button.setAttribute("aria-pressed", "true");
+
+            await loadScene(view.url);
+        });
+
+        holder.appendChild(button);
+    });
+
+    await loadScene(scene.views[0].url);
+}
+
+init().catch(function (error) {
+    document.getElementById("app").innerHTML =
+        "<div id=\"fallback\">Viewer failed: " + error.message + "</div>";
+});
+</script>
+</body>
+</html>

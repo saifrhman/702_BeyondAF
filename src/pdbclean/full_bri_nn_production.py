@@ -41,6 +41,7 @@ from pdbclean.full_bri_production import (
     _validate_commit,
     _write_json_atomic,
 )
+from pdbclean.defaults import require_implemented_precision
 from pdbclean.length_buckets import (
     validate_stage5_brain_publication,
 )
@@ -51,6 +52,10 @@ class FullBRINNProductionError(RuntimeError):
 
 
 def _validate_threshold(config: dict) -> tuple[float, int]:
+    # Stage 8-9 represent complete BRI and its distances in exact integer
+    # milliangstroms, which is only valid on the implemented precision grid.
+    require_implemented_precision(config, stage="stage8_full_bri_nn")
+
     value = float(
         config["duplicate_search"][
             "near_duplicate_threshold_angstrom"

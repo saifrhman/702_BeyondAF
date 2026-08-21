@@ -25,8 +25,10 @@ fi
 
 cd "$REPOSITORY_ROOT"
 
+PDBCLEAN_PYTHON="${PDBCLEAN_PYTHON:-python}"
+
 METADATA="$(
-python - "$CONFIG_PATH" "$MANIFEST_PATH" <<'PY'
+"$PDBCLEAN_PYTHON" - "$CONFIG_PATH" "$MANIFEST_PATH" <<'PY'
 import sys
 
 import pyarrow.parquet as pq
@@ -129,7 +131,7 @@ ARRAY_RANGE="0-${LAST_WORKER}%${ARRAY_CONCURRENCY}"
 # Production entrypoints require a clean repository. Checking here prevents
 # submitting an array whose workers would all fail provenance validation.
 GIT_COMMIT="$(
-python - <<'PY'
+"$PDBCLEAN_PYTHON" - <<'PY'
 from pathlib import Path
 
 from pdbclean.provenance import resolve_clean_git_commit
@@ -138,7 +140,7 @@ print(resolve_clean_git_commit(Path.cwd()))
 PY
 )"
 
-LOG_ROOT="$HOME/fastscratch/pdbclean_logs"
+LOG_ROOT="${PDBCLEAN_LOG_ROOT:-$HOME/fastscratch/pdbclean_logs}"
 mkdir -p "$LOG_ROOT"
 
 QUALITY_SCRIPT="$SCRIPT_DIR/run_quality_array.sbatch"

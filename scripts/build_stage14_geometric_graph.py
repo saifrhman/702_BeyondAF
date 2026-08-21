@@ -13,6 +13,11 @@ import pyarrow.parquet as pq
 
 SCHEMA_VERSION = "1.0"
 
+# Validated COMP702 defaults.  Supplying --threshold-mA / --minimum-chain-length
+# uses a configured value instead; omitting them reproduces the frozen run.
+DEFAULT_NEAR_DUPLICATE_THRESHOLD_MA = 10
+DEFAULT_MINIMUM_DEDUPLICATED_CHAIN_LENGTH = 2
+
 
 def sha256(path):
     h = hashlib.sha256()
@@ -27,10 +32,80 @@ def parse_args():
     p.add_argument("--edges", type=Path, required=True)
     p.add_argument("--m1-edges", type=Path, required=True)
     p.add_argument("--output-dir", type=Path, required=True)
-    p.add_argument("--expected-edges", type=int, required=True)
-    p.add_argument("--expected-m1-edges", type=int, required=True)
-    p.add_argument("--expected-mge2-nodes", type=int, required=True)
-    return p.parse_args()
+    # Dataset-version acceptance gates.
+    #
+    # These are known-correct counts for one specific snapshot, not scientific
+    # parameters.  Supplying them asserts that a re-run has not drifted; that
+    # is how the frozen 2026-01-01 profile is validated.  Omitting them lets a
+    # new snapshot -- whose counts are not known in advance and must not be
+    # required to equal the 2026 ones -- derive every count from its own data.
+    p.add_argument("--expected-edges", type=int, default=None)
+    p.add_argument("--expected-m1-edges", type=int, default=None)
+    p.add_argument("--expected-mge2-nodes", type=int, default=None)
+    p.add_argument(
+        "--length-buckets-summary",
+        type=Path,
+        default=None,
+        help=(
+            "Stage-6 length-bucket global_summary.json, used to derive the "
+            "m >= 2 population when --expected-mge2-nodes is not given."
+        ),
+    )
+    p.add_argument(
+        "--no-expectation-gate",
+        action="store_true",
+        help=(
+            "Acknowledge that this run has no dataset-version expectation "
+            "gates. Required when no --expected-* value is supplied, so a "
+            "gate can never be dropped silently."
+        ),
+    )
+    p.add_argument(
+        "--threshold-mA",
+        type=int,
+        default=DEFAULT_NEAR_DUPLICATE_THRESHOLD_MA,
+        help=(
+            "Inclusive complete-BRI near-duplicate threshold in exact integer "
+            "milliangstroms. Defaults to the validated COMP702 value "
+            f"({DEFAULT_NEAR_DUPLICATE_THRESHOLD_MA} mA = 0.010 A)."
+        ),
+    )
+    p.add_argument(
+        "--minimum-chain-length",
+        type=int,
+        default=DEFAULT_MINIMUM_DEDUPLICATED_CHAIN_LENGTH,
+        help=(
+            "Minimum chain length admitted to the deduplication graph. "
+            "Defaults to the validated COMP702 value "
+            f"({DEFAULT_MINIMUM_DEDUPLICATED_CHAIN_LENGTH}); m = 1 chains are "
+            "handled separately and are always retained."
+        ),
+    )
+
+    args = p.parse_args()
+
+    gates = (
+        args.expected_edges,
+        args.expected_m1_edges,
+        args.expected_mge2_nodes,
+    )
+
+    if all(gate is None for gate in gates) and not args.no_expectation_gate:
+        p.error(
+            "no dataset-version expectation gates were supplied. Pass "
+            "--expected-edges/--expected-m1-edges/--expected-mge2-nodes for a "
+            "snapshot whose counts are known, or --no-expectation-gate to run "
+            "a new snapshot whose counts are not known in advance."
+        )
+
+    if args.expected_mge2_nodes is None and args.length_buckets_summary is None:
+        p.error(
+            "the m >= 2 population must come from somewhere: pass "
+            "--expected-mge2-nodes, or --length-buckets-summary pointing at "
+            "the Stage-6 global_summary.json for this snapshot."
+        )
+
+    return args
 
 
 def main():
@@ -44,8 +119,33 @@ def main():
     source_rows = pq.ParquetFile(args.edges).metadata.num_rows
     m1_rows = pq.ParquetFile(args.m1_edges).metadata.num_rows
 
-    assert source_rows == args.expected_edges
-    assert m1_rows == args.expected_m1_edges
+    # Counts are observed from this snapshot's own data.  A supplied
+    # expectation is a gate asserted against the observation, never a
+    # substitute for it, so the two are identical whenever a gate is given.
+    if args.expected_edges is not None:
+        assert source_rows == args.expected_edges
+
+    if args.expected_m1_edges is not None:
+        assert m1_rows == args.expected_m1_edges
+
+    source_edge_count = source_rows
+    m1_edge_count = m1_rows
+
+    observed_mge2_nodes = None
+
+    if args.length_buckets_summary is not None:
+        bucket_summary = json.loads(
+            args.length_buckets_summary.read_text(encoding="utf-8")
+        )
+        observed_mge2_nodes = int(bucket_summary["brain_defined_chain_count"])
+
+    if args.expected_mge2_nodes is None:
+        mge2_node_count = observed_mge2_nodes
+    else:
+        mge2_node_count = args.expected_mge2_nodes
+
+        if observed_mge2_nodes is not None:
+            assert observed_mge2_nodes == args.expected_mge2_nodes
 
     # --------------------------------------------------------
     # Dynamic union-find.
@@ -147,8 +247,8 @@ def main():
             m = int(d["retained_residue_count"][i])
             dist = int(d["d_bri_mA"][i])
 
-            assert m >= 2
-            assert 0 <= dist <= 10
+            assert m >= args.minimum_chain_length
+            assert 0 <= dist <= args.threshold_mA
 
             qkey = (
                 str(d["query_snapshot"][i]),
@@ -196,8 +296,8 @@ def main():
                 flush=True,
             )
 
-    assert processed == args.expected_edges
-    assert len(seen_edges) == args.expected_edges
+    assert processed == source_edge_count
+    assert len(seen_edges) == source_edge_count
 
     # Free duplicate-detection structure before component analysis.
     del seen_edges
@@ -211,10 +311,10 @@ def main():
 
     edge_node_count = len(id_to_key)
 
-    assert edge_node_count <= args.expected_mge2_nodes
+    assert edge_node_count <= mge2_node_count
 
     no_edge_node_count = (
-        args.expected_mge2_nodes
+        mge2_node_count
         - edge_node_count
     )
 
@@ -256,7 +356,7 @@ def main():
 
         component_edges[ru] += 1
 
-    assert sum(component_edges.values()) == args.expected_edges
+    assert sum(component_edges.values()) == source_edge_count
     assert set(component_edges) == set(component_nodes)
 
     # --------------------------------------------------------
@@ -399,15 +499,17 @@ def main():
         "relation":
             "paper_faithful_complete_BRI_near_duplicate",
         "threshold":
-            "d_bri_mA <= 10",
+            f"d_bri_mA <= {args.threshold_mA}",
+        "threshold_mA":
+            args.threshold_mA,
         "minimum_chain_length":
-            2,
+            args.minimum_chain_length,
         "source_edge_count":
-            args.expected_edges,
+            source_edge_count,
         "excluded_m1_edge_count":
-            args.expected_m1_edges,
+            m1_edge_count,
         "canonical_mge2_node_count":
-            args.expected_mge2_nodes,
+            mge2_node_count,
         "edge_participating_node_count":
             edge_node_count,
         "no_edge_node_count":
@@ -473,7 +575,7 @@ def main():
             {
                 "status": "PASS",
                 "schema_version": SCHEMA_VERSION,
-                "edge_count": args.expected_edges,
+                "edge_count": source_edge_count,
                 "edge_node_count": edge_node_count,
                 "edge_component_count": len(component_rows),
                 "representative_selection_performed": False,
@@ -503,11 +605,11 @@ def main():
     print("===== STAGE-14 GRAPH SUMMARY =====")
     print(
         "m>=2 canonical chains:",
-        f"{args.expected_mge2_nodes:,}",
+        f"{mge2_node_count:,}",
     )
     print(
         "Near-duplicate edges:",
-        f"{args.expected_edges:,}",
+        f"{source_edge_count:,}",
     )
     print(
         "Chains with >=1 edge:",

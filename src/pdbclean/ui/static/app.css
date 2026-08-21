@@ -1,0 +1,741 @@
+/* PDBClean UI - restrained scientific data-management styling.
+ *
+ * Deliberately plain: 1px borders, flat surfaces, dense tables, tabular
+ * numerals, no gradients, no shadows, no rounded cards.
+ */
+
+:root {
+    --bg: #ffffff;
+    --panel: #f7f7f6;
+    --panel-alt: #fbfbfa;
+    --border: #d3d2cf;
+    --border-strong: #b4b3af;
+    --text: #1b1b1a;
+    --muted: #5d5c58;
+    --faint: #8b8a85;
+    --accent: #23517a;
+    --accent-bg: #eaf0f5;
+    --pass: #1c6b40;
+    --fail: #99271f;
+    --warn: #8a5910;
+    --idle: #6d6c68;
+    --mono: ui-monospace, "SFMono-Regular", "SF Mono", Menlo, Consolas,
+        "Liberation Mono", monospace;
+}
+
+/* Theme.
+ *
+ * Three states, one palette per state:
+ *   - bare :root            the light palette (also the fallback)
+ *   - OS preference = dark  applied unless the viewer chose light explicitly
+ *   - [data-theme="dark"]   an explicit choice, which wins either way
+ *
+ * The toggle only sets data-theme on <html> and writes localStorage. It is a
+ * viewing preference: it never enters the run configuration and never affects
+ * either configuration hash.
+ */
+
+@media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+        --bg: #17191b;
+        --panel: #1d2022;
+        --panel-alt: #202426;
+        --border: #333739;
+        --border-strong: #474b4e;
+        --text: #dee1e3;
+        --muted: #9ba0a4;
+        --faint: #7b8085;
+        --accent: #82abd0;
+        --accent-bg: #1e2c39;
+        --pass: #67b487;
+        --fail: #d98980;
+        --warn: #cfa055;
+        --idle: #8b9095;
+    }
+}
+
+:root[data-theme="dark"] {
+        --bg: #17191b;
+        --panel: #1d2022;
+        --panel-alt: #202426;
+        --border: #333739;
+        --border-strong: #474b4e;
+        --text: #dee1e3;
+        --muted: #9ba0a4;
+        --faint: #7b8085;
+        --accent: #82abd0;
+        --accent-bg: #1e2c39;
+        --pass: #67b487;
+        --fail: #d98980;
+        --warn: #cfa055;
+        --idle: #8b9095;
+}
+
+* {
+    box-sizing: border-box;
+}
+
+html,
+body {
+    margin: 0;
+    height: 100%;
+}
+
+body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+        "Helvetica Neue", Arial, sans-serif;
+    font-size: 13px;
+    line-height: 1.45;
+    -webkit-font-smoothing: antialiased;
+}
+
+a {
+    color: var(--accent);
+}
+
+code,
+.mono,
+.num {
+    font-family: var(--mono);
+    font-size: 12px;
+}
+
+.num {
+    font-variant-numeric: tabular-nums;
+    text-align: right;
+    white-space: nowrap;
+}
+
+/* ---------------------------------------------------------------- layout */
+
+#shell {
+    display: grid;
+    grid-template-rows: auto 1fr;
+    grid-template-columns: 208px 1fr;
+    grid-template-areas:
+        "head head"
+        "nav main";
+    height: 100vh;
+}
+
+header {
+    grid-area: head;
+    display: flex;
+    align-items: baseline;
+    gap: 18px;
+    padding: 8px 14px;
+    border-bottom: 1px solid var(--border-strong);
+    background: var(--panel);
+}
+
+header h1 {
+    margin: 0;
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+}
+
+header .sub {
+    color: var(--muted);
+    font-size: 12px;
+}
+
+header .spacer {
+    flex: 1;
+}
+
+header .facts {
+    display: flex;
+    gap: 16px;
+    font-size: 11.5px;
+    color: var(--muted);
+}
+
+header .facts b {
+    font-weight: 500;
+    color: var(--text);
+    font-family: var(--mono);
+}
+
+nav {
+    grid-area: nav;
+    border-right: 1px solid var(--border);
+    background: var(--panel-alt);
+    padding: 10px 0;
+    overflow-y: auto;
+}
+
+nav .group {
+    padding: 10px 14px 4px;
+    font-size: 10.5px;
+    text-transform: uppercase;
+    letter-spacing: 0.07em;
+    color: var(--faint);
+}
+
+nav button {
+    display: block;
+    width: 100%;
+    text-align: left;
+    padding: 5px 14px;
+    border: 0;
+    border-left: 2px solid transparent;
+    background: none;
+    color: var(--text);
+    font: inherit;
+    cursor: pointer;
+}
+
+nav button:hover {
+    background: var(--accent-bg);
+}
+
+nav button[aria-current="true"] {
+    border-left-color: var(--accent);
+    background: var(--accent-bg);
+    font-weight: 600;
+}
+
+main {
+    grid-area: main;
+    overflow: auto;
+    padding: 16px 18px 48px;
+}
+
+section[hidden] {
+    display: none;
+}
+
+h2 {
+    margin: 0 0 2px;
+    font-size: 14px;
+    font-weight: 600;
+}
+
+h3 {
+    margin: 20px 0 6px;
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--muted);
+}
+
+p.lede {
+    margin: 0 0 14px;
+    color: var(--muted);
+    max-width: 78ch;
+}
+
+/* ---------------------------------------------------------------- tables */
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 6px 0 4px;
+}
+
+th {
+    text-align: left;
+    font-size: 10.5px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--muted);
+    padding: 4px 8px;
+    border-bottom: 1px solid var(--border-strong);
+    white-space: nowrap;
+}
+
+th.num {
+    text-align: right;
+}
+
+td {
+    padding: 3px 8px;
+    border-bottom: 1px solid var(--border);
+    vertical-align: top;
+}
+
+tbody tr:hover {
+    background: var(--panel);
+}
+
+table.compact td,
+table.compact th {
+    padding: 2px 8px;
+}
+
+.scroll-x {
+    overflow-x: auto;
+}
+
+/* ---------------------------------------------------------------- status */
+
+.state {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    white-space: nowrap;
+}
+
+.state::before {
+    content: "";
+    width: 7px;
+    height: 7px;
+    flex: 0 0 7px;
+    border: 1px solid currentColor;
+    background: currentColor;
+}
+
+.state-complete,
+.state-validation_pass {
+    color: var(--pass);
+}
+
+.state-validation_fail,
+.state-failed {
+    color: var(--fail);
+}
+
+.state-partial,
+.state-blocked,
+.state-validating,
+.state-running {
+    color: var(--warn);
+}
+
+.state-pending,
+.state-not_applicable,
+.state-execution_complete {
+    color: var(--idle);
+}
+
+.state-not_applicable::before {
+    background: none;
+}
+
+/* ------------------------------------------------------------ form bits */
+
+fieldset {
+    border: 1px solid var(--border);
+    padding: 10px 12px 12px;
+    margin: 0 0 14px;
+}
+
+legend {
+    padding: 0 6px;
+    font-size: 10.5px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--muted);
+}
+
+.field-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+    gap: 8px 16px;
+}
+
+label {
+    display: block;
+    font-size: 11.5px;
+    color: var(--muted);
+    margin-bottom: 2px;
+}
+
+input[type="text"],
+input[type="number"],
+select {
+    width: 100%;
+    padding: 3px 6px;
+    border: 1px solid var(--border-strong);
+    background: var(--bg);
+    color: var(--text);
+    font: inherit;
+    font-family: var(--mono);
+    font-size: 12px;
+}
+
+input:focus,
+select:focus,
+button:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: -1px;
+}
+
+label.inline {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    margin: 0;
+    color: var(--text);
+    font-size: 12px;
+}
+
+.actions {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    margin-top: 10px;
+    flex-wrap: wrap;
+}
+
+button.action {
+    padding: 4px 12px;
+    border: 1px solid var(--border-strong);
+    background: var(--panel);
+    color: var(--text);
+    font: inherit;
+    cursor: pointer;
+}
+
+button.action:hover {
+    background: var(--accent-bg);
+    border-color: var(--accent);
+}
+
+button.action.primary {
+    border-color: var(--accent);
+    background: var(--accent);
+    color: #fff;
+}
+
+@media (prefers-color-scheme: dark) {
+    button.action.primary {
+        color: #14181c;
+    }
+}
+
+button.action:disabled {
+    opacity: 0.5;
+    cursor: default;
+}
+
+button.link {
+    border: 0;
+    background: none;
+    padding: 0;
+    font: inherit;
+    color: var(--accent);
+    cursor: pointer;
+    text-decoration: underline;
+    text-underline-offset: 2px;
+}
+
+/* ------------------------------------------------------------- key/value */
+
+dl.kv {
+    display: grid;
+    grid-template-columns: max-content 1fr;
+    gap: 1px 16px;
+    margin: 4px 0 12px;
+}
+
+dl.kv dt {
+    color: var(--muted);
+    font-size: 12px;
+}
+
+dl.kv dd {
+    margin: 0;
+    font-family: var(--mono);
+    font-size: 12px;
+    word-break: break-all;
+}
+
+.origin {
+    color: var(--accent);
+    font-size: 11px;
+    margin-left: 6px;
+}
+
+.note {
+    color: var(--muted);
+    font-size: 11.5px;
+    margin: 4px 0;
+}
+
+.warn-block {
+    border: 1px solid var(--warn);
+    border-left-width: 3px;
+    padding: 7px 10px;
+    margin: 8px 0;
+    color: var(--text);
+    background: var(--panel);
+}
+
+.fail-block {
+    border: 1px solid var(--fail);
+    border-left-width: 3px;
+    padding: 7px 10px;
+    margin: 8px 0;
+    background: var(--panel);
+}
+
+pre {
+    margin: 4px 0 12px;
+    padding: 8px 10px;
+    border: 1px solid var(--border);
+    background: var(--panel);
+    overflow-x: auto;
+    font-family: var(--mono);
+    font-size: 11.5px;
+    line-height: 1.5;
+}
+
+/* --------------------------------------------------------- lifecycle bar */
+
+.lifecycle {
+    display: flex;
+    gap: 0;
+    border: 1px solid var(--border);
+    margin: 8px 0 16px;
+}
+
+.lifecycle div {
+    flex: 1;
+    padding: 6px 10px;
+    border-right: 1px solid var(--border);
+    background: var(--panel-alt);
+}
+
+.lifecycle div:last-child {
+    border-right: 0;
+}
+
+.lifecycle .name {
+    font-size: 10.5px;
+    text-transform: uppercase;
+    letter-spacing: 0.07em;
+    color: var(--faint);
+}
+
+.lifecycle .detail {
+    font-size: 11.5px;
+    color: var(--muted);
+}
+
+.layer-tag {
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--muted);
+    border: 1px solid var(--border);
+    padding: 0 4px;
+}
+
+tr.stage-row td:first-child {
+    white-space: nowrap;
+}
+
+tr.detail-row td {
+    background: var(--panel-alt);
+    color: var(--muted);
+    font-size: 11.5px;
+}
+
+.pager {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin: 8px 0;
+    color: var(--muted);
+    font-size: 12px;
+}
+
+#toast {
+    position: fixed;
+    right: 14px;
+    bottom: 14px;
+    max-width: 420px;
+    border: 1px solid var(--border-strong);
+    border-left: 3px solid var(--accent);
+    background: var(--panel);
+    padding: 8px 12px;
+    font-size: 12px;
+}
+
+#toast[hidden] {
+    display: none;
+}
+
+@media (max-width: 860px) {
+    #shell {
+        grid-template-columns: 1fr;
+        grid-template-areas:
+            "head"
+            "nav"
+            "main";
+        height: auto;
+    }
+
+    nav {
+        border-right: 0;
+        border-bottom: 1px solid var(--border);
+        display: flex;
+        flex-wrap: wrap;
+        padding: 4px;
+    }
+
+    nav .group {
+        display: none;
+    }
+
+    nav button {
+        width: auto;
+        border-left: 0;
+        border-bottom: 2px solid transparent;
+    }
+
+    nav button[aria-current="true"] {
+        border-left: 0;
+        border-bottom-color: var(--accent);
+    }
+}
+
+
+/* ---------------------------------------------------------------- theme */
+
+#theme-toggle {
+    font: inherit;
+    font-size: 11px;
+    color: var(--muted);
+    background: var(--bg);
+    border: 1px solid var(--border);
+    padding: 3px 9px;
+    cursor: pointer;
+    letter-spacing: 0.02em;
+}
+
+#theme-toggle:hover {
+    border-color: var(--border-strong);
+    color: var(--text);
+}
+
+#theme-toggle:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 1px;
+}
+
+/* ------------------------------------------------- canonical stage labels */
+
+.canonical {
+    font-family: var(--mono);
+    font-size: 11.5px;
+    white-space: nowrap;
+    color: var(--muted);
+}
+
+.canonical-label {
+    color: var(--text);
+    font-weight: 600;
+}
+
+.canonical-sub {
+    color: var(--faint);
+    font-size: 10.5px;
+}
+
+tr.stage-row {
+    cursor: pointer;
+}
+
+tr.stage-row:hover > td {
+    background: var(--panel-alt);
+}
+
+tr.stage-row[aria-expanded="true"] > td {
+    background: var(--accent-bg);
+}
+
+tr.stage-row.role-prerequisite .canonical-label {
+    font-weight: 500;
+    color: var(--muted);
+}
+
+tr.stage-row.role-investigation .canonical-label,
+tr.stage-row.role-validation .canonical-label {
+    color: var(--muted);
+}
+
+.stage-detail {
+    background: var(--panel-alt);
+    border-top: 1px solid var(--border);
+}
+
+.stage-detail > td {
+    padding: 12px 14px 16px;
+}
+
+.detail-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 14px 24px;
+    align-items: start;
+}
+
+.detail-block h4 {
+    margin: 0 0 6px;
+    font-size: 10.5px;
+    text-transform: uppercase;
+    letter-spacing: 0.07em;
+    color: var(--faint);
+    font-weight: 600;
+}
+
+.detail-block dl {
+    margin: 0;
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 2px 12px;
+    font-size: 12px;
+}
+
+.detail-block dt {
+    color: var(--muted);
+    white-space: nowrap;
+}
+
+.detail-block dd {
+    margin: 0;
+    font-family: var(--mono);
+    font-size: 11.5px;
+    word-break: break-all;
+}
+
+.detail-block dd.unrecorded {
+    font-family: inherit;
+    color: var(--faint);
+    font-style: italic;
+}
+
+.artefact-list {
+    margin-top: 12px;
+}
+
+.artefact-preview {
+    margin-top: 8px;
+    border: 1px solid var(--border);
+    background: var(--bg);
+    max-height: 380px;
+    overflow: auto;
+}
+
+.artefact-preview pre {
+    margin: 0;
+    padding: 10px;
+    font-size: 11px;
+    white-space: pre-wrap;
+    word-break: break-word;
+}
+
+.preview-note {
+    font-size: 11px;
+    color: var(--warn);
+    padding: 6px 10px;
+    border-bottom: 1px solid var(--border);
+}

@@ -7,51 +7,31 @@
 #SBATCH --output=logs/stage14_release_%j.out
 #SBATCH --error=logs/stage14_release_%j.err
 
+# Gold release: the deduplicated retained-chain publication.
+#
+# Every path and every scientific argument is derived from the resolved run
+# configuration, so this wrapper cannot drift from the CLI or the UI.
+#
+#   sbatch task_scripts/run_stage14_final_release.sbatch
+#   PDBCLEAN_PROFILE=<profile.yaml> sbatch task_scripts/...
+#
+# Submit from the repository root, or export PDBCLEAN_REPO_ROOT.
+
 set -euo pipefail
 
-cd "$HOME/fastscratch/COMP702_pdbclean_pipeline"
+source "${PDBCLEAN_REPO_ROOT:-${SLURM_SUBMIT_DIR:-$PWD}}/task_scripts/stage14_common.sh"
 
-PYTHON_ENV="${COMP702_PYTHON:-$HOME/fastscratch/envs/bri_env_1.2.2/bin/python}"
+pdbclean_banner "STAGE-14 FINAL RELEASE"
 
-if [[ ! -x "$PYTHON_ENV" ]]; then
-    echo "ERROR: Python not executable: $PYTHON_ENV"
+RELEASE="$(pdbclean_stage_argument gold_release --output-dir)"
+
+if [[ -e "$RELEASE" ]]; then
+    echo "ERROR: release already exists: $RELEASE" >&2
+    echo "A published release is immutable; refusing to overwrite it." >&2
     exit 1
 fi
 
-mapfile -t ROOTS < <(
-    find outputs/pdbclean \
-      -mindepth 2 \
-      -maxdepth 2 \
-      -type d \
-      -name 'protocol3.2-comp702-v1' \
-      -print
-)
-
-if [[ ${#ROOTS[@]} -ne 1 ]]; then
-    echo "ERROR: expected exactly one protocol root; found ${#ROOTS[@]}"
-    printf '%s\n' "${ROOTS[@]}"
-    exit 1
-fi
-
-ROOT="${ROOTS[0]}"
-
-SNAPSHOT="$(basename "$(dirname "$ROOT")")"
-PROTOCOL="$(basename "$ROOT")"
-
-RELEASE="outputs/releases/PDBClean-${SNAPSHOT}-${PROTOCOL}-dedup-v1"
-
-echo "===== FINAL RELEASE JOB ====="
-echo "Host: $(hostname)"
-echo "Started: $(date --iso-8601=seconds)"
-echo "Git HEAD: $(git rev-parse HEAD)"
-echo "Protocol root: $ROOT"
-echo "Release: $RELEASE"
-echo
-
-"$PYTHON_ENV" scripts/build_stage14_final_release.py \
-  --protocol-root "$ROOT" \
-  --policy-config config/pdbclean/stage14_representative_policy_v1.yaml \
-  --output-dir "$RELEASE"
+pdbclean_run_stage gold_release
 
 echo
 echo "Finished: $(date --iso-8601=seconds)"

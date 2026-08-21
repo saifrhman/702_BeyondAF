@@ -9,6 +9,12 @@ import numpy as np
 from scipy.spatial import cKDTree
 
 
+#: Validated default Brain filtering threshold.  This is the value that
+#: produced the frozen COMP702 20260101 release.  It remains the default for
+#: every call site; a caller may pass ``tau_mA`` to use a configured value
+#: instead, which is how ``brain_prefilter_production`` supplies the resolved
+#: run configuration.  With no argument the behaviour is byte-identical to the
+#: frozen pipeline.
 BRAIN_PREFILTER_TAU_ANGSTROM = 0.010
 BRAIN_PREFILTER_TAU_MA = 10
 BRAIN_DIMENSION = 9
@@ -16,6 +22,23 @@ BRAIN_DIMENSION = 9
 
 class BrainPrefilterError(ValueError):
     """Raised when Stage-7 Brain candidate search is invalid."""
+
+
+def _validated_tau_mA(tau_mA: int | None) -> int:
+    """Return the exact integer-milliangstrom Brain threshold to apply."""
+
+    if tau_mA is None:
+        return BRAIN_PREFILTER_TAU_MA
+
+    if isinstance(tau_mA, bool) or not isinstance(tau_mA, int):
+        raise BrainPrefilterError(
+            "tau_mA must be an integer number of milliangstroms"
+        )
+
+    if tau_mA < 0:
+        raise BrainPrefilterError("tau_mA must be non-negative")
+
+    return tau_mA
 
 
 @dataclass(frozen=True)
@@ -109,8 +132,15 @@ def brain_candidate_pairs(
     brains: np.ndarray,
     *,
     m: int,
+    tau_mA: int | None = None,
 ) -> BrainCandidatePairs:
-    """Return all and only same-m pairs satisfying d_Brain <= 0.010 A."""
+    """Return all and only same-m pairs satisfying d_Brain <= tau.
+
+    ``tau_mA`` defaults to :data:`BRAIN_PREFILTER_TAU_MA` (10 mA = 0.010 A),
+    the validated COMP702 threshold.  The comparison is inclusive.
+    """
+
+    tau = _validated_tau_mA(tau_mA)
 
     numerators = brain_integer_numerators(
         brains,
@@ -129,10 +159,10 @@ def brain_candidate_pairs(
         )
 
     # In one exact-m bucket the denominator is common.
-    # Thus the scientific threshold tau=0.010 A is exactly
-    # 10*(m-1) milliangstrom-sum units.
+    # Thus the scientific threshold tau (default 0.010 A) is exactly
+    # tau_mA*(m-1) milliangstrom-sum units.
     exact_radius = (
-        BRAIN_PREFILTER_TAU_MA
+        tau
         * (m - 1)
     )
 
@@ -189,8 +219,11 @@ def brute_force_brain_candidate_pairs(
     brains: np.ndarray,
     *,
     m: int,
+    tau_mA: int | None = None,
 ) -> BrainCandidatePairs:
     """Independent O(n^2) correctness oracle for small buckets."""
+
+    tau = _validated_tau_mA(tau_mA)
 
     numerators = brain_integer_numerators(
         brains,
@@ -198,7 +231,7 @@ def brute_force_brain_candidate_pairs(
     )
 
     radius = (
-        BRAIN_PREFILTER_TAU_MA
+        tau
         * (m - 1)
     )
 

@@ -1,0 +1,50 @@
+# COMP702 frozen production profile: PDB snapshot 2026-01-01.
+#
+# Selecting this profile reproduces the scientific configuration that produced
+#
+#     PDBClean-20260101-protocol3.2-comp702-v1-dedup-v1
+#
+# Every scientific value not restated here comes from the built-in validated
+# defaults in `pdbclean.defaults`, which already encode the frozen pipeline.
+# This profile therefore contains only:
+#
+#   1. the explicit snapshot pin, and
+#   2. the dataset-version expectation gates that the frozen run enforced.
+#
+# The frozen release itself is immutable historical evidence.  Running this
+# profile produces a NEW run directory with its own provenance; it never
+# rewrites `outputs/releases/PDBClean-20260101-...`.
+#
+# Exact-SHA reproduction note
+# ---------------------------
+# The frozen stages were driven by `config/pdbclean/protocol_3_2_comp702_v1.yaml`
+# (sha256 50bc5f98b26b3da7a2d57054c92235fde10afab7093201c89aeab2a194839bb5),
+# which is recorded inside frozen provenance and is byte-immutable.  To drive a
+# stage with that exact file rather than a projected configuration, pass
+# `--protocol-config config/pdbclean/protocol_3_2_comp702_v1.yaml`.
+
+snapshot:
+  mode: fixed
+  snapshot_id: "20260101"
+
+# Dataset-version acceptance gates.
+#
+# These are not scientific parameters: they are the known-correct counts for
+# this specific snapshot, asserted so that a re-run which silently drifts is
+# caught instead of published.  Sources are the frozen artefacts:
+#
+#   canonical_input_chain_count        geometric_validation/global_summary.json
+#   mge2_node_count, edge_count,
+#   m1_edge_count                      provenance/stage14_graph_summary.json
+#   retained/removed_chain_count       release_manifest.json
+#   pair counts                        duplicate_classification/global_summary.json
+expectations:
+  canonical_input_chain_count: 578524
+  mge2_node_count: 577760
+  edge_count: 1068256
+  m1_edge_count: 4495
+  retained_chain_count: 499770
+  removed_chain_count: 78754
+  total_near_duplicate_pair_count: 1072751
+  exact_duplicate_pair_count: 17373
+  nonzero_near_duplicate_pair_count: 1055378

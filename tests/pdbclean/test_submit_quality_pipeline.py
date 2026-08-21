@@ -6,6 +6,7 @@ import os
 import shlex
 import shutil
 import subprocess
+import sys
 from pathlib import Path
 
 import pyarrow as pa
@@ -223,6 +224,11 @@ def test_submission_derives_array_and_afterok_dependency(
     )
     env["FAKE_SBATCH_LOG"] = str(log_path)
     env["FAKE_SBATCH_COUNTER"] = str(counter_path)
+    # The submission wrapper resolves its interpreter from PDBCLEAN_PYTHON so
+    # it does not depend on whatever `python` happens to be on PATH.  Pin it to
+    # the interpreter running the tests, which is the one that can import
+    # pdbclean.
+    env["PDBCLEAN_PYTHON"] = sys.executable
 
     result = subprocess.run(
         [

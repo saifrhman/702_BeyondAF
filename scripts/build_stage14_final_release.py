@@ -10,6 +10,11 @@ import pyarrow as pa
 import pyarrow.parquet as pq
 
 
+# Validated COMP702 default.  Supplying --threshold-mA uses a configured value
+# instead; omitting it reproduces the frozen run exactly.
+DEFAULT_NEAR_DUPLICATE_THRESHOLD_MA = 10
+
+
 def sha256(path):
     h = hashlib.sha256()
     with path.open("rb") as f:
@@ -52,7 +57,65 @@ def parse_args():
     p.add_argument("--policy-config", type=Path, required=True)
     p.add_argument("--output-dir", type=Path, required=True)
 
-    return p.parse_args()
+    p.add_argument(
+        "--threshold-mA",
+        type=int,
+        default=DEFAULT_NEAR_DUPLICATE_THRESHOLD_MA,
+        help=(
+            "Inclusive complete-BRI near-duplicate threshold in exact integer "
+            "milliangstroms. Defaults to the validated COMP702 value "
+            f"({DEFAULT_NEAR_DUPLICATE_THRESHOLD_MA} mA = 0.010 A)."
+        ),
+    )
+
+    p.add_argument(
+        "--expected-retained-chains",
+        type=int,
+        default=None,
+        help=(
+            "Dataset-version acceptance gate for the retained-chain count."
+        ),
+    )
+
+    p.add_argument(
+        "--expected-removed-chains",
+        type=int,
+        default=None,
+        help=(
+            "Dataset-version acceptance gate for the removed-chain count."
+        ),
+    )
+
+    p.add_argument(
+        "--no-expectation-gate",
+        action="store_true",
+        help=(
+            "Publish without dataset-version count gates. Must be passed "
+            "explicitly: a release is never published with the gates silently "
+            "absent."
+        ),
+    )
+
+    args = p.parse_args()
+
+    gates_supplied = (
+        args.expected_retained_chains is not None
+        and args.expected_removed_chains is not None
+    )
+
+    if not gates_supplied and not args.no_expectation_gate:
+        p.error(
+            "Supply --expected-retained-chains and --expected-removed-chains, "
+            "or pass --no-expectation-gate to publish without them."
+        )
+
+    if gates_supplied and args.no_expectation_gate:
+        p.error(
+            "--no-expectation-gate cannot be combined with explicit "
+            "expected counts."
+        )
+
+    return args
 
 
 def main():
@@ -187,9 +250,6 @@ def main():
         rep_success = json.load(f)
 
     assert rep_success["status"] == "PASS"
-    assert rep_success["input_chains"] == 578_524
-    assert rep_success["retained_chains"] == 499_770
-    assert rep_success["removed_chains"] == 78_754
     assert rep_success["direct_edge_safety"] is True
     assert rep_success["m1_deduplication_performed"] is False
 
@@ -199,9 +259,57 @@ def main():
     ) as f:
         rep_summary = json.load(f)
 
-    assert rep_summary["canonical_input_chain_count"] == 578_524
-    assert rep_summary["final_retained_chain_count"] == 499_770
-    assert rep_summary["final_removed_chain_count"] == 78_754
+    # The Stage-14 success marker and the Stage-14 summary are independent
+    # artefacts and must agree with each other before either is trusted.
+    assert (
+        rep_success["input_chains"]
+        == rep_summary["canonical_input_chain_count"]
+    )
+    assert (
+        rep_success["retained_chains"]
+        == rep_summary["final_retained_chain_count"]
+    )
+    assert (
+        rep_success["removed_chains"]
+        == rep_summary["final_removed_chain_count"]
+    )
+
+    canonical_input_chain_count = int(
+        rep_summary["canonical_input_chain_count"]
+    )
+    expected_retained_chains = int(
+        rep_summary["final_retained_chain_count"]
+    )
+    expected_removed_chains = int(
+        rep_summary["final_removed_chain_count"]
+    )
+    expected_m1_retained = int(
+        rep_summary["retained_m1_total"]
+    )
+    expected_representatives = int(
+        rep_summary["edge_component_representatives"]
+    )
+
+    # Dataset-version acceptance gates, supplied by the run configuration.
+    if args.expected_retained_chains is not None:
+        assert (
+            expected_retained_chains
+            == args.expected_retained_chains
+        ), (
+            "Upstream retained-chain count "
+            f"{expected_retained_chains} does not match the expected "
+            f"{args.expected_retained_chains}"
+        )
+
+    if args.expected_removed_chains is not None:
+        assert (
+            expected_removed_chains
+            == args.expected_removed_chains
+        ), (
+            "Upstream removed-chain count "
+            f"{expected_removed_chains} does not match the expected "
+            f"{args.expected_removed_chains}"
+        )
 
     assert (
         rep_summary[
@@ -254,8 +362,8 @@ def main():
         if r["action"] == "retain_representative"
     }
 
-    assert len(removed_by_key) == 78_754
-    assert len(representative_keys) == 21_100
+    assert len(removed_by_key) == expected_removed_chains
+    assert len(representative_keys) == expected_representatives
 
     assert not (
         set(removed_by_key)
@@ -267,7 +375,7 @@ def main():
         rep = representative_key(row)
 
         assert rep in representative_keys
-        assert 0 <= int(row["direct_d_bri_mA"]) <= 10
+        assert 0 <= int(row["direct_d_bri_mA"]) <= args.threshold_mA
 
     # ========================================================
     # Create release layout.
@@ -304,7 +412,10 @@ def main():
 
     source_pf = pq.ParquetFile(canonical)
 
-    assert source_pf.metadata.num_rows == 578_524
+    assert (
+        source_pf.metadata.num_rows
+        == canonical_input_chain_count
+    )
 
     source_schema = source_pf.schema_arrow
 
@@ -624,10 +735,10 @@ def main():
     # Population and membership audit.
     # ========================================================
 
-    assert source_seen == 578_524
-    assert retained_count == 499_770
-    assert removed_count == 78_754
-    assert m1_count == 764
+    assert source_seen == canonical_input_chain_count
+    assert retained_count == expected_retained_chains
+    assert removed_count == expected_removed_chains
+    assert m1_count == expected_m1_retained
 
     assert (
         retained_count + removed_count
@@ -642,19 +753,35 @@ def main():
         representative_keys
     )
 
-    assert (
+    retained_row_count = (
         pq.ParquetFile(
             retained_output
         ).metadata.num_rows
-        == 499_770
     )
 
-    assert (
+    removed_row_count = (
         pq.ParquetFile(
             removed_output
         ).metadata.num_rows
-        == 78_754
     )
+
+    if args.expected_retained_chains is not None:
+        assert (
+            retained_row_count
+            == args.expected_retained_chains
+        ), (
+            f"Retained chain count {retained_row_count} does not match the "
+            f"expected {args.expected_retained_chains}"
+        )
+
+    if args.expected_removed_chains is not None:
+        assert (
+            removed_row_count
+            == args.expected_removed_chains
+        ), (
+            f"Removed chain count {removed_row_count} does not match the "
+            f"expected {args.expected_removed_chains}"
+        )
 
     # ========================================================
     # Copy immutable audit/provenance artifacts.
@@ -762,22 +889,22 @@ def main():
             sha256(canonical),
 
         "canonical_input_chain_count":
-            578_524,
+            canonical_input_chain_count,
 
         "removed_chain_count":
-            78_754,
+            removed_count,
 
         "retained_chain_count":
-            499_770,
+            retained_count,
 
         "m1_input_chain_count":
-            764,
+            m1_count,
 
         "m1_removed_chain_count":
             0,
 
         "m1_retained_chain_count":
-            764,
+            m1_count,
 
         "near_duplicate_relation":
             "complete_BRI_L_infinity",
@@ -786,7 +913,10 @@ def main():
             "exact_integer_milliangstrom",
 
         "near_duplicate_threshold":
-            "d_bri_mA <= 10",
+            f"d_bri_mA <= {args.threshold_mA}",
+
+        "near_duplicate_threshold_mA":
+            args.threshold_mA,
 
         "representative_policy":
             "comp702_stage14_representative_selection",
@@ -863,16 +993,16 @@ def main():
             args.output_dir.name,
 
         "canonical_input_chains":
-            578_524,
+            canonical_input_chain_count,
 
         "retained_chains":
-            499_770,
+            retained_count,
 
         "removed_chains":
-            78_754,
+            removed_count,
 
         "m1_retained":
-            764,
+            m1_count,
 
         "direct_edge_safety":
             True,
@@ -912,19 +1042,19 @@ def main():
     print()
     print(
         "Canonical input chains :",
-        f"{578_524:,}",
+        f"{canonical_input_chain_count:,}",
     )
     print(
         "Removed chains         :",
-        f"{78_754:,}",
+        f"{removed_count:,}",
     )
     print(
         "Retained chains        :",
-        f"{499_770:,}",
+        f"{retained_count:,}",
     )
     print(
         "m=1 retained           :",
-        f"{764:,}",
+        f"{m1_count:,}",
     )
     print()
     print(

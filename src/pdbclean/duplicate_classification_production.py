@@ -11,6 +11,10 @@ import pyarrow as pa
 import pyarrow.parquet as pq
 
 from pdbclean.config import load_config
+from pdbclean.defaults import (
+    near_duplicate_threshold_milliangstrom,
+    require_implemented_precision,
+)
 from pdbclean.duplicate_classification import (
     PAPER_NEAR_DUPLICATE_THRESHOLD_MA,
 )
@@ -132,12 +136,34 @@ def _write_json_atomic(
     return path
 
 
+def _classified_schema(
+    schema: pa.Schema,
+    threshold_mA: int,
+) -> pa.Schema:
+    """Restamp a Stage-10 schema with the configured threshold.
+
+    The declared threshold must describe the threshold the data was actually
+    classified with.  At the validated default (10 mA) this reproduces the
+    frozen Stage-10 metadata byte for byte.
+    """
+
+    metadata = {
+        key.decode("utf-8"): value.decode("utf-8")
+        for key, value in (schema.metadata or {}).items()
+    }
+
+    metadata["paper_near_duplicate_threshold_mA"] = str(threshold_mA)
+
+    return schema.with_metadata(metadata)
+
+
 def _classify_file(
     source: Path,
     destination: Path,
     *,
     input_schema: pa.Schema,
     output_schema: pa.Schema,
+    threshold_mA: int = PAPER_NEAR_DUPLICATE_THRESHOLD_MA,
 ) -> dict[str, int]:
     """Classify every Stage-8 row without filtering."""
 
@@ -198,7 +224,7 @@ def _classify_file(
             zero = d == 0
             paper_near = (
                 d
-                <= PAPER_NEAR_DUPLICATE_THRESHOLD_MA
+                <= threshold_mA
             )
             nonzero_near = (
                 (d > 0)
@@ -351,6 +377,15 @@ def main() -> int:
         config["release"]["protocol_version"]
     )
 
+    # The near-duplicate threshold comes from the resolved configuration, which
+    # the frozen protocol configuration already carries as
+    # duplicate_search.near_duplicate_threshold_angstrom = 0.010.
+    # Classification compares exact integer milliangstrom distances, which is
+    # only valid on the implemented precision grid.
+    require_implemented_precision(config, stage="stage10_duplicate_classification")
+
+    threshold_mA = near_duplicate_threshold_milliangstrom(config)
+
     storage_root = Path(
         config["storage"]["output_root"]
     )
@@ -464,9 +499,11 @@ def main() -> int:
         input_schema=(
             CANDIDATE_COMPARISON_SCHEMA
         ),
-        output_schema=(
-            CANDIDATE_CLASSIFIED_SCHEMA
+        output_schema=_classified_schema(
+            CANDIDATE_CLASSIFIED_SCHEMA,
+            threshold_mA,
         ),
+        threshold_mA=threshold_mA,
     )
 
     m1_counts = _classify_file(
@@ -474,7 +511,11 @@ def main() -> int:
         finalized
         / "m1_classifications.parquet",
         input_schema=M1_COMPARISON_SCHEMA,
-        output_schema=M1_CLASSIFIED_SCHEMA,
+        output_schema=_classified_schema(
+            M1_CLASSIFIED_SCHEMA,
+            threshold_mA,
+        ),
+        threshold_mA=threshold_mA,
     )
 
     total = {
@@ -520,11 +561,14 @@ def main() -> int:
             "exact_full_bri_integer_milliangstrom"
         ),
         "paper_near_duplicate_threshold_mA": (
-            PAPER_NEAR_DUPLICATE_THRESHOLD_MA
+            threshold_mA
         ),
         "paper_near_duplicate_threshold_angstrom": (
-            PAPER_NEAR_DUPLICATE_THRESHOLD_MA
+            threshold_mA
             / 1000.0
+        ),
+        "paper_near_duplicate_threshold_operator": (
+            "less_than_or_equal"
         ),
         "input_pair_count": total["input"],
         "zero_duplicate_pair_count": (
