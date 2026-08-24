@@ -519,3 +519,71 @@ def test_viewing_does_not_modify_run_provenance(ui, tmp_path):
 
     assert hashlib.sha256(record.read_bytes()).hexdigest() == before_record
     assert hashlib.sha256(events.read_bytes()).hexdigest() == before_events
+
+
+def test_a_runs_own_output_root_is_readable(tmp_path, monkeypatch):
+    """A run may write outside the default output root; its artefacts are still
+    legitimate pipeline outputs the viewer exists to show.
+
+    The regression: the allowlist was built from the *default* configuration
+    only, so a threshold study writing to its own output root had every one of
+    its artefacts rejected with "outside the directories this viewer may read".
+    """
+
+    from pdbclean.run_provenance import RunProvenance
+    from pdbclean.runconfig import resolve_run_config
+    from pdbclean.ui import server as ui_server
+
+    repo_root = Path(__file__).resolve().parents[2]
+
+    study_root = tmp_path / "outputs" / "pdbclean_study"
+    study_root.mkdir(parents=True)
+
+    resolved = resolve_run_config(
+        overrides=[
+            "snapshot.mode=fixed",
+            "snapshot.snapshot_id=20260101",
+            f"storage.output_root={study_root}",
+            f"storage.run_root={tmp_path / 'runs'}",
+        ]
+    )
+
+    RunProvenance.create(
+        resolved=resolved,
+        run_root=tmp_path / "runs",
+        repo_root=repo_root,
+        snapshot={"snapshot_id": "20260101", "display": "2026-01-01"},
+    )
+
+    state = ui_server.UIState(
+        repo_root=repo_root, config_path=None, overrides=[]
+    )
+    monkeypatch.setattr(state, "run_root", lambda: tmp_path / "runs")
+
+    configs = state.recorded_run_configs()
+
+    assert configs, "the recorded run was not picked up"
+    assert any(
+        str(study_root) == str(c.get("storage.output_root")) for c in configs
+    )
+
+
+def test_source_code_is_still_not_readable(tmp_path):
+    """The viewer shows provenance, not source. Widening it to the repository
+    root would turn it back into a filesystem browser."""
+
+    from pdbclean.ui import server as ui_server
+
+    repo_root = Path(__file__).resolve().parents[2]
+
+    state = ui_server.UIState(
+        repo_root=repo_root, config_path=None, overrides=[]
+    )
+
+    roots = [
+        Path(c.get("storage.output_root") or "")
+        for c in state.recorded_run_configs()
+    ]
+
+    assert repo_root not in roots
+    assert not any(root == repo_root for root in roots)

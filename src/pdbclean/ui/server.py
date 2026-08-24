@@ -130,6 +130,8 @@ class UIState:
         #: the same moment cannot both pass the idempotency check.
         self._submit_lock = threading.Lock()
         self._auto_advance: dict[str, dict[str, Any]] = {}
+        #: (run-root mtime, frozen configs) -- see recorded_run_configs.
+        self._run_configs: tuple[int, list[ResolvedRunConfig]] | None = None
 
     # -- execution ------------------------------------------------------
 
@@ -179,6 +181,39 @@ class UIState:
             overrides=overrides,
             snapshot=snapshot,
         )
+
+    def recorded_run_configs(self) -> list[ResolvedRunConfig]:
+        """The frozen configuration of every recorded run.
+
+        Cached on the run directory's modification time, so a new run is picked
+        up without re-reading every run.json on each artefact request.
+        """
+
+        root = self.run_root()
+
+        try:
+            stamp = root.stat().st_mtime_ns
+        except OSError:
+            return []
+
+        with self._lock:
+            cached = self._run_configs
+
+            if cached is not None and cached[0] == stamp:
+                return cached[1]
+
+        configs: list[ResolvedRunConfig] = []
+
+        for entry in sorted(root.glob("run-*")):
+            try:
+                configs.append(FrozenRun.load(entry).resolved)
+            except Exception:  # noqa: BLE001 - a bad run must not break the UI
+                continue
+
+        with self._lock:
+            self._run_configs = (stamp, configs)
+
+        return configs
 
     def submitter(self) -> "submission_module.Submitter":
         return submission_module.Submitter(
@@ -945,29 +980,42 @@ class Handler(BaseHTTPRequestHandler):
         reachable.
         """
 
-        resolved = self.state.resolve()
         repo = self.state.repo_root.resolve()
 
-        roots: list[Path] = []
-
-        for dotted in (
+        STORAGE_KEYS = (
             "storage.output_root",
             "storage.release_root",
             "storage.run_root",
             "storage.durable_snapshot_root",
             "storage.hot_cache_root",
-        ):
-            value = resolved.get(dotted)
+        )
 
-            if not value:
-                continue
+        roots: list[Path] = []
 
-            candidate = Path(value)
+        def _collect(resolved) -> None:
+            for dotted in STORAGE_KEYS:
+                value = resolved.get(dotted)
 
-            if not candidate.is_absolute():
-                candidate = repo / candidate
+                if not value:
+                    continue
 
-            roots.append(candidate)
+                candidate = Path(value)
+
+                if not candidate.is_absolute():
+                    candidate = repo / candidate
+
+                roots.append(candidate)
+
+        _collect(self.state.resolve())
+
+        # Every recorded run's own storage roots, too. A run may write outside
+        # the default output root -- a threshold study does exactly that -- and
+        # its artefacts are still legitimate pipeline outputs that the viewer
+        # exists to show. Taking the roots from frozen run configurations keeps
+        # this an allowlist of directories some real run declared, rather than
+        # a filesystem browser.
+        for resolved in self.state.recorded_run_configs():
+            _collect(resolved)
 
         # Prepared Mol* assets and generated scenes.
         roots.append(repo / "reports" / "molstar_exact_duplicate_examples")
