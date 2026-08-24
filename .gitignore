@@ -56,9 +56,13 @@ src/*.egg-info/
 reports/*.before_*.csv
 reports/acta_2026_nonzero_batch_evidence/mmcif_cache/
 
-# Work in progress, deliberately untracked. Listed here so the production
+# Scratch that is not part of the pipeline. Listed here so the production
 # submission gate (which requires a clean worktree, untracked files included)
-# is not blocked by scratch that is not part of the pipeline.
-scripts/openfold_training/
+# is not blocked by it.
+#
+# scripts/openfold_training/ is deliberately NOT ignored: Stage 17 is now
+# production work, and a fix that cannot be versioned cannot be reviewed,
+# bisected or reproduced.
 reports/molstar_exact_duplicate_examples/*.before_*
 outputs/pdbclean_tau0p005/
+outputs/pdbclean_brain0p10/
