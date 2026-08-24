@@ -55,3 +55,10 @@ src/*.egg-info/
 # Stage-13 temporary review checkpoints and parser caches
 reports/*.before_*.csv
 reports/acta_2026_nonzero_batch_evidence/mmcif_cache/
+
+# Work in progress, deliberately untracked. Listed here so the production
+# submission gate (which requires a clean worktree, untracked files included)
+# is not blocked by scratch that is not part of the pipeline.
+scripts/openfold_training/
+reports/molstar_exact_duplicate_examples/*.before_*
+outputs/pdbclean_tau0p005/

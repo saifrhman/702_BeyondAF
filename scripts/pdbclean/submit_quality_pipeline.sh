@@ -171,6 +171,11 @@ fi
 
 echo "Quality array submitted: $ARRAY_JOB_ID"
 
+# Machine-readable, for the orchestrator. This script creates the jobs that do
+# the real work, so the run has to be able to record their identifiers rather
+# than infer completion from this script's own exit code.
+echo "PDBCLEAN_CHILD_JOB array $ARRAY_JOB_ID"
+
 MERGE_RESULT="$(sbatch --parsable --dependency="afterok:${ARRAY_JOB_ID}" "$MERGE_SCRIPT" "$CONFIG_PATH" "$MANIFEST_PATH" "$REPOSITORY_ROOT")"
 MERGE_JOB_ID="${MERGE_RESULT%%;*}"
 
@@ -180,6 +185,7 @@ if [[ ! "$MERGE_JOB_ID" =~ ^[0-9]+$ ]]; then
 fi
 
 echo "Quality merge submitted: $MERGE_JOB_ID"
+echo "PDBCLEAN_CHILD_JOB merge $MERGE_JOB_ID"
 echo "Dependency: afterok:$ARRAY_JOB_ID"
 echo
 echo "Submission complete."

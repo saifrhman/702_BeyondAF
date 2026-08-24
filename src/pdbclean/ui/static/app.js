@@ -15,6 +15,12 @@ const state = {
     dupOffset: 0,
     dupMatched: 0,
     scenes: [],
+    /* Execution monitoring. `jobsRunId` is the run the Execution panel is
+     * showing; `autoAdvance` is the interval handle for "Run all eligible
+     * stages", which polls and submits one stage at a time. */
+    lastRunId: null,
+    jobsRunId: null,
+    autoAdvance: null,
 };
 
 /* ------------------------------------------------------------ utilities */
@@ -31,6 +37,9 @@ function el(tag, attrs, children) {
             node.className = attrs[key];
         } else if (key === "text") {
             node.textContent = attrs[key];
+        } else if (key.indexOf("on") === 0 && typeof attrs[key] === "function") {
+            /* A handler, not an attribute: setAttribute would stringify it. */
+            node.addEventListener(key.slice(2), attrs[key]);
         } else if (attrs[key] !== null && attrs[key] !== undefined) {
             node.setAttribute(key, attrs[key]);
         }
@@ -1640,6 +1649,7 @@ async function loadRuns() {
 
             row.querySelector("button").addEventListener("click", function () {
                 loadRunDetail(run.run_id);
+                loadRunJobs(run.run_id);
             });
 
             body.appendChild(row);
@@ -2179,76 +2189,458 @@ function openDuplicateExplorer(filters) {
     searchDuplicates(0);
 }
 
+/* ------------------------------------------------------- input values */
+
+/* The editable form, shown as data. Kept visually separate from the resolved
+ * table so an entered value can never be mistaken for an executed one. */
+const INPUT_FIELDS = [
+    ["cfg-profile", "Configuration profile"],
+    ["cfg-snapshot-manual", "Snapshot (typed)"],
+    ["cfg-snapshot", "Snapshot (selected)"],
+    ["cfg-model", "Model scope (selection.models.model_id)"],
+    ["cfg-q005", "Q005 minimum backbone distance (A)"],
+    ["cfg-angle", "Minimum N-CA-C angle (deg)"],
+    ["cfg-precision", "BRI representation precision p (A)"],
+    ["cfg-brain", "Brain filtering threshold (A)"],
+    ["cfg-near", "Complete-BRI near-duplicate threshold tau (A)"],
+];
+
+function renderInputValues() {
+    const body = $("input-table").tBodies[0];
+
+    body.innerHTML = "";
+
+    INPUT_FIELDS.forEach(function (entry) {
+        const node = $(entry[0]);
+
+        if (!node) {
+            return;
+        }
+
+        const value = (node.value || "").trim();
+
+        body.appendChild(
+            el("tr", {}, [
+                el("td", { text: entry[1] }),
+                el("td", {
+                    class: value ? "mono" : "note",
+                    text: value || "(not set - the resolved value is used)",
+                }),
+            ])
+        );
+    });
+}
+
 /* ------------------------------------------------------------ start run */
 
-async function startRun() {
+function frozenValueRows(values) {
+    if (!values) {
+        return [];
+    }
+
+    if (values.legacy) {
+        return [["Frozen configuration", values.note]];
+    }
+
+    return [
+        ["Snapshot", values.snapshot],
+        ["Model scope", values.model_id],
+        ["BRI representation precision (A)",
+            values.representation_precision_angstrom],
+        ["Brain filtering threshold (A)",
+            values.brain_filter_threshold_angstrom],
+        ["Complete-BRI threshold tau (A)",
+            values.complete_bri_near_duplicate_threshold_angstrom],
+        ["Q005 minimum backbone distance (A)",
+            values.minimum_backbone_distance_angstrom],
+        ["Minimum N-CA-C angle (deg)", values.minimum_triangle_angle_degrees],
+    ];
+}
+
+function renderCommands(holder, commands) {
+    if (!commands || !commands.length) {
+        holder.appendChild(
+            el("p", {
+                class: "note",
+                text:
+                    "Every stage already has validated output for this "
+                    + "configuration; nothing needs to run.",
+            })
+        );
+
+        return;
+    }
+
+    const details = el("details");
+
+    details.appendChild(
+        el("summary", { text: "Advanced - reproduce manually" })
+    );
+
+    details.appendChild(
+        el("p", {
+            class: "note",
+            text:
+                "These are the exact commands the submitted jobs execute. "
+                + "They name this run's own frozen configuration and its "
+                + "frozen commit, so running one by hand and letting the "
+                + "orchestrator submit it describe the same run.",
+        })
+    );
+
+    commands.forEach(function (entry) {
+        details.appendChild(
+            el("pre", {
+                text:
+                    "# " + entry.stage_id + "\n"
+                    + (entry.error
+                        ? "ERROR: " + entry.error
+                        : entry.command_text
+                            || (entry.argv || []).join(" \\\n    ")),
+            })
+        );
+    });
+
+    holder.appendChild(details);
+}
+
+async function startRun(submit) {
     const holder = $("run-result");
 
     holder.innerHTML = "";
+
+    const body = requestBody();
+
+    body.submit = Boolean(submit);
 
     try {
         const payload = await api("/api/run", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(requestBody()),
+            body: JSON.stringify(body),
         });
 
+        state.lastRunId = payload.run_id;
+
+        const submission = payload.submission;
+
         holder.appendChild(
-            el("div", { class: "warn-block" }, [
-                el("div", { text: "Run created: " + payload.run_id }),
-                el("div", {
-                    class: "note",
-                    text:
-                        "Provenance was written before any work. Long stages "
-                        + "are submitted from the CLI on a login node, not "
-                        + "from the browser.",
+            el(
+                "div",
+                {
+                    class:
+                        submission && submission.submitted
+                            ? "pass-block"
+                            : "warn-block",
+                },
+                [
+                    el("div", { text: "Run frozen: " + payload.run_id }),
+                    el("div", {
+                        class: "note",
+                        text:
+                            submission
+                                ? (submission.submitted
+                                    ? "Submitted stage "
+                                      + submission.stage_id
+                                      + " to Slurm."
+                                    : "Not submitted: " + submission.reason)
+                                : "Provenance written. Nothing was submitted.",
+                    }),
+                ]
+            )
+        );
+
+        holder.appendChild(el("h3", { text: "Frozen scientific configuration" }));
+
+        const frozen = el("dl", { class: "kv" });
+
+        frozenValueRows(payload.frozen_scientific_values).forEach(function (row) {
+            frozen.appendChild(el("dt", { text: row[0] }));
+            frozen.appendChild(el("dd", { class: "mono", text: String(row[1]) }));
+        });
+
+        [
+            ["Resolved config SHA256", payload.resolved_config_sha256],
+            ["Scientific SHA256", payload.scientific_config_sha256],
+            ["Git commit", payload.git_commit],
+            ["Working tree dirty", String(payload.git_working_tree_dirty)],
+            ["Run directory", payload.run_directory],
+            ["Stage configuration", payload.stage_config_path],
+            ["CLI equivalent", payload.cli_equivalent],
+        ].forEach(function (row) {
+            frozen.appendChild(el("dt", { text: row[0] }));
+            frozen.appendChild(el("dd", { class: "mono", text: String(row[1]) }));
+        });
+
+        holder.appendChild(frozen);
+
+        renderCommands(holder, payload.commands);
+
+        holder.appendChild(
+            el("div", { class: "actions" }, [
+                el("button", {
+                    class: "action",
+                    text: "Monitor this run",
+                    onclick: function () {
+                        showView("runs");
+                        loadRunJobs(payload.run_id);
+                    },
                 }),
             ])
         );
 
-        const kv = el("dl", { class: "kv" }, [
-            el("dt", { text: "Run directory" }),
-            el("dd", { text: payload.run_directory }),
-            el("dt", { text: "Resolved config SHA256" }),
-            el("dd", { text: payload.resolved_config_sha256 }),
-            el("dt", { text: "CLI equivalent" }),
-            el("dd", { text: payload.cli_equivalent }),
-        ]);
-
-        holder.appendChild(kv);
-
-        if (payload.commands.length) {
-            holder.appendChild(el("h3", { text: "Outstanding stage commands" }));
-
-            payload.commands.forEach(function (entry) {
-                holder.appendChild(
-                    el("pre", {
-                        text:
-                            "# " + entry.stage_id + "\n"
-                            + (entry.error
-                                ? "ERROR: " + entry.error
-                                : entry.argv.join(" \\\n    ")),
-                    })
-                );
-            });
-        } else {
-            holder.appendChild(
-                el("p", {
-                    class: "note",
-                    text:
-                        "Every stage already has validated output for this "
-                        + "configuration; nothing needs to run.",
-                })
-            );
-        }
-
-        toast("Run " + payload.run_id + " created.");
+        toast("Run " + payload.run_id + " frozen.");
     } catch (error) {
         holder.appendChild(
             el("div", { class: "fail-block", text: error.message })
         );
         toast(error.message, true);
     }
+}
+
+/* ---------------------------------------------------------- run jobs */
+
+const ACTIVE_JOB_STATES = ["SUBMITTING", "QUEUED", "RUNNING", "VALIDATING"];
+
+function jobStateClass(state) {
+    if (state === "COMPLETE") {
+        return "pass";
+    }
+
+    if (state === "FAILED") {
+        return "fail";
+    }
+
+    if (ACTIVE_JOB_STATES.indexOf(state) >= 0) {
+        return "warn";
+    }
+
+    return "note";
+}
+
+async function loadRunJobs(runId) {
+    const holder = $("run-jobs");
+
+    if (!runId) {
+        holder.innerHTML = "";
+        return;
+    }
+
+    state.jobsRunId = runId;
+
+    try {
+        const payload = await api(
+            "/api/runs/" + encodeURIComponent(runId) + "/jobs"
+        );
+
+        holder.innerHTML = "";
+
+        holder.appendChild(
+            el("h4", { text: "Run " + payload.run_id })
+        );
+
+        if (payload.is_legacy) {
+            holder.appendChild(
+                el("div", {
+                    class: "warn-block",
+                    text:
+                        "This run was frozen before runs carried an executable "
+                        + "configuration. It is a readable historical record "
+                        + "and cannot be executed.",
+                })
+            );
+        }
+
+        if (!payload.slurm.available) {
+            holder.appendChild(
+                el("div", {
+                    class: "warn-block",
+                    text:
+                        "This host has no sbatch. Job states cannot be read "
+                        + "and nothing can be submitted from here.",
+                })
+            );
+        }
+
+        const kv = el("dl", { class: "kv" });
+
+        frozenValueRows(payload.frozen_scientific_values).forEach(function (row) {
+            kv.appendChild(el("dt", { text: row[0] }));
+            kv.appendChild(el("dd", { class: "mono", text: String(row[1]) }));
+        });
+
+        [
+            ["Resolved config SHA256", payload.resolved_config_sha256],
+            ["Scientific SHA256", payload.scientific_config_sha256],
+            ["Git commit", payload.git_commit],
+            ["Stage configuration", payload.stage_config_path],
+            ["Next eligible stage", payload.next_submittable_stage || "none"],
+        ].forEach(function (row) {
+            kv.appendChild(el("dt", { text: row[0] }));
+            kv.appendChild(el("dd", { class: "mono", text: String(row[1]) }));
+        });
+
+        holder.appendChild(kv);
+
+        const rows = payload.stages.map(function (stage) {
+            const jobs = (stage.slurm_jobs || [])
+                .map(function (job) {
+                    return job.job_id + " (" + job.state + ")";
+                })
+                .join(", ");
+
+            const execution = stage.execution || {};
+
+            const actions = el("td");
+
+            if (stage.may_submit || stage.may_retry) {
+                actions.appendChild(
+                    el("button", {
+                        class: "link",
+                        text: stage.may_retry ? "Retry" : "Run",
+                        onclick: function () {
+                            submitStage(
+                                payload.run_id,
+                                stage.stage_id,
+                                stage.may_retry
+                            );
+                        },
+                    })
+                );
+            }
+
+            return el("tr", {}, [
+                el("td", { text: stage.stage_id }),
+                el("td", {
+                    class: jobStateClass(stage.state),
+                    text: stage.state,
+                }),
+                el("td", { class: "mono", text: jobs || "—" }),
+                el("td", { text: stage.validation }),
+                el("td", {
+                    class:
+                        execution.value_agreement === "FAIL" ? "fail" : "note",
+                    text: execution.value_agreement || "—",
+                }),
+                el("td", { class: "note", text: stage.reason }),
+                actions,
+            ]);
+        });
+
+        holder.appendChild(
+            el("div", { class: "scroll-x" }, [
+                el("table", { class: "compact" }, [
+                    el("thead", {}, [
+                        el("tr", {}, [
+                            el("th", { text: "Stage" }),
+                            el("th", { text: "State" }),
+                            el("th", { text: "Slurm job(s)" }),
+                            el("th", { text: "Validation" }),
+                            el("th", { text: "Executed == frozen" }),
+                            el("th", { text: "Detail" }),
+                            el("th", { text: "" }),
+                        ]),
+                    ]),
+                    el("tbody", {}, rows),
+                ]),
+            ])
+        );
+
+        const mismatched = payload.stages.filter(function (stage) {
+            return (stage.execution || {}).value_agreement === "FAIL";
+        });
+
+        mismatched.forEach(function (stage) {
+            holder.appendChild(
+                el("div", { class: "fail-block" }, [
+                    el("div", {
+                        text:
+                            stage.stage_id
+                            + ": the worker loaded values that differ from the "
+                            + "frozen configuration. The stage was failed.",
+                    }),
+                    el("pre", {
+                        text: JSON.stringify(
+                            stage.execution.value_mismatches,
+                            null,
+                            2
+                        ),
+                    }),
+                ])
+            );
+        });
+
+        renderCommands(holder, payload.commands);
+    } catch (error) {
+        holder.innerHTML = "";
+        holder.appendChild(
+            el("div", { class: "fail-block", text: error.message })
+        );
+    }
+}
+
+async function submitStage(runId, stageId, retry) {
+    try {
+        const payload = await api(
+            "/api/runs/" + encodeURIComponent(runId) + "/submit",
+            {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    stage_id: stageId || null,
+                    retry: Boolean(retry),
+                }),
+            }
+        );
+
+        if (payload.submitted) {
+            toast("Submitted " + payload.stage_id + ".");
+        } else {
+            toast(payload.reason, true);
+        }
+
+        await loadRunJobs(runId);
+    } catch (error) {
+        toast(error.message, true);
+    }
+}
+
+/* "Run all eligible stages" is a poll, not a dependency chain: it submits one
+ * stage, waits for it to reach COMPLETE -- Slurm success, validation pass and
+ * matching executed values -- and only then submits the next. */
+function setAutoAdvance(runId, enabled) {
+    if (state.autoAdvance) {
+        clearInterval(state.autoAdvance);
+        state.autoAdvance = null;
+    }
+
+    if (!enabled) {
+        return;
+    }
+
+    state.autoAdvance = setInterval(async function () {
+        const holder = $("run-jobs");
+
+        if (!holder || state.jobsRunId !== runId) {
+            setAutoAdvance(runId, false);
+            return;
+        }
+
+        try {
+            const payload = await api(
+                "/api/runs/" + encodeURIComponent(runId) + "/jobs"
+            );
+
+            if (payload.next_submittable_stage) {
+                await submitStage(runId, payload.next_submittable_stage, false);
+            } else {
+                await loadRunJobs(runId);
+            }
+        } catch (error) {
+            setAutoAdvance(runId, false);
+            toast(error.message, true);
+        }
+    }, 30000);
 }
 
 /* ---------------------------------------------------------------- about */
@@ -2389,7 +2781,63 @@ async function init() {
     });
 
     $("btn-list-snapshots").addEventListener("click", listSnapshots);
-    $("btn-start-run").addEventListener("click", startRun);
+
+    $("btn-start-run").addEventListener("click", function () {
+        startRun(false);
+    });
+
+    $("btn-run-pipeline").addEventListener("click", function () {
+        startRun(true);
+    });
+
+    /* Keep the "input values" table honest: it mirrors the form as typed. */
+    INPUT_FIELDS.forEach(function (entry) {
+        const node = $(entry[0]);
+
+        if (node) {
+            node.addEventListener("input", renderInputValues);
+            node.addEventListener("change", renderInputValues);
+        }
+    });
+
+    renderInputValues();
+
+    /* Defensive: if this page is ever served by a backend older than the
+     * submission endpoints, degrade to freeze-only instead of dying here. */
+    if (!state.bootstrap.slurm || !state.bootstrap.slurm.available) {
+        $("btn-run-pipeline").disabled = true;
+        $("run-hint").textContent =
+            "This host has no sbatch, so the browser cannot submit from here. "
+            + "Freeze the run, then submit it from a Barkla login node with "
+            + "the printed command.";
+    }
+
+    $("btn-run-next").addEventListener("click", function () {
+        if (state.jobsRunId) {
+            submitStage(state.jobsRunId, null, false);
+        } else {
+            toast("Select a run first.", true);
+        }
+    });
+
+    $("btn-run-all").addEventListener("click", function () {
+        if (!state.jobsRunId) {
+            toast("Select a run first.", true);
+            return;
+        }
+
+        $("jobs-autorefresh").checked = true;
+        setAutoAdvance(state.jobsRunId, true);
+        submitStage(state.jobsRunId, null, false);
+    });
+
+    $("btn-run-refresh").addEventListener("click", function () {
+        loadRunJobs(state.jobsRunId);
+    });
+
+    $("jobs-autorefresh").addEventListener("change", function () {
+        setAutoAdvance(state.jobsRunId, this.checked);
+    });
 
     $("btn-dup-search").addEventListener("click", function () {
         searchDuplicates(0);

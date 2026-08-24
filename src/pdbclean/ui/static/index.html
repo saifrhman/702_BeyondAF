@@ -156,7 +156,30 @@
 
       <div id="config-error"></div>
 
-      <h3>Resolved configuration</h3>
+      <h3>Input values</h3>
+      <p class="note">
+        What is currently typed into the form above. These are editable and are
+        <b>not</b> what any run executes until they are resolved and frozen.
+      </p>
+      <div class="scroll-x">
+        <table id="input-table" class="compact">
+          <thead>
+            <tr>
+              <th>Field</th>
+              <th>Entered value</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+
+      <h3>Resolved values that will execute</h3>
+      <p class="note">
+        Built from validated defaults, then the selected profile, then the
+        explicit overrides above. Every value below is written into the run's
+        own <code>stage_config.yaml</code> when the run is frozen, and that
+        document is what the Slurm workers load.
+      </p>
       <div class="scroll-x">
         <table id="resolved-table" class="compact">
           <thead>
@@ -180,8 +203,15 @@
       <pre id="resolved-yaml">&mdash;</pre>
 
       <div class="actions">
-        <button class="action" id="btn-start-run">Create run and freeze provenance</button>
+        <button class="action primary" id="btn-run-pipeline">Run pipeline</button>
+        <button class="action" id="btn-start-run">Create run without submitting</button>
       </div>
+      <p class="note" id="run-hint">
+        <b>Run pipeline</b> freezes the run, writes its provenance, and submits
+        the next eligible stage to Slurm. Stages are submitted one at a time:
+        the next becomes eligible only after this one's outputs exist
+        <i>and</i> its validation gate passes.
+      </p>
       <div id="run-result"></div>
     </section>
 
@@ -355,6 +385,24 @@
         </table>
       </div>
       <div id="run-detail"></div>
+
+      <h3>Execution</h3>
+      <p class="note">
+        The frozen configuration this run executes, and the live state of its
+        Slurm jobs. A stage is <b>COMPLETE</b> only when Slurm succeeded,
+        the stage's own validation gate passed, and the values the worker
+        loaded match the frozen configuration. Exit code zero alone is not
+        enough.
+      </p>
+      <div class="actions">
+        <button class="action primary" id="btn-run-next">Run next stage</button>
+        <button class="action" id="btn-run-all">Run all eligible stages</button>
+        <button class="action" id="btn-run-refresh">Refresh</button>
+        <label class="inline">
+          <input type="checkbox" id="jobs-autorefresh"> auto-refresh
+        </label>
+      </div>
+      <div id="run-jobs"></div>
     </section>
 
     <!-- ====================================================== METHOD -->

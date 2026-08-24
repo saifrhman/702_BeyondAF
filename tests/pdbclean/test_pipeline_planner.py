@@ -595,7 +595,16 @@ def _argv(stage_id, resolved):
 
     paths = PipelinePaths.from_config(resolved, repo_root=REPO)
 
-    return stage_command(stage_id, resolved, paths)
+    # Both are explicit by design: `stage_command` has no environment fallback
+    # and no default configuration, because the old default was the frozen
+    # base YAML whose thresholds are not this configuration's.
+    return stage_command(
+        stage_id,
+        resolved,
+        paths,
+        config_path="/frozen/run/stage_config.yaml",
+        pipeline_git_commit="a" * 40,
+    )
 
 
 def test_validated_defaults_carry_no_frozen_counts():

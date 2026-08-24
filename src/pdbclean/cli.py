@@ -28,6 +28,7 @@ import json
 import os
 import shlex
 import sys
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Sequence
 
@@ -48,12 +49,18 @@ from pdbclean.pipeline import (
     plan_pipeline,
     record_plan_in_provenance,
 )
-from pdbclean.run_provenance import RunProvenance, list_runs
+from pdbclean.run_provenance import (
+    FrozenRun,
+    FrozenRunError,
+    RunProvenance,
+    list_runs,
+)
 from pdbclean.runconfig import (
     ResolvedRunConfig,
     RunConfigError,
     resolve_run_config,
 )
+from pdbclean.stage_config import cached_stage_config
 from pdbclean.snapshot_selection import (
     SnapshotSelectionError,
     format_snapshot_id,
@@ -63,7 +70,12 @@ from pdbclean.snapshot_selection import (
     resolve_snapshot_for_run,
     snapshot_provenance,
 )
-from pdbclean.stage_registry import STAGES_BY_ID, stage_catalogue
+from pdbclean.stage_registry import (
+    STAGES_BY_ID,
+    SlurmResources,
+    stage_catalogue,
+    stage_execution,
+)
 
 
 DEFAULT_PROFILE = "config/pdbclean/profiles/comp702_frozen_20260101.yaml"
@@ -82,6 +94,20 @@ def repository_root() -> Path:
         return Path(override).resolve()
 
     return Path(__file__).resolve().parents[2]
+
+
+def run_root_for(args: argparse.Namespace, repo_root: Path) -> Path:
+    """Where run directories live, without resolving a full configuration.
+
+    Locating a *recorded* run must not depend on re-resolving configuration:
+    a run that was frozen with an unusual profile is still found here.
+    """
+
+    configured = os.environ.get("PDBCLEAN_RUN_ROOT") or "outputs/runs"
+
+    root = Path(configured)
+
+    return root if root.is_absolute() else repo_root / root
 
 
 # ----------------------------------------------------------------------
@@ -299,34 +325,72 @@ def stage_command(
     resolved: ResolvedRunConfig,
     paths: PipelinePaths,
     *,
-    protocol_config: str | None = None,
+    config_path: str,
+    pipeline_git_commit: str,
     python: str | None = None,
 ) -> list[str] | None:
     """Return the argv for one stage, or None when it has no command.
 
-    Every scientific argument is derived from the resolved configuration, so
-    the CLI, the UI and the Slurm wrappers all pass identical values.
+    Pure: every input is explicit.  There is no environment fallback and no
+    default configuration path, because the previous default -- the byte-frozen
+    ``protocol_3_2_comp702_v1.yaml`` -- is precisely how a run's own resolved
+    Brain threshold, near-duplicate threshold and pinned snapshot used to be
+    replaced by that file's values without any error.
+
+    ``config_path``
+        The configuration the worker will load.  For anything that executes,
+        this is the frozen run's ``stage_config.yaml``.
+
+    ``pipeline_git_commit``
+        The 40-character commit the stage records as its producer.  For
+        anything that executes, this is the commit frozen in run provenance.
+
+    Every scientific argument is derived from ``resolved``, so the CLI, the UI
+    and the Slurm wrappers all pass identical values.
     """
 
     interpreter = python or os.environ.get("PDBCLEAN_PYTHON") or sys.executable
 
-    config_path = protocol_config or os.environ.get(
-        "PDBCLEAN_PROTOCOL_CONFIG",
-        str(paths.repo_root / "config/pdbclean/protocol_3_2_comp702_v1.yaml"),
+    execution = stage_execution(stage_id)
+
+    # The representative policy is a *scientific* input whose SHA256 is
+    # recorded in the release manifest, and the resolved configuration names
+    # it. Reading it from the configuration -- rather than from an environment
+    # variable or a hard-coded path -- is what makes a run that selects a
+    # different policy actually run that policy.
+    policy_path = resolved.get("representative_selection.policy_config") or (
+        "config/pdbclean/stage14_representative_policy_v1.yaml"
     )
 
-    policy_path = os.environ.get(
-        "PDBCLEAN_REPRESENTATIVE_POLICY",
-        str(
-            paths.repo_root
-            / "config/pdbclean/stage14_representative_policy_v1.yaml"
-        ),
-    )
+    if not Path(policy_path).is_absolute():
+        policy_path = str(paths.repo_root / policy_path)
 
     protocol_root = paths.output_root / paths.snapshot / paths.protocol
     threshold_mA = resolved.near_duplicate_threshold_mA
 
+    manifest_path = str(
+        paths.output_root / paths.snapshot / "bronze/source_manifest.parquet"
+    )
+
     expectations = resolved.get("expectations") or {}
+
+    def _finish(command: list[str]) -> list[str]:
+        """Assert the entry point's declared requirements are all present."""
+
+        missing = [
+            option
+            for option in execution.required_arguments
+            if option not in command
+        ]
+
+        if missing:
+            raise PipelineError(
+                f"Generated command for stage {stage_id!r} omits required "
+                f"argument(s): {', '.join(missing)}. The stage would abort in "
+                "argparse before doing any work."
+            )
+
+        return command
 
     if stage_id == "redundancy_graph":
         full_bri = protocol_root / "full_bri_nn" / "finalized"
@@ -379,7 +443,7 @@ def stage_command(
         if not supplied:
             command.append("--no-expectation-gate")
 
-        return command
+        return _finish(command)
 
     if stage_id == "representative_selection":
         command = [
@@ -414,7 +478,7 @@ def stage_command(
                 ["--expected-canonical-input-chains", str(canonical)]
             )
 
-        return command
+        return _finish(command)
 
     if stage_id == "gold_release":
         command = [
@@ -445,74 +509,348 @@ def stage_command(
         else:
             command.append("--no-expectation-gate")
 
-        return command
+        return _finish(command)
 
     if stage_id == "candidate_filtering":
-        return [
-            interpreter,
-            "-m",
-            "pdbclean.brain_prefilter_production",
-            "--config",
-            config_path,
-        ]
+        return _finish(
+            [
+                interpreter,
+                "-m",
+                "pdbclean.brain_prefilter_production",
+                "--config",
+                config_path,
+                "--pipeline-git-commit",
+                pipeline_git_commit,
+            ]
+        )
 
     if stage_id == "complete_bri_nn":
-        return [
-            interpreter,
-            "-m",
-            "pdbclean.full_bri_nn_production",
-            "--config",
-            config_path,
-        ]
+        return _finish(
+            [
+                interpreter,
+                "-m",
+                "pdbclean.full_bri_nn_production",
+                "--config",
+                config_path,
+                "--pipeline-git-commit",
+                pipeline_git_commit,
+            ]
+        )
 
     if stage_id == "duplicate_classification":
-        return [
-            interpreter,
-            "-m",
-            "pdbclean.duplicate_classification_production",
-            "--config",
-            config_path,
-        ]
+        return _finish(
+            [
+                interpreter,
+                "-m",
+                "pdbclean.duplicate_classification_production",
+                "--config",
+                config_path,
+                "--pipeline-git-commit",
+                pipeline_git_commit,
+            ]
+        )
 
     if stage_id == "length_buckets":
-        return [
-            interpreter,
-            "-m",
-            "pdbclean.length_buckets_cli",
-            "--config",
-            config_path,
-        ]
+        return _finish(
+            [
+                interpreter,
+                "-m",
+                "pdbclean.length_buckets_cli",
+                "--config",
+                config_path,
+                "--length-bucket-pipeline-git-commit",
+                pipeline_git_commit,
+            ]
+        )
 
     if stage_id == "brain":
-        return [
-            interpreter,
-            "-m",
-            "pdbclean.brain_finalize_cli",
-            "--config",
-            config_path,
-        ]
+        # Stage 5 distinguishes the commit that produced the per-batch Brain
+        # outputs from the commit that finalized them. A run executed at one
+        # commit supplies that commit for both; a run finalizing older batches
+        # must state the producing commit explicitly.
+        return _finish(
+            [
+                interpreter,
+                "-m",
+                "pdbclean.brain_finalize_cli",
+                "--config",
+                config_path,
+                "--brain-pipeline-git-commit",
+                pipeline_git_commit,
+                "--finalizer-pipeline-git-commit",
+                pipeline_git_commit,
+            ]
+        )
+
+    if stage_id == "downstream_metadata":
+        return _finish(
+            [
+                interpreter,
+                "-m",
+                "pdbclean.downstream_metadata_finalize",
+                "--config",
+                config_path,
+                "--producer-git-commit",
+                pipeline_git_commit,
+                "--finalizer-git-commit",
+                pipeline_git_commit,
+            ]
+        )
+
+    if stage_id == "complete_bri":
+        return _finish(
+            [
+                interpreter,
+                str(paths.repo_root / "scripts/pdbclean/finalize_bri.py"),
+                "--config",
+                config_path,
+                "--manifest",
+                manifest_path,
+            ]
+        )
+
+    if stage_id == "geometric_validation":
+        return _finish(
+            [
+                interpreter,
+                str(
+                    paths.repo_root
+                    / "scripts/pdbclean/finalize_geometric_validation.py"
+                ),
+                "--config",
+                config_path,
+                "--manifest",
+                manifest_path,
+            ]
+        )
 
     if stage_id == "structural_cleaning":
-        return [
-            "bash",
-            str(paths.repo_root / "scripts/pdbclean/submit_quality_pipeline.sh"),
-            config_path,
-            str(
-                paths.output_root
-                / paths.snapshot
-                / "bronze/source_manifest.parquet"
-            ),
-        ]
+        return _finish(
+            [
+                "bash",
+                str(
+                    paths.repo_root
+                    / "scripts/pdbclean/submit_quality_pipeline.sh"
+                ),
+                config_path,
+                manifest_path,
+            ]
+        )
 
     if stage_id == "bronze_source_manifest":
-        return [
-            interpreter,
-            str(paths.repo_root / "scripts/pdbclean/create_manifest.py"),
-            "--config",
-            config_path,
-        ]
+        return _finish(
+            [
+                interpreter,
+                str(paths.repo_root / "scripts/pdbclean/create_manifest.py"),
+                "--config",
+                config_path,
+                "--output-dir",
+                str(paths.output_root / paths.snapshot / "bronze"),
+            ]
+        )
 
     return None
+
+
+@dataclass(frozen=True)
+class StageInvocation:
+    """Everything needed to execute one stage of one frozen run.
+
+    Built only from the run's own directory.  Nothing here is re-resolved from
+    defaults, a profile or a browser form.
+    """
+
+    run_id: str
+    run_dir: Path
+    stage_id: str
+    argv: tuple[str, ...]
+    config_path: str
+    pipeline_git_commit: str
+    resolved_config_sha256: str
+    scientific_config_sha256: str
+    mode: str
+    resources: dict[str, Any]
+
+    @property
+    def command_text(self) -> str:
+        return " \\\n    ".join(shlex.quote(part) for part in self.argv)
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "run_id": self.run_id,
+            "run_directory": str(self.run_dir),
+            "stage_id": self.stage_id,
+            "argv": list(self.argv),
+            "command_text": self.command_text,
+            "config_path": self.config_path,
+            "pipeline_git_commit": self.pipeline_git_commit,
+            "resolved_config_sha256": self.resolved_config_sha256,
+            "scientific_config_sha256": self.scientific_config_sha256,
+            "mode": self.mode,
+            "resources": dict(self.resources),
+        }
+
+
+def stage_invocation(
+    stage_id: str,
+    run: "FrozenRun",
+    *,
+    repo_root: str | Path,
+    python: str | None = None,
+    verify: bool = True,
+) -> StageInvocation | None:
+    """Build the exact invocation a frozen run's stage executes.
+
+    This is the only supported way to produce something that runs.  It reads
+    the run's own frozen configuration, its frozen commit and its frozen
+    executable projection; a later edit to ``pdbclean.defaults``, to a profile
+    YAML or to a browser form cannot reach it.
+    """
+
+    if verify:
+        run.verify()
+
+    resolved = run.resolved
+    paths = PipelinePaths.from_config(resolved, repo_root=repo_root)
+
+    commit = run.git_commit
+
+    if not commit:
+        raise PipelineError(
+            f"Run {run.run_id} did not record a Git commit; a production "
+            "stage cannot state its producer and will refuse to run."
+        )
+
+    argv = stage_command(
+        stage_id,
+        resolved,
+        paths,
+        config_path=str(run.stage_config_path),
+        pipeline_git_commit=commit,
+        python=python,
+    )
+
+    if argv is None:
+        return None
+
+    execution = stage_execution(stage_id)
+
+    return StageInvocation(
+        run_id=run.run_id,
+        run_dir=run.run_dir,
+        stage_id=stage_id,
+        argv=tuple(argv),
+        config_path=str(run.stage_config_path),
+        pipeline_git_commit=commit,
+        resolved_config_sha256=run.resolved_config_sha256 or "",
+        scientific_config_sha256=run.scientific_config_sha256 or "",
+        mode=execution.mode,
+        resources=slurm_resources_for(stage_id, resolved).to_dict(),
+    )
+
+
+def preview_stage_command(
+    stage_id: str,
+    resolved: ResolvedRunConfig,
+    paths: PipelinePaths,
+    *,
+    config_path: str | None = None,
+    python: str | None = None,
+) -> list[str] | None:
+    """Build a stage's argv before a run exists.
+
+    ``pdbclean plan`` and ``pdbclean stage-command`` show what *would* run.
+    What they print has to be runnable and has to carry the operator's own
+    resolved values, so the configuration it names is a content-addressed
+    projection of exactly those values -- never the frozen base YAML, whose
+    numbers are somebody else's.
+
+    Pass ``config_path`` to name a configuration explicitly; that is the
+    documented exact-SHA reproduction route described in
+    ``config/pdbclean/profiles/comp702_frozen_20260101.yaml``.
+    """
+
+    if config_path is None:
+        config_path = str(
+            cached_stage_config(resolved, paths.run_root / ".stage_configs")
+        )
+
+    from pdbclean.run_provenance import collect_git_state
+
+    commit = collect_git_state(paths.repo_root).get("commit") or ("0" * 40)
+
+    return stage_command(
+        stage_id,
+        resolved,
+        paths,
+        config_path=config_path,
+        pipeline_git_commit=commit,
+        python=python,
+    )
+
+
+def slurm_resources_for(
+    stage_id: str,
+    resolved: ResolvedRunConfig,
+    *,
+    array: bool = False,
+) -> SlurmResources:
+    """Resource request for one stage: registry default, config override.
+
+    ``execution.slurm.<stage_id>`` may override any field.  ``execution`` is
+    excluded from the scientific projection, so tuning a time limit can never
+    change a run's scientific identity.
+    """
+
+    execution = stage_execution(stage_id)
+
+    base = execution.array_resources if array else execution.resources
+
+    if base is None:
+        base = SlurmResources()
+
+    override = (
+        resolved.get(f"execution.slurm.{stage_id}")
+        if not array
+        else resolved.get(f"execution.slurm.{stage_id}_array")
+    )
+
+    if not isinstance(override, dict):
+        return base
+
+    return SlurmResources(
+        partition=str(override.get("partition", base.partition)),
+        time_limit=_normalise_time_limit(
+            override.get("time_limit", base.time_limit)
+        ),
+        memory=str(override.get("memory", base.memory)),
+        cpus=int(override.get("cpus", base.cpus)),
+    )
+
+
+def _normalise_time_limit(value: Any) -> str:
+    """Repair a time limit that YAML read as a sexagesimal integer.
+
+    ``--set execution.slurm.<stage>.time_limit=48:00:00`` and an unquoted
+    ``time_limit: 48:00:00`` both arrive as the integer 172800, because YAML 1.1
+    reads colon-separated digits as base 60.  That is the same duration, not a
+    different one, so converting it back is a representation repair -- the same
+    treatment ``normalise_resolved_config`` gives a snapshot identity.
+    """
+
+    if isinstance(value, bool) or not isinstance(value, int):
+        return str(value)
+
+    seconds = int(value)
+
+    days, remainder = divmod(seconds, 86400)
+    hours, remainder = divmod(remainder, 3600)
+    minutes, seconds = divmod(remainder, 60)
+
+    if days:
+        return f"{days}-{hours:02d}:{minutes:02d}:{seconds:02d}"
+
+    return f"{hours:02d}:{minutes:02d}:{seconds:02d}"
 
 
 # ----------------------------------------------------------------------
@@ -608,26 +946,43 @@ def cmd_plan(args: argparse.Namespace) -> int:
 
 
 def cmd_stage_command(args: argparse.Namespace) -> int:
-    resolved = resolve_from_args(args)
-    resolved, _ = pin_snapshot(resolved, args)
-
     repo_root = Path(args.repo_root) if args.repo_root else repository_root()
-    paths = PipelinePaths.from_config(resolved, repo_root=repo_root)
 
     if args.stage not in STAGES_BY_ID:
         print(f"error: unknown stage {args.stage!r}", file=sys.stderr)
         return 2
 
-    try:
-        command = stage_command(
-            args.stage,
-            resolved,
-            paths,
-            protocol_config=args.protocol_config,
-        )
-    except PipelineError as exc:
-        print(f"error: {exc}", file=sys.stderr)
-        return 2
+    # A frozen run is authoritative: its own configuration, its own commit.
+    if args.run_id:
+        try:
+            run = FrozenRun.locate(run_root_for(args, repo_root), args.run_id)
+            invocation = stage_invocation(
+                args.stage,
+                run,
+                repo_root=repo_root,
+                verify=not args.no_verify,
+            )
+        except (FrozenRunError, PipelineError) as exc:
+            print(f"error: {exc}", file=sys.stderr)
+            return 2
+
+        command = None if invocation is None else list(invocation.argv)
+    else:
+        resolved = resolve_from_args(args)
+        resolved, _ = pin_snapshot(resolved, args)
+
+        paths = PipelinePaths.from_config(resolved, repo_root=repo_root)
+
+        try:
+            command = preview_stage_command(
+                args.stage,
+                resolved,
+                paths,
+                config_path=args.protocol_config,
+            )
+        except PipelineError as exc:
+            print(f"error: {exc}", file=sys.stderr)
+            return 2
 
     if command is None:
         print(
@@ -732,9 +1087,11 @@ def cmd_run(args: argparse.Namespace) -> int:
 
     record_plan_in_provenance(plan, provenance)
 
-    executor = build_executor(args.executor)
+    # From here on the run -- not the resolution that produced it -- is the
+    # authority. Everything below reads the run's own frozen directory.
+    run = FrozenRun.load(provenance.run_dir)
 
-    provenance.set_status("running", executor=executor.name)
+    provenance.set_status("running", executor=args.executor)
 
     failed = False
 
@@ -760,8 +1117,13 @@ def cmd_run(args: argparse.Namespace) -> int:
             break
 
         try:
-            command = stage_command(stage.stage_id, resolved, paths)
-        except PipelineError as exc:
+            invocation = stage_invocation(
+                stage.stage_id,
+                run,
+                repo_root=repo_root,
+                verify=(observation is plan.observations[0]),
+            )
+        except (PipelineError, FrozenRunError) as exc:
             print(f"  ERROR    {stage.stage_id:<26} {exc}")
             provenance.update_stage(
                 stage.stage_id,
@@ -771,23 +1133,18 @@ def cmd_run(args: argparse.Namespace) -> int:
             failed = True
             break
 
-        if command is None:
+        if invocation is None:
             print(
                 f"  skip     {stage.stage_id:<26} "
                 f"no executable command registered"
             )
             continue
 
-        rendered = " ".join(shlex.quote(part) for part in command)
-
-        if executor.name == "dry-run":
-            print(f"  would run {stage.stage_id:<25} {rendered}")
+        if args.executor == "dry-run":
+            print(f"  would run {stage.stage_id:<25}")
+            print(f"      {invocation.command_text}")
             continue
 
-        print(f"  run      {stage.stage_id:<26} {rendered}")
-
-        # Host-specific facts belong to the execution, not to the run's
-        # canonical configuration.
         provenance.record_runtime(resolved, stage_id=stage.stage_id)
 
         provenance.update_stage(
@@ -796,23 +1153,67 @@ def cmd_run(args: argparse.Namespace) -> int:
             attempts=(observation_attempts(provenance, stage.stage_id) + 1),
         )
 
-        result = executor.run(
-            stage.stage_id,
-            command,
-            cwd=paths.repo_root,
-        )
+        if args.executor == "slurm":
+            returncode, detail = _submit_one(
+                run,
+                stage.stage_id,
+                plan=plan,
+                repo_root=repo_root,
+                retry=args.retry,
+                allow_dirty=args.allow_dirty_worktree,
+            )
 
-        provenance.append_event("stage_execution", **result.to_dict())
+            provenance.append_event("stage_submitted", **detail)
 
-        if result.slurm_job_id:
+            if returncode != 0:
+                print(f"  FAILED   {stage.stage_id:<26} {detail.get('error')}")
+                failed = True
+                break
+
+            job_ids = [
+                str(job["job_id"]) for job in detail.get("jobs", [])
+            ]
+
             stage_record = provenance.stage(stage.stage_id)
 
             if stage_record is not None:
-                stage_record.slurm_job_ids.append(result.slurm_job_id)
+                stage_record.slurm_job_ids.extend(job_ids)
 
-            print(f"           submitted as Slurm job {result.slurm_job_id}")
+            print(
+                f"  submit   {stage.stage_id:<26} "
+                f"Slurm job(s) {', '.join(job_ids)}"
+            )
+            print(
+                "           downstream stages stay blocked until this one "
+                "passes validation"
+            )
 
-        if result.returncode not in (None, 0):
+            # One stage at a time: the next may only start after this one has
+            # been validated, which cannot happen while it is still queued.
+            break
+
+        # Local execution: the same verified path a compute node takes.
+        from pdbclean.stage_runner import StageRunnerError, run_stage
+
+        print(f"  run      {stage.stage_id:<26}")
+        print(f"      {invocation.command_text}")
+
+        try:
+            returncode, _record = run_stage(
+                run,
+                stage.stage_id,
+                repo_root=repo_root,
+                allow_dirty=args.allow_dirty_worktree,
+            )
+        except (StageRunnerError, FrozenRunError) as exc:
+            print(f"  ABORTED  {stage.stage_id:<26} {exc}")
+            provenance.record_validation(
+                f"{stage.stage_id}:preflight", "FAIL", error=str(exc)
+            )
+            failed = True
+            break
+
+        if returncode != 0:
             provenance.update_stage(
                 stage.stage_id,
                 status=pipeline_module.VALIDATION_FAIL,
@@ -821,11 +1222,11 @@ def cmd_run(args: argparse.Namespace) -> int:
             provenance.record_validation(
                 f"{stage.stage_id}:execution",
                 "FAIL",
-                returncode=result.returncode,
+                returncode=returncode,
             )
             print(
                 f"  FAILED   {stage.stage_id:<26} "
-                f"exit {result.returncode}; downstream stages will not start"
+                f"exit {returncode}; downstream stages will not start"
             )
             failed = True
             break
@@ -839,9 +1240,37 @@ def cmd_run(args: argparse.Namespace) -> int:
     provenance.flush()
 
     print("")
+    print(f"Run ID          {provenance.run_id}")
     print(f"Provenance      {provenance.record_path}")
+    print(f"Stage config    {run.stage_config_path}")
 
     return 1 if failed else 0
+
+
+def _submit_one(
+    run: FrozenRun,
+    stage_id: str,
+    *,
+    plan,
+    repo_root: Path,
+    retry: bool,
+    allow_dirty: bool,
+) -> tuple[int, dict[str, Any]]:
+    """Submit one stage to Slurm, returning (exit status, ledger entry)."""
+
+    from pdbclean.slurm import SlurmClient
+    from pdbclean.submission import SubmissionError, Submitter
+
+    submitter = Submitter(
+        repo_root=repo_root,
+        client=SlurmClient(),
+        allow_dirty_worktree=allow_dirty,
+    )
+
+    try:
+        return 0, submitter.submit(run, stage_id, plan=plan, retry=retry)
+    except SubmissionError as exc:
+        return 1, {"stage_id": stage_id, "error": str(exc), "jobs": []}
 
 
 def observation_attempts(provenance: RunProvenance, stage_id: str) -> int:
@@ -911,6 +1340,187 @@ def cmd_status(args: argparse.Namespace) -> int:
             f"{run['run_id']:<34}{str(run.get('created_at')):<22}"
             f"{str(run.get('status')):<12}{str(run.get('snapshot_id')):<12}"
         )
+
+    return 0
+
+
+def _load_run_and_plan(args: argparse.Namespace, repo_root: Path):
+    run = FrozenRun.locate(run_root_for(args, repo_root), args.run_id)
+
+    plan = plan_pipeline(run.resolved, repo_root=repo_root)
+
+    return run, plan
+
+
+def cmd_submit(args: argparse.Namespace) -> int:
+    """Submit stages of an already-frozen run to Slurm."""
+
+    from pdbclean.slurm import SlurmClient
+    from pdbclean.submission import (
+        STATE_COMPLETE,
+        SubmissionError,
+        Submitter,
+        next_submittable_stage,
+        run_status,
+    )
+
+    repo_root = Path(args.repo_root) if args.repo_root else repository_root()
+
+    try:
+        run, plan = _load_run_and_plan(args, repo_root)
+    except FrozenRunError as exc:
+        print(f"error: {exc}", file=sys.stderr)
+        return 2
+
+    client = SlurmClient()
+
+    if not client.available:
+        print(
+            "error: this host has no sbatch, so nothing can be submitted from "
+            "it. Run this on a Barkla login node.",
+            file=sys.stderr,
+        )
+        return 2
+
+    submitter = Submitter(
+        repo_root=repo_root,
+        client=client,
+        allow_dirty_worktree=args.allow_dirty_worktree,
+    )
+
+    def _submit(stage_id: str) -> int:
+        try:
+            entry = submitter.submit(
+                run, stage_id, plan=plan, retry=args.retry
+            )
+        except SubmissionError as exc:
+            print(f"error: {exc}", file=sys.stderr)
+            return 2
+
+        for job in entry["jobs"]:
+            print(
+                f"submitted  {stage_id:<26} {job['role']:<9} "
+                f"job {job['job_id']}"
+            )
+
+        print(f"recorded   {SubmissionLedgerPath(run)}")
+
+        return 0
+
+    if args.stage:
+        return _submit(args.stage)
+
+    statuses = run_status(run, plan=plan, client=client)
+
+    if not args.all:
+        candidate = next_submittable_stage(statuses)
+
+        if candidate is None:
+            _print_statuses(statuses)
+            print("")
+            print("Nothing is eligible to start right now.")
+            return 0
+
+        return _submit(candidate.stage_id)
+
+    # --all: one stage at a time, each gated on the previous one validating.
+    import time
+
+    while True:
+        statuses = run_status(run, plan=plan, client=client)
+
+        if all(status.state == STATE_COMPLETE for status in statuses):
+            print("Every stage is COMPLETE.")
+            return 0
+
+        candidate = next_submittable_stage(statuses)
+
+        if candidate is not None:
+            if _submit(candidate.stage_id) != 0:
+                return 2
+
+            if not args.watch:
+                print(
+                    "Submitted one stage. The next becomes eligible when this "
+                    "one passes validation; re-run with --watch to continue "
+                    "automatically."
+                )
+                return 0
+
+        elif not args.watch:
+            _print_statuses(statuses)
+            return 0
+
+        time.sleep(max(10, args.poll_seconds))
+
+        # A stage that finished changes the plan (its outputs now exist).
+        plan = plan_pipeline(run.resolved, repo_root=repo_root)
+
+
+def SubmissionLedgerPath(run: FrozenRun) -> Path:  # noqa: N802 - short helper
+    from pdbclean.submission import SubmissionLedger
+
+    return SubmissionLedger(run.run_dir).path
+
+
+def _print_statuses(statuses) -> None:
+    print(f"{'stage':<28}{'state':<14}{'validation':<18}detail")
+
+    for status in statuses:
+        print(
+            f"{status.stage_id:<28}{status.state:<14}"
+            f"{status.validation:<18}{status.reason}"
+        )
+
+
+def cmd_jobs(args: argparse.Namespace) -> int:
+    """Report the live state of one run's submitted stages."""
+
+    from pdbclean.slurm import SlurmClient
+    from pdbclean.submission import run_status
+
+    repo_root = Path(args.repo_root) if args.repo_root else repository_root()
+
+    try:
+        run, plan = _load_run_and_plan(args, repo_root)
+    except FrozenRunError as exc:
+        print(f"error: {exc}", file=sys.stderr)
+        return 2
+
+    client = SlurmClient()
+
+    statuses = run_status(
+        run, plan=plan, client=client if client.available else None
+    )
+
+    if args.json:
+        print(
+            json.dumps(
+                {
+                    "run_id": run.run_id,
+                    "run_directory": str(run.run_dir),
+                    "resolved_config_sha256": run.resolved_config_sha256,
+                    "scientific_config_sha256": run.scientific_config_sha256,
+                    "git_commit": run.git_commit,
+                    "stage_config_path": str(run.stage_config_path),
+                    "slurm": client.describe(),
+                    "stages": [status.to_dict() for status in statuses],
+                },
+                indent=2,
+                sort_keys=True,
+            )
+        )
+        return 0
+
+    print(f"Run          {run.run_id}")
+    print(f"Snapshot     {run.snapshot_id}")
+    print(f"Config sha   {run.resolved_config_sha256}")
+    print(f"Science sha  {run.scientific_config_sha256}")
+    print(f"Git commit   {run.git_commit}")
+    print(f"Stage config {run.stage_config_path}")
+    print("")
+
+    _print_statuses(statuses)
 
     return 0
 
@@ -1093,7 +1703,64 @@ def build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="Do not prompt for confirmation",
     )
+    p.add_argument(
+        "--retry",
+        action="store_true",
+        help="Resubmit a stage that previously failed",
+    )
+    p.add_argument(
+        "--allow-dirty-worktree",
+        action="store_true",
+        help=(
+            "Permit execution from a dirty worktree. Provenance then records "
+            "the changed paths and a digest of the uncommitted diff."
+        ),
+    )
     p.set_defaults(func=cmd_run)
+
+    # submit ------------------------------------------------------------
+    p = sub.add_parser(
+        "submit",
+        help="Submit stages of an existing frozen run to Slurm",
+    )
+    p.add_argument("--repo-root", default=None)
+    p.add_argument("--run-id", required=True)
+    p.add_argument(
+        "--stage",
+        default=None,
+        help="Submit exactly this stage. Omit to submit the next eligible one.",
+    )
+    p.add_argument(
+        "--all",
+        action="store_true",
+        help=(
+            "Work through every eligible stage, one at a time. Each stage is "
+            "submitted only after the previous one has passed validation."
+        ),
+    )
+    p.add_argument(
+        "--watch",
+        action="store_true",
+        help="With --all, keep polling and submitting until nothing is left.",
+    )
+    p.add_argument("--poll-seconds", type=int, default=60)
+    p.add_argument(
+        "--retry",
+        action="store_true",
+        help="Resubmit a stage that previously failed",
+    )
+    p.add_argument("--allow-dirty-worktree", action="store_true")
+    p.set_defaults(func=cmd_submit)
+
+    # jobs --------------------------------------------------------------
+    p = sub.add_parser(
+        "jobs",
+        help="Show the live Slurm and validation state of one run",
+    )
+    p.add_argument("--repo-root", default=None)
+    p.add_argument("--run-id", required=True)
+    p.add_argument("--json", action="store_true")
+    p.set_defaults(func=cmd_jobs)
 
     # status ------------------------------------------------------------
     p = sub.add_parser("status", help="Show recorded runs")
@@ -1109,7 +1776,28 @@ def build_parser() -> argparse.ArgumentParser:
     )
     add_config_arguments(p)
     p.add_argument("--stage", required=True)
-    p.add_argument("--protocol-config", default=None)
+    p.add_argument(
+        "--run-id",
+        default=None,
+        help=(
+            "Print the exact command a frozen run executes, built from that "
+            "run's own configuration and commit. This is what actually runs."
+        ),
+    )
+    p.add_argument(
+        "--protocol-config",
+        default=None,
+        help=(
+            "Name a configuration file explicitly instead of projecting the "
+            "resolved one. Use config/pdbclean/protocol_3_2_comp702_v1.yaml to "
+            "reproduce the frozen run byte-for-byte."
+        ),
+    )
+    p.add_argument(
+        "--no-verify",
+        action="store_true",
+        help="With --run-id, skip re-verifying the frozen configuration.",
+    )
     p.add_argument("--shell", action="store_true")
     p.set_defaults(func=cmd_stage_command)
 

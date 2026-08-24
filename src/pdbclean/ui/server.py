@@ -50,7 +50,15 @@ from pdbclean.molstar_service import (
     PairRequest,
     locator_for_run,
 )
-from pdbclean.run_provenance import RunProvenance, list_runs
+from pdbclean import run_provenance as run_provenance_module
+from pdbclean import submission as submission_module
+from pdbclean.run_provenance import (
+    FrozenRun,
+    FrozenRunError,
+    RunProvenance,
+    list_runs,
+)
+from pdbclean.slurm import SlurmClient, SlurmError
 from pdbclean.runconfig import (
     ResolvedRunConfig,
     RunConfigError,
@@ -117,6 +125,44 @@ class UIState:
         self.default_overrides = list(overrides or [])
         self._lock = threading.Lock()
         self._explorers: dict[str, DuplicateExplorer] = {}
+        self._slurm: SlurmClient | None = None
+        #: Submissions are serialised so that two browser tabs pressing Run at
+        #: the same moment cannot both pass the idempotency check.
+        self._submit_lock = threading.Lock()
+        self._auto_advance: dict[str, dict[str, Any]] = {}
+
+    # -- execution ------------------------------------------------------
+
+    def slurm_client(self) -> SlurmClient:
+        with self._lock:
+            if self._slurm is None:
+                self._slurm = SlurmClient()
+
+            return self._slurm
+
+    def run_root(self) -> Path:
+        """Where runs live, without needing a resolvable configuration."""
+
+        resolved = self.resolve()
+
+        configured = resolved.get("storage.run_root") or "outputs/runs"
+
+        root = Path(configured)
+
+        return root if root.is_absolute() else self.repo_root / root
+
+    def frozen_run(self, run_id: str) -> FrozenRun:
+        return FrozenRun.locate(self.run_root(), run_id)
+
+    def submitter(self) -> "submission_module.Submitter":
+        return submission_module.Submitter(
+            repo_root=self.repo_root,
+            client=self.slurm_client(),
+            # The browser never enables dirty-worktree execution. A production
+            # run started from the UI always records a commit that fully
+            # describes the code that ran.
+            allow_dirty_worktree=False,
+        )
 
     # -- configuration --------------------------------------------------
 
@@ -352,6 +398,21 @@ class Handler(BaseHTTPRequestHandler):
                 self._api_run(body)
                 return
 
+            if parsed.path.startswith("/api/runs/"):
+                parts = [
+                    part
+                    for part in parsed.path[len("/api/runs/"):].split("/")
+                    if part
+                ]
+
+                if len(parts) == 2 and parts[1] == "submit":
+                    self._api_run_submit(parts[0], body)
+                    return
+
+                if len(parts) == 2 and parts[1] == "cancel":
+                    self._api_run_cancel(parts[0], body)
+                    return
+
             self._error("Unknown endpoint", HTTPStatus.NOT_FOUND)
         except UIError as exc:
             self._error(str(exc))
@@ -423,6 +484,10 @@ class Handler(BaseHTTPRequestHandler):
                 self._api_run_timeline(parts[0])
                 return
 
+            if len(parts) == 2 and parts[1] == "jobs":
+                self._api_run_jobs(parts[0])
+                return
+
             if len(parts) == 3 and parts[1] == "stages":
                 self._api_run_stage(parts[0], parts[2], query)
                 return
@@ -465,6 +530,14 @@ class Handler(BaseHTTPRequestHandler):
                     {"id": layer, "label": label} for layer, label in LAYERS
                 ],
                 "stage_states": list(pipeline_module.STATE_ORDER),
+                # Whether this host can submit at all. The UI shows the manual
+                # command instead of a dead button when it cannot.
+                "slurm": self.state.slurm_client().describe(),
+                "job_states": list(submission_module.ALL_STATES),
+                "submittable_stages": submission_module.submittable_stage_ids(),
+                "git": run_provenance_module.collect_git_state(
+                    state.repo_root
+                ),
             }
         )
 
@@ -1208,12 +1281,12 @@ class Handler(BaseHTTPRequestHandler):
         self._json(plan.to_dict())
 
     def _api_run(self, body: dict[str, Any]) -> None:
-        """Create a run: freeze identity and write provenance.
+        """Create a run: freeze identity, write provenance, optionally submit.
 
-        The UI deliberately creates the run and records provenance, then
-        reports the exact commands.  Submitting long Slurm work is done from
-        the CLI on a login node, so a browser tab can never leave a partially
-        submitted array behind.
+        Freezing happens first and always.  The configuration a worker will
+        consume is materialised inside the run directory at this moment, so
+        every command reported below -- and every job submitted afterwards --
+        names that document and nothing else.
         """
 
         resolved = self.state.resolve(
@@ -1242,61 +1315,217 @@ class Handler(BaseHTTPRequestHandler):
                     "snapshot.resolved_selection_mode"
                 ),
             },
-            invocation={"origin": "ui", "executor": "deferred"},
+            invocation={
+                "origin": "ui",
+                "executor": "slurm" if body.get("submit") else "deferred",
+                "overrides": dict(body.get("overrides") or {}),
+                "config_path": body.get("config_path"),
+            },
         )
 
         record_plan_in_provenance(plan, provenance)
         provenance.set_status("planned")
         provenance.flush()
 
-        from pdbclean.cli import stage_command
+        run = FrozenRun.load(provenance.run_dir)
 
-        commands = []
+        payload: dict[str, Any] = {
+            "run_id": run.run_id,
+            "run_directory": str(run.run_dir),
+            "resolved_config_sha256": run.resolved_config_sha256,
+            "scientific_config_sha256": run.scientific_config_sha256,
+            "stage_config_path": str(run.stage_config_path),
+            "stage_config_sha256": run.record.get("stage_config_sha256"),
+            "git_commit": run.git_commit,
+            "git_working_tree_dirty": run.git_working_tree_dirty,
+            "plan": plan.to_dict(),
+            "frozen_scientific_values": _frozen_scientific_values(run),
+            "commands": self._invocations_for(run, plan),
+            "cli_equivalent": (
+                f"pdbclean submit --run-id {run.run_id} --all --watch"
+            ),
+        }
+
+        if body.get("submit"):
+            payload["submission"] = self._submit_next(
+                run,
+                plan,
+                stage_id=body.get("stage_id"),
+                retry=bool(body.get("retry")),
+            )
+
+        self._json(payload)
+
+    # -- execution endpoints --------------------------------------------
+
+    def _invocations_for(self, run: FrozenRun, plan) -> list[dict[str, Any]]:
+        """The exact commands this frozen run's outstanding stages execute."""
+
+        from pdbclean.cli import stage_invocation
+
+        commands: list[dict[str, Any]] = []
 
         for observation in plan.to_run:
+            stage_id = observation.stage.stage_id
+
             try:
-                argv = stage_command(
-                    observation.stage.stage_id,
-                    resolved,
-                    paths,
+                invocation = stage_invocation(
+                    stage_id,
+                    run,
+                    repo_root=self.state.repo_root,
+                    verify=False,
                 )
-            except PipelineError as exc:
-                argv = None
-                commands.append(
-                    {
-                        "stage_id": observation.stage.stage_id,
-                        "error": str(exc),
-                    }
-                )
+            except (PipelineError, FrozenRunError) as exc:
+                commands.append({"stage_id": stage_id, "error": str(exc)})
                 continue
 
-            if argv:
-                commands.append(
-                    {
-                        "stage_id": observation.stage.stage_id,
-                        "argv": argv,
-                    }
+            if invocation is not None:
+                commands.append(invocation.to_dict())
+
+        return commands
+
+    def _submit_next(
+        self,
+        run: FrozenRun,
+        plan,
+        *,
+        stage_id: str | None = None,
+        retry: bool = False,
+    ) -> dict[str, Any]:
+        """Submit one stage. Never more, and never past a validation gate."""
+
+        submitter = self.state.submitter()
+
+        if not self.state.slurm_client().available:
+            return {
+                "submitted": False,
+                "reason": (
+                    "This host has no sbatch, so the UI cannot submit from "
+                    "here. Run the UI on a Barkla login node, or use the "
+                    "printed command."
+                ),
+            }
+
+        statuses = submission_module.run_status(
+            run, plan=plan, client=self.state.slurm_client()
+        )
+
+        if stage_id is None:
+            candidate = submission_module.next_submittable_stage(statuses)
+
+            if candidate is None:
+                return {
+                    "submitted": False,
+                    "reason": (
+                        "Nothing is eligible to start: a stage is already in "
+                        "flight, a stage has failed, or every stage is "
+                        "complete."
+                    ),
+                    "stages": [status.to_dict() for status in statuses],
+                }
+
+            stage_id = candidate.stage_id
+
+        # One submission at a time, process-wide: two tabs pressing Run must
+        # not both pass the idempotency check.
+        with self.state._submit_lock:
+            try:
+                entry = submitter.submit(
+                    run, stage_id, plan=plan, retry=retry
                 )
+            except submission_module.SubmissionError as exc:
+                return {
+                    "submitted": False,
+                    "stage_id": stage_id,
+                    "reason": str(exc),
+                }
+            except SlurmError as exc:
+                return {
+                    "submitted": False,
+                    "stage_id": stage_id,
+                    "reason": f"Slurm: {exc}",
+                }
+
+        return {"submitted": True, "stage_id": stage_id, "entry": entry}
+
+    def _api_run_submit(self, run_id: str, body: dict[str, Any]) -> None:
+        try:
+            run = self.state.frozen_run(run_id)
+        except FrozenRunError as exc:
+            self._error(str(exc), HTTPStatus.NOT_FOUND)
+            return
+
+        plan = plan_pipeline(run.resolved, repo_root=self.state.repo_root)
+
+        result = self._submit_next(
+            run,
+            plan,
+            stage_id=body.get("stage_id"),
+            retry=bool(body.get("retry")),
+        )
+
+        self._json({"run_id": run_id, **result})
+
+    def _api_run_jobs(self, run_id: str) -> None:
+        try:
+            run = self.state.frozen_run(run_id)
+        except FrozenRunError as exc:
+            self._error(str(exc), HTTPStatus.NOT_FOUND)
+            return
+
+        client = self.state.slurm_client()
+
+        plan = plan_pipeline(run.resolved, repo_root=self.state.repo_root)
+
+        statuses = submission_module.run_status(
+            run, plan=plan, client=client if client.available else None
+        )
+
+        next_stage = submission_module.next_submittable_stage(statuses)
 
         self._json(
             {
-                "run_id": provenance.run_id,
-                "run_directory": str(provenance.run_dir),
-                "resolved_config_sha256": resolved.sha256,
-                "scientific_config_sha256": resolved.scientific_sha256,
-                "plan": plan.to_dict(),
-                "commands": commands,
-                "cli_equivalent": (
-                    "pdbclean run"
-                    + (
-                        f" --config {body['config_path']}"
-                        if body.get("config_path")
-                        else ""
-                    )
-                    + f" --snapshot {resolved.get('snapshot.snapshot_id')}"
-                    + " --executor slurm"
+                "run_id": run.run_id,
+                "run_directory": str(run.run_dir),
+                "snapshot": run.snapshot_id,
+                "git_commit": run.git_commit,
+                "resolved_config_sha256": run.resolved_config_sha256,
+                "scientific_config_sha256": run.scientific_config_sha256,
+                "stage_config_path": str(run.stage_config_path),
+                "is_legacy": run.is_legacy,
+                "frozen_scientific_values": _frozen_scientific_values(run),
+                "slurm": client.describe(),
+                "stages": [status.to_dict() for status in statuses],
+                "next_submittable_stage": (
+                    None if next_stage is None else next_stage.stage_id
                 ),
+                "commands": self._invocations_for(run, plan),
             }
+        )
+
+    def _api_run_cancel(self, run_id: str, body: dict[str, Any]) -> None:
+        stage_id = body.get("stage_id")
+
+        if not stage_id:
+            self._error("cancel requires a stage_id")
+            return
+
+        try:
+            run = self.state.frozen_run(run_id)
+        except FrozenRunError as exc:
+            self._error(str(exc), HTTPStatus.NOT_FOUND)
+            return
+
+        try:
+            cancelled = submission_module.cancel_stage(
+                run, stage_id, client=self.state.slurm_client()
+            )
+        except SlurmError as exc:
+            self._error(str(exc))
+            return
+
+        self._json(
+            {"run_id": run_id, "stage_id": stage_id, "cancelled": cancelled}
         )
 
     # -- static and structure files -------------------------------------
@@ -1368,6 +1597,32 @@ class Handler(BaseHTTPRequestHandler):
             return
 
         self._error("Not found", HTTPStatus.NOT_FOUND)
+
+
+def _frozen_scientific_values(run: FrozenRun) -> dict[str, Any]:
+    """The scientific values this run is frozen with.
+
+    Read from the run's own persisted configuration, so what the run page shows
+    after submission is the same document the workers load -- not the browser
+    fields, which the operator may have edited since.
+    """
+
+    from pdbclean.stage_config import frozen_values
+
+    if run.is_legacy:
+        return {
+            "legacy": True,
+            "note": (
+                "This run predates the executable configuration; the values "
+                "its workers consumed were not recorded and are not invented "
+                "here."
+            ),
+        }
+
+    try:
+        return {"legacy": False, **frozen_values(run.resolved)}
+    except (RunConfigError, OSError) as exc:
+        return {"legacy": False, "error": str(exc)}
 
 
 def _single(query: dict[str, list[str]], key: str) -> str | None:

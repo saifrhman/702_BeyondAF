@@ -625,6 +625,246 @@ STAGES: tuple[StageSpec, ...] = (
 STAGES_BY_ID: dict[str, StageSpec] = {stage.stage_id: stage for stage in STAGES}
 
 
+# ---------------------------------------------------------------------------
+# How each stage is realised on the cluster
+# ---------------------------------------------------------------------------
+#
+# Nothing here is scientific.  Resource requests, partitions and array shapes
+# change how fast a stage runs, never what it computes -- which is why they
+# live under `execution` in the configuration and are excluded from the
+# scientific hash.
+#
+# What *is* load-bearing is `required_arguments`: the options each entry point
+# declares `required=True`.  Command generation asserts every one of them is
+# supplied, and tests/pdbclean/test_stage_commands.py re-derives the same set
+# by parsing the entry point's source, so this table cannot drift away from
+# the code it describes.
+
+#: A stage submitted as one batch job.
+EXECUTION_SINGLE = "single"
+
+#: A stage whose per-task array must finish before its finalizer runs.  The
+#: array is submitted first; the finalizer is submitted with
+#: ``--dependency=afterok`` on it.
+EXECUTION_ARRAY_THEN_FINALIZE = "array_then_finalize"
+
+#: A stage whose entry point is itself a submitter: it inspects the manifest,
+#: works out the array shape and submits the real work.  It runs where it is
+#: invoked (a login node) because it does no scientific computation itself.
+EXECUTION_SUBMITTER = "submitter"
+
+#: A stage the orchestrator does not execute.
+EXECUTION_NONE = "none"
+
+
+@dataclass(frozen=True)
+class SlurmResources:
+    """One stage's batch resource request. Infrastructure only."""
+
+    partition: str = "nodes"
+    time_limit: str = "02:00:00"
+    memory: str = "16G"
+    cpus: int = 1
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "partition": self.partition,
+            "time_limit": self.time_limit,
+            "memory": self.memory,
+            "cpus": self.cpus,
+        }
+
+
+@dataclass(frozen=True)
+class StageExecution:
+    """How one stage is submitted, and what its entry point demands."""
+
+    stage_id: str
+    mode: str = EXECUTION_SINGLE
+
+    #: Options the entry point declares `required=True`.
+    required_arguments: tuple[str, ...] = ()
+
+    resources: SlurmResources = field(default_factory=SlurmResources)
+
+    #: Array phase, for EXECUTION_ARRAY_THEN_FINALIZE.
+    array_script: str | None = None
+    array_resources: SlurmResources | None = None
+
+    #: Why this stage is not orchestrated, when it is not.
+    note: str = ""
+
+    @property
+    def orchestrated(self) -> bool:
+        return self.mode != EXECUTION_NONE
+
+
+#: Resource requests below are grounded in the frozen 2026-01-01 run's own
+#: Slurm accounting (``sacct``), with headroom:
+#:
+#:     brain_finalize        00:01:26   8G   1 cpu
+#:     brain_prefilter       00:00:33   8G   1 cpu
+#:     full_bri_nn_stage8    00:25:30  32G   4 cpu
+#:     stage10_classify      00:00:08   8G   1 cpu
+#:     stage14_graph         00:00:10   8G   1 cpu
+#:     stage14_reps          00:00:12  12G   2 cpu
+#:     pdbclean_release      00:00:09  16G   2 cpu
+#:     pdbclean_bri (array)  ~00:35    16G   4 cpu per worker
+#:     comp702_metadata      TIMEOUT at 02:00:00, 32G  -> 04:00:00 here
+#:
+#: Lowering tau makes Stages 7 and 8-9 cheaper, not dearer (a smaller radius
+#: returns fewer candidates), so these are upper bounds for a tau study.
+#: Raising tau or changing snapshot may need more; every field is overridable
+#: from `execution.slurm.<stage_id>` in the run configuration.
+STAGE_EXECUTION: dict[str, StageExecution] = {
+    "snapshot": StageExecution(
+        stage_id="snapshot",
+        mode=EXECUTION_NONE,
+        note=(
+            "Snapshot resolution happens during configuration resolution, "
+            "before a run is frozen. It is not a batch job."
+        ),
+    ),
+    "silver_parse": StageExecution(
+        stage_id="silver_parse",
+        mode=EXECUTION_NONE,
+        note=(
+            "Deterministic in-memory parsing performed inside Stage 1. It "
+            "persists nothing and has no separate job."
+        ),
+    ),
+    "bronze_source_manifest": StageExecution(
+        stage_id="bronze_source_manifest",
+        required_arguments=("--config", "--output-dir"),
+        resources=SlurmResources(time_limit="06:00:00", memory="8G", cpus=1),
+    ),
+    "structural_cleaning": StageExecution(
+        stage_id="structural_cleaning",
+        mode=EXECUTION_SUBMITTER,
+        required_arguments=(),
+        note=(
+            "scripts/pdbclean/submit_quality_pipeline.sh derives the array "
+            "shape from the manifest and submits the quality array plus its "
+            "afterok merge. It computes no science itself."
+        ),
+    ),
+    "geometric_validation": StageExecution(
+        stage_id="geometric_validation",
+        mode=EXECUTION_ARRAY_THEN_FINALIZE,
+        required_arguments=("--config", "--manifest"),
+        array_script="scripts/pdbclean/run_geometric_validation_array.sbatch",
+        array_resources=SlurmResources(
+            partition="long", time_limit="12:00:00", memory="16G", cpus=4
+        ),
+        resources=SlurmResources(time_limit="02:00:00", memory="16G", cpus=4),
+    ),
+    "complete_bri": StageExecution(
+        stage_id="complete_bri",
+        mode=EXECUTION_ARRAY_THEN_FINALIZE,
+        required_arguments=("--config", "--manifest"),
+        array_script="scripts/pdbclean/run_bri_array.sbatch",
+        array_resources=SlurmResources(
+            partition="long", time_limit="12:00:00", memory="16G", cpus=4
+        ),
+        resources=SlurmResources(time_limit="04:00:00", memory="32G", cpus=4),
+    ),
+    "brain": StageExecution(
+        stage_id="brain",
+        required_arguments=(
+            "--config",
+            "--brain-pipeline-git-commit",
+            "--finalizer-pipeline-git-commit",
+        ),
+        resources=SlurmResources(time_limit="02:00:00", memory="16G", cpus=1),
+    ),
+    "length_buckets": StageExecution(
+        stage_id="length_buckets",
+        required_arguments=("--config", "--length-bucket-pipeline-git-commit"),
+        resources=SlurmResources(time_limit="02:00:00", memory="16G", cpus=1),
+    ),
+    "candidate_filtering": StageExecution(
+        stage_id="candidate_filtering",
+        required_arguments=("--config", "--pipeline-git-commit"),
+        resources=SlurmResources(time_limit="06:00:00", memory="32G", cpus=2),
+    ),
+    "complete_bri_nn": StageExecution(
+        stage_id="complete_bri_nn",
+        required_arguments=("--config", "--pipeline-git-commit"),
+        resources=SlurmResources(
+            partition="long", time_limit="24:00:00", memory="64G", cpus=4
+        ),
+    ),
+    "duplicate_classification": StageExecution(
+        stage_id="duplicate_classification",
+        required_arguments=("--config", "--pipeline-git-commit"),
+        resources=SlurmResources(time_limit="02:00:00", memory="16G", cpus=1),
+    ),
+    "downstream_metadata": StageExecution(
+        stage_id="downstream_metadata",
+        required_arguments=(
+            "--config",
+            "--producer-git-commit",
+            "--finalizer-git-commit",
+        ),
+        resources=SlurmResources(time_limit="04:00:00", memory="32G", cpus=4),
+        note=(
+            "Only the finalizer is orchestrated. Its per-entry metadata tasks "
+            "(pdbclean.downstream_metadata_task) have no array wrapper in this "
+            "repository and are still submitted by hand."
+        ),
+    ),
+    "redundancy_graph": StageExecution(
+        stage_id="redundancy_graph",
+        required_arguments=(
+            "--edges",
+            "--m1-edges",
+            "--output-dir",
+            "--threshold-mA",
+        ),
+        resources=SlurmResources(time_limit="02:00:00", memory="16G", cpus=2),
+    ),
+    "representative_selection": StageExecution(
+        stage_id="representative_selection",
+        required_arguments=(
+            "--graph-dir",
+            "--edges",
+            "--accepted",
+            "--metadata",
+            "--config",
+            "--output-dir",
+            "--threshold-mA",
+        ),
+        resources=SlurmResources(time_limit="02:00:00", memory="16G", cpus=2),
+    ),
+    "gold_release": StageExecution(
+        stage_id="gold_release",
+        required_arguments=(
+            "--protocol-root",
+            "--policy-config",
+            "--output-dir",
+            "--threshold-mA",
+        ),
+        resources=SlurmResources(time_limit="02:00:00", memory="16G", cpus=2),
+    ),
+}
+
+
+def stage_execution(stage_id: str) -> StageExecution:
+    """Return how ``stage_id`` is executed.
+
+    Every registered stage has an entry; a missing one is a registry bug, not
+    a silent "run it somehow".
+    """
+
+    try:
+        return STAGE_EXECUTION[stage_id]
+    except KeyError:
+        raise KeyError(
+            f"Stage {stage_id!r} has no execution description; add one to "
+            "pdbclean.stage_registry.STAGE_EXECUTION"
+        ) from None
+
+
 def stage_order() -> list[str]:
     """Return stage ids in pipeline order."""
 

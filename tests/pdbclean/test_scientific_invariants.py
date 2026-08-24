@@ -721,15 +721,24 @@ def test_the_stage_that_classifies_never_receives_the_stale_block():
     )
     paths = PipelinePaths.from_config(resolved, repo_root=REPO_ROOT)
 
+    def _argv(stage_id):
+        return stage_command(
+            stage_id,
+            resolved,
+            paths,
+            config_path="/frozen/run/stage_config.yaml",
+            pipeline_git_commit="a" * 40,
+        )
+
     for stage_id in ("candidate_filtering", "complete_bri_nn",
                      "duplicate_classification", "redundancy_graph"):
-        argv = stage_command(stage_id, resolved, paths)
+        argv = _argv(stage_id)
 
         assert argv is not None
         assert "1.0" not in argv
         assert "--query-radius" not in argv
 
-    graph = stage_command("redundancy_graph", resolved, paths)
+    graph = _argv("redundancy_graph")
 
     assert "--threshold-mA" in graph
     assert graph[graph.index("--threshold-mA") + 1] == "10"

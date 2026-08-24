@@ -476,6 +476,25 @@ dl.kv dd {
     background: var(--panel);
 }
 
+.pass-block {
+    border: 1px solid var(--pass);
+    border-left-width: 3px;
+    padding: 7px 10px;
+    margin: 8px 0;
+    background: var(--panel);
+}
+
+/* Job-state cells in the Execution table. */
+td.pass { color: var(--pass); font-weight: 600; }
+td.warn { color: var(--warn); font-weight: 600; }
+td.fail { color: var(--fail); font-weight: 600; }
+
+details > summary {
+    cursor: pointer;
+    margin: 10px 0 4px;
+    font-weight: 600;
+}
+
 pre {
     margin: 4px 0 12px;
     padding: 8px 10px;

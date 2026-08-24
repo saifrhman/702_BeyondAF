@@ -499,22 +499,37 @@ class ResolvedRunConfig:
         )
 
     def to_protocol_config(self) -> dict[str, Any]:
-        """Project the resolved run config onto the legacy protocol schema.
+        """Project the resolved run config onto the stage-execution schema.
 
-        The existing stage entry points consume the Protocol 3.2 configuration
-        schema validated by :func:`pdbclean.config.load_config`.  This
-        projection carries the resolved scientific values into that schema so
-        that CLI, UI and Slurm execution all drive the same stage code with the
-        same numbers.
+        The production stage entry points consume the Protocol 3.2
+        configuration schema validated by :func:`pdbclean.config.load_config`.
+        This projection carries **every** resolved scientific value into that
+        schema, so a worker driven by the projection can only ever compute with
+        the numbers this run was frozen with.
+
+        Completeness is the whole point.  A section omitted here does not
+        become "unset" in the worker: it becomes whatever the stage module's
+        own fallback says.  ``brain_prefilter_production`` falls back to the
+        module constant ``BRAIN_PREFILTER_TAU_ANGSTROM`` when ``brain_filter``
+        is missing, which is exactly how a UI-entered Brain threshold used to
+        be replaced by 0.010 A without any error.  Every section of the
+        canonical configuration is therefore carried through verbatim.
 
         The snapshot is always emitted as ``fixed`` with its concrete resolved
         identity, because a run must be pinned to an immutable snapshot before
-        any processing begins.
+        any processing begins.  ``resolve_manifest_snapshot`` then *asserts*
+        that the manifest it reads is that snapshot.
 
-        This projection is the *execution* handoff, so runtime templates such
-        as ``${TMPDIR}`` are resolved to their concrete value on the executing
-        host here -- and only here.  The canonical configuration itself keeps
-        the template, so it stays identical on every host.
+        Runtime templates such as ``${TMPDIR}`` are deliberately **preserved**.
+        This document is written once, on the submitting host, and read on a
+        compute node; baking the submitter's ``$TMPDIR`` into it would send the
+        worker to a directory that belongs to another machine.
+        :func:`pdbclean.config.load_config` expands environment references when
+        it loads the file, which happens on the executing host -- the same
+        "resolved on the executing host, and only there" rule as before, now
+        applied at the correct moment.  Preserving the template is also what
+        makes this document a pure function of the configuration, and therefore
+        hashable and byte-comparable.
         """
 
         data = self.to_dict()
@@ -527,23 +542,12 @@ class ResolvedRunConfig:
                 "snapshot has been resolved to a concrete identity"
             )
 
-        snapshot_section: dict[str, Any] = {
-            "mode": "fixed",
-            "snapshot_id": snapshot_id,
-            "bucket_url": self.get("snapshot.bucket_url"),
-        }
-
-        expected_count = self.get("snapshot.expected_mmcif_count")
-
-        if expected_count is not None:
-            snapshot_section["expected_mmcif_count"] = expected_count
-
-        expected_bytes = self.get("snapshot.expected_total_bytes")
-
-        if expected_bytes is not None:
-            snapshot_section["expected_total_bytes"] = expected_bytes
+        snapshot_section: dict[str, Any] = copy.deepcopy(data["snapshot"])
+        snapshot_section["mode"] = "fixed"
+        snapshot_section["snapshot_id"] = snapshot_id
 
         projected: dict[str, Any] = {
+            # -- scientific sections, carried verbatim --------------------
             "release": data["release"],
             "snapshot": snapshot_section,
             "selection": data["selection"],
@@ -551,56 +555,55 @@ class ResolvedRunConfig:
             "post_cleaning_geometric_validation": data[
                 "post_cleaning_geometric_validation"
             ],
-            "bri": {
-                "enabled": self.get("bri.enabled"),
-                "implementation": self.get("bri.implementation"),
-                "vector_partition_key": self.get("bri.vector_partition_key"),
-                "require_full_accounting": self.get(
-                    "bri.require_full_accounting"
-                ),
-            },
-            "duplicate_search": {
-                "near_duplicate_threshold_angstrom": self.get(
-                    "duplicate_search.near_duplicate_threshold_angstrom"
-                ),
-            },
-            "graph": {
-                "build_connected_components": self.get(
-                    "graph.build_connected_components"
-                ),
-                "calculate_edge_density": self.get(
-                    "graph.calculate_edge_density"
-                ),
-                "calculate_clique_status": self.get(
-                    "graph.calculate_clique_status"
-                ),
-                "require_direct_edge_for_removal": self.get(
-                    "graph.require_direct_edge_for_removal"
-                ),
-            },
+            "bri": data["bri"],
+            "brain": data["brain"],
+            "brain_filter": data["brain_filter"],
+            "duplicate_search": data["duplicate_search"],
+            "graph": data["graph"],
+            "representative_selection": data["representative_selection"],
+            # -- dataset-version acceptance gates -------------------------
+            "expectations": data.get("expectations", {}),
+            # -- infrastructure -------------------------------------------
+            # `executor` is a front-end choice, not a stage input.
             "execution": {
                 key: value
                 for key, value in data["execution"].items()
                 if key != "executor"
             },
-            "storage": {
-                "temporary_root": _expand_environment(
-                    self.get("storage.temporary_root"),
-                    preserve_runtime=False,
-                ),
-                "output_root": _expand_environment(
-                    self.get("storage.output_root"),
-                    preserve_runtime=False,
-                ),
-                "retain_downloaded_mmcif": self.get(
-                    "storage.retain_downloaded_mmcif"
+            "storage": data["storage"],
+            "observability": data["observability"],
+            # -- schema compatibility -------------------------------------
+            # `load_config` requires these two sections to exist.  No stage
+            # reads either of them; `geometric_search` describes the
+            # superseded PDB707K design (docs/CONFIGURATION.md section 5) and
+            # is emitted as an explicit inert marker rather than as values
+            # that could be mistaken for the executed method.
+            # tests/pdbclean/test_stage_config.py asserts that no production
+            # module reads it.
+            "geometric_search": {
+                "status": "superseded_not_executed",
+                "superseded_by": "brain_filter + duplicate_search",
+                "note": (
+                    "Retained only because pdbclean.config.load_config lists "
+                    "this section as required. No stage reads it. The "
+                    "executed filter is brain_filter; the executed "
+                    "classification is duplicate_search."
                 ),
             },
-            "observability": data["observability"],
             "automation": {
                 "snapshot_watcher_enabled": False,
                 "require_stable_manifest": True,
                 "prevent_concurrent_release_runs": True,
+            },
+            # -- identity back-reference ----------------------------------
+            # A worker that has only this file can still name the canonical
+            # configuration it was projected from, and prove it.
+            "resolved_run": {
+                "schema_name": RESOLVED_CONFIG_SCHEMA_NAME,
+                "schema_version": RESOLVED_CONFIG_SCHEMA_VERSION,
+                "defaults_version": data.get("defaults_version"),
+                "resolved_config_sha256": self.sha256,
+                "scientific_config_sha256": self.scientific_sha256,
             },
         }
 

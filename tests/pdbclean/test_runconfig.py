@@ -296,10 +296,23 @@ def test_runtime_environment_resolves_the_template_for_execution(monkeypatch):
     assert resolved.get("storage.temporary_root") == "${TMPDIR}/pdbclean"
 
 
-def test_protocol_projection_resolves_runtime_templates(monkeypatch):
-    """The execution handoff -- and only it -- gets concrete host paths."""
+def test_protocol_projection_defers_runtime_templates_to_the_worker(
+    monkeypatch, tmp_path
+):
+    """``${TMPDIR}`` is resolved where the job runs, not where it is written.
 
-    monkeypatch.setenv("TMPDIR", "/scratch/node-b/999")
+    The projection is written once, on the submitting host, and read on a
+    compute node.  Baking the submitter's ``$TMPDIR`` into it would send the
+    worker to a directory belonging to another machine -- and would make the
+    document host-dependent, so it could not be hashed or byte-compared.  The
+    template is therefore preserved here and expanded by the production loader
+    on the executing host, which is what this asserts.
+    """
+
+    from pdbclean.config import load_config
+    from pdbclean.stage_config import write_stage_config
+
+    monkeypatch.setenv("TMPDIR", "/scratch/submitting-host/1")
 
     resolved = resolve_run_config(
         overrides=["snapshot.mode=fixed", "snapshot.snapshot_id=20260101"]
@@ -307,13 +320,39 @@ def test_protocol_projection_resolves_runtime_templates(monkeypatch):
 
     projected = resolved.to_protocol_config()
 
-    assert projected["storage"]["temporary_root"] == (
-        "/scratch/node-b/999/pdbclean"
-    )
+    assert projected["storage"]["temporary_root"] == "${TMPDIR}/pdbclean"
     assert resolved.get("storage.temporary_root") == "${TMPDIR}/pdbclean"
+
+    written = write_stage_config(resolved, tmp_path)
+
+    # The executing host expands it -- through the very loader the stage uses.
+    monkeypatch.setenv("TMPDIR", "/scratch/compute-node-b/999")
+
+    loaded = load_config(written["stage_config_path"])
+
+    assert loaded.data["storage"]["temporary_root"] == (
+        "/scratch/compute-node-b/999/pdbclean"
+    )
+
     assert resolved.sha256 == resolve_run_config(
         overrides=["snapshot.mode=fixed", "snapshot.snapshot_id=20260101"]
     ).sha256
+
+
+def test_projection_is_byte_identical_on_every_host(monkeypatch):
+    """Two hosts must project the same frozen configuration to the same bytes."""
+
+    from pdbclean.stage_config import stage_config_text
+
+    overrides = ["snapshot.mode=fixed", "snapshot.snapshot_id=20260101"]
+
+    monkeypatch.setenv("TMPDIR", "/tmp/node-a")
+    first = stage_config_text(resolve_run_config(overrides=overrides))
+
+    monkeypatch.setenv("TMPDIR", "/scratch/node-b/999")
+    second = stage_config_text(resolve_run_config(overrides=overrides))
+
+    assert first == second
 
 
 def test_scientific_hash_is_stable_across_machines(monkeypatch):
