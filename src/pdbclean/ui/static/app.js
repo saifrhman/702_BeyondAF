@@ -1801,7 +1801,6 @@ async function loadRuns() {
                 el("td", {}, [
                     el("button", { class: "link", text: run.run_id }),
                 ]),
-                el("td", { class: "mono", text: run.created_at || "—" }),
                 el("td", {}, [stateCell(run.status)]),
                 el("td", { class: "mono", text: run.snapshot_id || "—" }),
                 el("td", {
