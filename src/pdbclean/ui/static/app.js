@@ -20,6 +20,8 @@ const state = {
      * stages", which polls and submits one stage at a time. */
     lastRunId: null,
     jobsRunId: null,
+    /* Run the Duplicate Explorer is scoped to, or null for the form. */
+    dupRunId: null,
     autoAdvance: null,
 };
 
@@ -1208,12 +1210,20 @@ function toggleStageDetail(row, stage) {
 function duplicateQuery(offset) {
     const params = new URLSearchParams();
 
-    if ($("cfg-profile").value) {
-        params.set("config", $("cfg-profile").value);
-    }
+    /* A run scopes the explorer to its own frozen configuration, and with it
+     * its own output root. Two runs over the same snapshot can hold different
+     * duplicate sets, so when one is selected it -- not the form -- decides
+     * which dataset answers. */
+    if (state.dupRunId) {
+        params.set("run_id", state.dupRunId);
+    } else {
+        if ($("cfg-profile").value) {
+            params.set("config", $("cfg-profile").value);
+        }
 
-    if (state.snapshot) {
-        params.set("snapshot", state.snapshot);
+        if (state.snapshot) {
+            params.set("snapshot", state.snapshot);
+        }
     }
 
     if ($("dup-pdb").value.trim()) {
@@ -1255,6 +1265,65 @@ function duplicateQuery(offset) {
     return params.toString();
 }
 
+/* Which dataset answered, stated above the results. A pair count means
+ * nothing without the thresholds and the tree it came from. */
+function renderDuplicateScope(scope) {
+    const holder = $("dup-scope");
+
+    holder.innerHTML = "";
+
+    if (!scope) {
+        return;
+    }
+
+    const scoped = Boolean(scope.run_id);
+
+    const head = el("div", {
+        text: scoped
+            ? "Scoped to run " + scope.run_id
+            : "Scoped to the current form configuration (no run selected)",
+    });
+
+    const detail = el("div", { class: "note" });
+
+    detail.textContent =
+        "snapshot " + scope.snapshot
+        + "   •   complete-BRI τ = "
+        + scope.near_duplicate_threshold_angstrom + " Å ("
+        + scope.near_duplicate_threshold_units + " units)"
+        + "   •   Brain = " + scope.brain_filter_threshold_angstrom + " Å"
+        + "   •   p = " + scope.representation_precision_angstrom + " Å";
+
+    const path = el("div", { class: "note mono", text: scope.protocol_root });
+
+    const box = el("div", { class: scoped ? "pass-block" : "warn-block" },
+        [head, detail, path]);
+
+    if (scoped) {
+        box.appendChild(
+            el("div", { class: "actions" }, [
+                el("button", {
+                    class: "action",
+                    text: "Clear run scope",
+                    onclick: function () {
+                        state.dupRunId = null;
+                        searchDuplicates(0);
+                    },
+                }),
+            ])
+        );
+    }
+
+    holder.appendChild(box);
+}
+
+/* Open the Duplicate Explorer against one recorded run. */
+function exploreRunDuplicates(runId) {
+    state.dupRunId = runId;
+    showView("duplicates");
+    searchDuplicates(0);
+}
+
 async function searchDuplicates(offset) {
     const summary = $("dup-summary");
 
@@ -1269,6 +1338,7 @@ async function searchDuplicates(offset) {
         state.dupMatched = payload.matched;
         state.scenes = payload.scenes || [];
 
+        renderDuplicateScope(payload.scope);
         renderDuplicateSummary(payload);
         renderDuplicateRows(payload);
     } catch (error) {
@@ -1468,23 +1538,42 @@ function renderDuplicateRows(payload) {
 
 /* -------------------------------------------------------------- release */
 
-async function loadRelease() {
+async function loadRelease(runId) {
     const holder = $("release-body");
 
     holder.innerHTML = "";
 
+    if (runId) {
+        showView("release");
+    }
+
     try {
         const params = new URLSearchParams();
 
-        if ($("cfg-profile").value) {
-            params.set("config", $("cfg-profile").value);
-        }
+        /* As with the explorer: a selected run answers from its own frozen
+         * configuration, so the release shown is that run's release. */
+        if (runId) {
+            params.set("run_id", runId);
+        } else {
+            if ($("cfg-profile").value) {
+                params.set("config", $("cfg-profile").value);
+            }
 
-        if (state.snapshot) {
-            params.set("snapshot", state.snapshot);
+            if (state.snapshot) {
+                params.set("snapshot", state.snapshot);
+            }
         }
 
         const payload = await api("/api/release?" + params.toString());
+
+        if (payload.run_id) {
+            holder.appendChild(
+                el("div", {
+                    class: "pass-block",
+                    text: "Scoped to run " + payload.run_id,
+                })
+            );
+        }
 
         if (!payload.published) {
             holder.appendChild(
@@ -2526,6 +2615,25 @@ async function loadRunJobs(runId) {
                 actions,
             ]);
         });
+
+        holder.appendChild(
+            el("div", { class: "actions" }, [
+                el("button", {
+                    class: "action",
+                    text: "Duplicate Explorer for this run",
+                    onclick: function () {
+                        exploreRunDuplicates(payload.run_id);
+                    },
+                }),
+                el("button", {
+                    class: "action",
+                    text: "Gold release for this run",
+                    onclick: function () {
+                        loadRelease(payload.run_id);
+                    },
+                }),
+            ])
+        );
 
         holder.appendChild(
             el("div", { class: "scroll-x" }, [

@@ -154,6 +154,32 @@ class UIState:
     def frozen_run(self, run_id: str) -> FrozenRun:
         return FrozenRun.locate(self.run_root(), run_id)
 
+    def resolved_for(
+        self,
+        *,
+        run_id: str | None = None,
+        config_path: str | None = None,
+        overrides: Any = None,
+        snapshot: str | None = None,
+    ) -> ResolvedRunConfig:
+        """The configuration a read-only view should be answered from.
+
+        With ``run_id`` this is the run's own frozen configuration, loaded from
+        its directory.  That is what makes "inspect this run" mean *this* run:
+        a threshold study writes its artefacts under its own output root, so
+        answering from the browser form instead would quietly show the default
+        tree's numbers under a historical run's name.
+        """
+
+        if run_id:
+            return self.frozen_run(run_id).resolved
+
+        return self.resolve(
+            config_path=config_path,
+            overrides=overrides,
+            snapshot=snapshot,
+        )
+
     def submitter(self) -> "submission_module.Submitter":
         return submission_module.Submitter(
             repo_root=self.repo_root,
@@ -260,7 +286,20 @@ class UIState:
     def explorer(self, resolved: ResolvedRunConfig) -> DuplicateExplorer:
         paths = self.paths(resolved)
 
-        key = f"{paths.snapshot}:{paths.protocol}"
+        # The cache key must name the artefacts, not the snapshot and protocol
+        # alone: a threshold study writes a *different* duplicate set for the
+        # same snapshot and protocol under its own output root. Keying on
+        # "20260101:protocol3.2-comp702-v1" made the first configuration
+        # loaded answer for every later one.
+        key = "|".join(
+            [
+                str(paths.output_root),
+                str(paths.release_root),
+                paths.snapshot,
+                paths.protocol,
+                paths.release,
+            ]
+        )
 
         with self._lock:
             existing = self._explorers.get(key)
@@ -579,10 +618,25 @@ class Handler(BaseHTTPRequestHandler):
         )
 
     def _api_duplicates(self, query: dict[str, list[str]]) -> None:
-        resolved = self.state.resolve(
-            config_path=_single(query, "config"),
-            snapshot=_single(query, "snapshot"),
-        )
+        run_id = _single(query, "run_id")
+
+        try:
+            resolved = self.state.resolved_for(
+                run_id=run_id,
+                config_path=_single(query, "config"),
+                snapshot=_single(query, "snapshot"),
+            )
+        except FrozenRunError as exc:
+            self._error(str(exc), HTTPStatus.NOT_FOUND)
+            return
+
+        if not resolved.get("snapshot.snapshot_id"):
+            self._error(
+                "The Duplicate Explorer needs a snapshot. Select one and "
+                "resolve the configuration, or open the explorer from a "
+                "recorded run, which supplies its own frozen snapshot."
+            )
+            return
 
         explorer = self.state.explorer(resolved)
 
@@ -603,6 +657,33 @@ class Handler(BaseHTTPRequestHandler):
         result = explorer.query(filters)
         result["summary"] = explorer.summary()
         result["scenes"] = _scene_index(self.state.repo_root)
+
+        # State which dataset answered, and under which thresholds. Two runs
+        # over the same snapshot and protocol can hold different duplicate
+        # sets, so a pair count is meaningless without saying whose it is.
+        paths = self.state.paths(resolved)
+
+        result["scope"] = {
+            "run_id": run_id,
+            "snapshot": resolved.get("snapshot.snapshot_id"),
+            "protocol": resolved.get("release.protocol_version"),
+            "protocol_root": str(
+                paths.output_root / paths.snapshot / paths.protocol
+            ),
+            "release_root": str(paths.release_root / paths.release),
+            "near_duplicate_threshold_angstrom": resolved.get(
+                "duplicate_search.near_duplicate_threshold_angstrom"
+            ),
+            "near_duplicate_threshold_units": (
+                resolved.near_duplicate_threshold_mA
+            ),
+            "brain_filter_threshold_angstrom": resolved.get(
+                "brain_filter.threshold_angstrom"
+            ),
+            "representation_precision_angstrom": resolved.get(
+                "bri.representation_precision_angstrom"
+            ),
+        }
 
         # Per-row Mol* availability, resolved against THIS run's snapshot.
         # Every row gets either a usable action or a specific reason -- never
@@ -681,10 +762,24 @@ class Handler(BaseHTTPRequestHandler):
         self._json(result)
 
     def _api_release(self, query: dict[str, list[str]]) -> None:
-        resolved = self.state.resolve(
-            config_path=_single(query, "config"),
-            snapshot=_single(query, "snapshot"),
-        )
+        run_id = _single(query, "run_id")
+
+        try:
+            resolved = self.state.resolved_for(
+                run_id=run_id,
+                config_path=_single(query, "config"),
+                snapshot=_single(query, "snapshot"),
+            )
+        except FrozenRunError as exc:
+            self._error(str(exc), HTTPStatus.NOT_FOUND)
+            return
+
+        if not resolved.get("snapshot.snapshot_id"):
+            self._error(
+                "Select a snapshot and resolve the configuration, or open "
+                "this view from a recorded run."
+            )
+            return
 
         plan = plan_pipeline(resolved, repo_root=self.state.repo_root)
 
@@ -699,6 +794,7 @@ class Handler(BaseHTTPRequestHandler):
             "snapshot_display": format_snapshot_id(
                 str(resolved.get("snapshot.snapshot_id") or "")
             ),
+            "run_id": run_id,
             "brain_threshold_angstrom": resolved.get(
                 "brain_filter.threshold_angstrom"
             ),

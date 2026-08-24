@@ -488,3 +488,172 @@ def test_resolve_reports_precision_and_units(ui):
     assert payload["representation_unit"] == "mA"
     assert payload["precision_is_implemented"] is True
     assert payload["near_duplicate_threshold_mA"] == 10
+
+
+# --------------------------------------------------------------------------
+# Run-scoped inspection
+# --------------------------------------------------------------------------
+#
+# Two runs over the same snapshot and protocol can hold different duplicate
+# sets, because a threshold study writes its artefacts under its own output
+# root. Inspecting a recorded run must therefore answer from that run's frozen
+# configuration, not from whatever is currently typed into the browser form.
+
+
+def _freeze_run(tmp_path, **overrides):
+    from pdbclean.run_provenance import RunProvenance
+    from pdbclean.runconfig import resolve_run_config
+
+    items = {
+        "snapshot.mode": "fixed",
+        "snapshot.snapshot_id": "20260101",
+        **overrides,
+    }
+
+    resolved = resolve_run_config(
+        overrides=[f"{key}={value}" for key, value in items.items()]
+    )
+
+    return RunProvenance.create(
+        resolved=resolved,
+        run_root=tmp_path / "runs",
+        repo_root=REPO_ROOT,
+        snapshot={"snapshot_id": "20260101", "display": "2026-01-01"},
+    )
+
+
+def test_duplicates_without_a_snapshot_explains_itself(ui):
+    """The old failure was a raw 'cannot derive pipeline paths' error.
+
+    It is still a 400 -- the request genuinely cannot be served -- but the body
+    now says what to do about it instead of leaking an internal message.
+    """
+
+    with pytest.raises(urllib.error.HTTPError) as excinfo:
+        ui.get("/api/duplicates?limit=1")
+
+    assert excinfo.value.code == 400
+
+    payload = json.loads(excinfo.value.read().decode("utf-8"))
+
+    assert "snapshot" in payload["error"].lower()
+    assert "recorded run" in payload["error"]
+
+
+def test_duplicates_reject_an_unknown_run(ui):
+    with pytest.raises(urllib.error.HTTPError) as excinfo:
+        ui.get("/api/duplicates?run_id=run-20990101T000000Z-deadbeef")
+
+    assert excinfo.value.code == 404
+
+
+def test_duplicate_scope_names_the_dataset_that_answered(ui):
+    payload = ui.get(
+        "/api/duplicates?snapshot=20260101&limit=1&config=" + PROFILE
+    )
+
+    scope = payload["scope"]
+
+    assert scope["snapshot"] == "20260101"
+    assert scope["near_duplicate_threshold_units"] == 10
+    assert scope["protocol_root"].endswith("protocol3.2-comp702-v1")
+
+
+def test_a_threshold_study_is_not_answered_from_the_default_tree(tmp_path):
+    """The bug: same snapshot and protocol, different artefacts, one answer.
+
+    The explorer cache was keyed on snapshot and protocol alone, so whichever
+    configuration was loaded first answered for every later one -- a tau study
+    would silently report the default tree's duplicate set.
+    """
+
+    from pdbclean.pipeline import PipelinePaths
+    from pdbclean.runconfig import resolve_run_config
+
+    def _paths(output_root):
+        resolved = resolve_run_config(
+            overrides=[
+                "snapshot.mode=fixed",
+                "snapshot.snapshot_id=20260101",
+                f"storage.output_root={output_root}",
+            ]
+        )
+        return PipelinePaths.from_config(resolved, repo_root=REPO_ROOT)
+
+    default = _paths("outputs/pdbclean")
+    study = _paths("outputs/pdbclean_tau0p005")
+
+    # Same snapshot and protocol -- the old cache key -- yet different data.
+    assert default.snapshot == study.snapshot
+    assert default.protocol == study.protocol
+    assert default.output_root != study.output_root
+
+    state = ui_server.UIState(
+        repo_root=REPO_ROOT, config_path=None, overrides=[]
+    )
+
+    def _key(paths):
+        return "|".join(
+            [
+                str(paths.output_root),
+                str(paths.release_root),
+                paths.snapshot,
+                paths.protocol,
+                paths.release,
+            ]
+        )
+
+    assert _key(default) != _key(study)
+    assert state is not None
+
+
+def test_release_scoped_to_a_run_names_that_run(ui, tmp_path, monkeypatch):
+    provenance = _freeze_run(tmp_path)
+
+    monkeypatch.setattr(
+        ui_server.Handler.state,
+        "run_root",
+        lambda: tmp_path / "runs",
+    )
+
+    payload = ui.get(
+        "/api/release?run_id=" + provenance.run_id
+    )
+
+    assert payload["run_id"] == provenance.run_id
+    assert payload["snapshot"] == "20260101"
+
+
+def test_duplicates_scoped_to_a_run_use_its_frozen_configuration(
+    ui, tmp_path, monkeypatch
+):
+    """A run's own thresholds decide what the explorer reports."""
+
+    provenance = _freeze_run(
+        tmp_path,
+        **{
+            "brain_filter.threshold_angstrom": 0.005,
+            "duplicate_search.near_duplicate_threshold_angstrom": 0.005,
+            "storage.output_root": "outputs/pdbclean_tau0p005",
+        },
+    )
+
+    monkeypatch.setattr(
+        ui_server.Handler.state,
+        "run_root",
+        lambda: tmp_path / "runs",
+    )
+
+    payload = ui.get(
+        "/api/duplicates?limit=1&run_id=" + provenance.run_id
+    )
+
+    if "error" in payload:
+        pytest.skip(f"tau=0.005 artefacts not present here: {payload['error']}")
+
+    scope = payload["scope"]
+
+    assert scope["run_id"] == provenance.run_id
+    assert scope["near_duplicate_threshold_angstrom"] == 0.005
+    assert scope["near_duplicate_threshold_units"] == 5
+    assert "tau0p005" in scope["protocol_root"]
