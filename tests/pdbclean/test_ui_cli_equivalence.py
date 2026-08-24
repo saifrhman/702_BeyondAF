@@ -657,3 +657,51 @@ def test_duplicates_scoped_to_a_run_use_its_frozen_configuration(
     assert scope["near_duplicate_threshold_angstrom"] == 0.005
     assert scope["near_duplicate_threshold_units"] == 5
     assert "tau0p005" in scope["protocol_root"]
+
+
+def test_every_in_run_explorer_link_carries_the_run():
+    """A link clicked inside a run must scope the explorer to that run.
+
+    The regression this pins: the stage-detail duplicate link called
+    openDuplicateExplorer() without a run, so clicking it from a recorded run
+    fell back to the browser form -- which either has no snapshot (an error the
+    operator cannot act on from there) or has a *different* configuration's,
+    which would show another run's pairs under this run's stage.
+
+    Asserted against the shipped asset rather than a mock, because the defect
+    was in the wiring, not in any function's behaviour.
+    """
+
+    source = (
+        REPO_ROOT / "src/pdbclean/ui/static/app.js"
+    ).read_text(encoding="utf-8")
+
+    # The call site inside a run's stage detail.
+    assert "openDuplicateExplorer(nav.filters || {}, runId)" in source, (
+        "the stage-detail duplicate link no longer passes its run id"
+    )
+
+    # The signature that accepts it.
+    assert "function openDuplicateExplorer(filters, runId)" in source
+
+    # And it must actually apply the scope the query builder reads.
+    opener = source.split("function openDuplicateExplorer(filters, runId)")[1]
+    opener = opener.split("\n}")[0]
+
+    assert "state.dupRunId" in opener
+
+
+def test_the_query_builder_prefers_the_run_over_the_form():
+    source = (
+        REPO_ROOT / "src/pdbclean/ui/static/app.js"
+    ).read_text(encoding="utf-8")
+
+    builder = source.split("function duplicateQuery(offset)")[1]
+    builder = builder.split("\n}")[0]
+
+    run_branch = builder.index("state.dupRunId")
+    form_branch = builder.index('params.set("config"')
+
+    # The run is consulted first, and the form only in its absence.
+    assert run_branch < form_branch
+    assert 'params.set("run_id", state.dupRunId)' in builder

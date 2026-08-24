@@ -1343,10 +1343,74 @@ async function searchDuplicates(offset) {
         renderDuplicateRows(payload);
     } catch (error) {
         $("dup-range").textContent = "—";
+
+        /* Nothing to explore *yet* is not a failure -- it means no dataset has
+         * been chosen. Offer the choice instead of a red error, because the
+         * meaningful unit here is a recorded run. */
+        if (!state.dupRunId && /snapshot/i.test(error.message)) {
+            await renderRunPicker();
+            return;
+        }
+
         summary.appendChild(
             el("div", { class: "fail-block", text: error.message })
         );
     }
+}
+
+/* Let the operator pick which recorded run to explore. */
+async function renderRunPicker() {
+    const holder = $("dup-scope");
+
+    holder.innerHTML = "";
+
+    const box = el("div", { class: "warn-block" }, [
+        el("div", { text: "Choose a dataset to explore" }),
+        el("div", {
+            class: "note",
+            text:
+                "Duplicate pairs belong to a particular run: two runs over the "
+                + "same snapshot can hold different pair sets, so the explorer "
+                + "will not guess which one you mean. Pick a recorded run "
+                + "below, or resolve a configuration with a snapshot on the "
+                + "Run configuration page.",
+        }),
+    ]);
+
+    try {
+        const payload = await api("/api/runs");
+        const runs = payload.runs || payload;
+
+        if (!runs.length) {
+            box.appendChild(
+                el("div", { class: "note", text: "No runs are recorded yet." })
+            );
+        } else {
+            const list = el("div", { class: "actions" });
+
+            runs.slice(0, 12).forEach(function (run) {
+                list.appendChild(
+                    el("button", {
+                        class: "action",
+                        text:
+                            run.run_id
+                            + "  (snapshot " + (run.snapshot_id || "—") + ")",
+                        onclick: function () {
+                            exploreRunDuplicates(run.run_id);
+                        },
+                    })
+                );
+            });
+
+            box.appendChild(list);
+        }
+    } catch (listError) {
+        box.appendChild(
+            el("div", { class: "note", text: listError.message })
+        );
+    }
+
+    holder.appendChild(box);
 }
 
 function renderDuplicateSummary(payload) {
@@ -1684,8 +1748,23 @@ async function loadRelease(runId) {
         table.appendChild(body);
         holder.appendChild(table);
     } catch (error) {
+        /* Same distinction as the explorer: "no dataset chosen yet" is a
+         * prompt, not a failure. */
+        const unscoped = !runId && /snapshot/i.test(error.message);
+
         holder.appendChild(
-            el("div", { class: "fail-block", text: error.message })
+            el("div", { class: unscoped ? "warn-block" : "fail-block" }, [
+                el("div", { text: error.message }),
+                unscoped
+                    ? el("div", {
+                        class: "note",
+                        text:
+                            "Open this page from a run (Runs -> select a run "
+                            + "-> Gold release for this run) to see that "
+                            + "run's release.",
+                    })
+                    : el("span", {}),
+            ])
         );
     }
 }
@@ -2062,7 +2141,7 @@ async function loadStageDetail(runId, stage, container) {
 
             button.addEventListener("click", function (event) {
                 event.stopPropagation();
-                openDuplicateExplorer(nav.filters || {});
+                openDuplicateExplorer(nav.filters || {}, runId);
             });
 
             actions.appendChild(button);
@@ -2264,8 +2343,15 @@ function renderPreviewTable(preview) {
 }
 
 /* Jump to the Duplicate Explorer with the stage's filters applied. Mol* is
- * reached from there; neither ever reclassifies a pair. */
-function openDuplicateExplorer(filters) {
+ * reached from there; neither ever reclassifies a pair.
+ *
+ * `runId` scopes the explorer to the run the link was clicked in. It is not
+ * optional in practice: a stage of a recorded run describes that run's
+ * duplicate set, which may live under its own output root, so opening the
+ * explorer unscoped from here would answer from the browser form -- either
+ * failing for want of a snapshot, or worse, quietly showing another
+ * configuration's pairs under this run's stage. */
+function openDuplicateExplorer(filters, runId) {
     if (filters.relationship) {
         $("dup-rel").value = filters.relationship;
     }
@@ -2273,6 +2359,8 @@ function openDuplicateExplorer(filters) {
     if (filters.exact_only) {
         $("dup-class").value = "exact";
     }
+
+    state.dupRunId = runId || null;
 
     showView("duplicates");
     searchDuplicates(0);
