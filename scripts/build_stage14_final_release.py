@@ -87,6 +87,17 @@ def parse_args():
     )
 
     p.add_argument(
+        "--expected-mapping-rows",
+        type=int,
+        default=99_854,
+        help=(
+            "Dataset-version gate: rows in representative_mapping.parquet. "
+            "The default is the frozen 2026-01-01 tau = 10 mA figure, so an "
+            "existing invocation behaves exactly as before."
+        ),
+    )
+
+    p.add_argument(
         "--no-expectation-gate",
         action="store_true",
         help=(
@@ -341,14 +352,22 @@ def main():
         mapping_path
     ).to_pylist()
 
-    assert len(mapping) == 99_854
+    if not args.no_expectation_gate:
+        assert len(mapping) == args.expected_mapping_rows, (
+            f"Representative mapping row count {len(mapping)} does not match "
+            f"the expected {args.expected_mapping_rows}"
+        )
 
     mapping_by_key = {
         canonical_key_from_mapping(r): r
         for r in mapping
     }
 
-    assert len(mapping_by_key) == 99_854
+    if not args.no_expectation_gate:
+        assert len(mapping_by_key) == args.expected_mapping_rows, (
+            f"Distinct mapping key count {len(mapping_by_key)} does not match "
+            f"the expected {args.expected_mapping_rows}"
+        )
 
     removed_by_key = {
         canonical_key_from_mapping(r): r

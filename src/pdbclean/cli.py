@@ -478,6 +478,26 @@ def stage_command(
                 ["--expected-canonical-input-chains", str(canonical)]
             )
 
+        # Component and edge counts are dataset-version facts, not scientific
+        # parameters: a different snapshot or a different threshold simply has
+        # different ones. They are asserted when this configuration knows them
+        # and explicitly waived when it does not, exactly as Stage 14a and 14c
+        # already do.
+        supplied = False
+
+        for flag, key in (
+            ("--expected-components", "component_count"),
+            ("--expected-edge-count", "edge_count"),
+        ):
+            value = expectations.get(key)
+
+            if value is not None:
+                command.extend([flag, str(value)])
+                supplied = True
+
+        if not supplied:
+            command.append("--no-expectation-gate")
+
         return _finish(command)
 
     if stage_id == "gold_release":
@@ -506,6 +526,13 @@ def stage_command(
                     str(removed),
                 ]
             )
+
+            mapping_rows = expectations.get("representative_mapping_rows")
+
+            if mapping_rows is not None:
+                command.extend(
+                    ["--expected-mapping-rows", str(mapping_rows)]
+                )
         else:
             command.append("--no-expectation-gate")
 

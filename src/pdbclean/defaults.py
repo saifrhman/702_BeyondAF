@@ -312,6 +312,8 @@ VALIDATED_DEFAULTS: dict[str, Any] = {
         "mge2_node_count": None,
         "edge_count": None,
         "m1_edge_count": None,
+        "component_count": None,
+        "representative_mapping_rows": None,
         "retained_chain_count": None,
         "removed_chain_count": None,
         "total_near_duplicate_pair_count": None,

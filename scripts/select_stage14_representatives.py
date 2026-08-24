@@ -59,6 +59,40 @@ def parse_args():
     )
 
     p.add_argument(
+        "--expected-components",
+        type=int,
+        default=20_789,
+        help=(
+            "Dataset-version gate: the number of connected components in the "
+            "near-duplicate graph. The default is the frozen 2026-01-01 "
+            "tau = 10 mA figure, so an existing invocation behaves exactly as "
+            "before. A different snapshot or threshold has a different value; "
+            "supply it, or pass --no-expectation-gate."
+        ),
+    )
+
+    p.add_argument(
+        "--expected-edge-count",
+        type=int,
+        default=1_068_256,
+        help=(
+            "Dataset-version gate: the number of undirected near-duplicate "
+            "edges. Frozen 2026-01-01 tau = 10 mA default; see "
+            "--expected-components."
+        ),
+    )
+
+    p.add_argument(
+        "--no-expectation-gate",
+        action="store_true",
+        help=(
+            "Publish without dataset-version gates. Required for any snapshot "
+            "or threshold whose counts are not known in advance. The internal "
+            "accounting assertions still run."
+        ),
+    )
+
+    p.add_argument(
         "--expected-canonical-input-chains",
         type=int,
         default=None,
@@ -303,7 +337,11 @@ def main():
             row["component_id"]
         ].append(key)
 
-    assert len(components) == 20_789
+    if not args.no_expectation_gate:
+        assert len(components) == args.expected_components, (
+            f"Component count {len(components)} does not match the expected "
+            f"{args.expected_components}"
+        )
 
     # ========================================================
     # Accepted-chain quality evidence
@@ -441,7 +479,11 @@ def main():
 
             edge_count += 1
 
-    assert edge_count == 1_068_256
+    if not args.no_expectation_gate:
+        assert edge_count == args.expected_edge_count, (
+            f"Edge count {edge_count} does not match the expected "
+            f"{args.expected_edge_count}"
+        )
 
     # ========================================================
     # Component clique metadata
@@ -457,7 +499,11 @@ def main():
         for r in component_summary
     }
 
-    assert len(comp_info) == 20_789
+    if not args.no_expectation_gate:
+        assert len(comp_info) == args.expected_components, (
+            f"Component summary count {len(comp_info)} does not match the "
+            f"expected {args.expected_components}"
+        )
 
     # ========================================================
     # Deterministic quality ranking

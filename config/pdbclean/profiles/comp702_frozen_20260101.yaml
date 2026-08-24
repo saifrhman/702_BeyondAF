@@ -43,6 +43,8 @@ expectations:
   mge2_node_count: 577760
   edge_count: 1068256
   m1_edge_count: 4495
+  component_count: 20789
+  representative_mapping_rows: 99854
   retained_chain_count: 499770
   removed_chain_count: 78754
   total_near_duplicate_pair_count: 1072751
