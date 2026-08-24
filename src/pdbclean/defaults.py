@@ -293,6 +293,24 @@ VALIDATED_DEFAULTS: dict[str, Any] = {
         "hot_cache_root": "outputs/snapshot_cache",
         "retain_downloaded_mmcif": False,
     },
+    # ------------------------------------------------------------------
+    # Evidence declarations.
+    #
+    # What review evidence exists for this configuration. Deliberately NOT a
+    # scientific section: whether a release cites a manual review changes what
+    # its manifest documents, never a computed value, so declaring one here
+    # cannot alter a run's scientific identity or its eligibility to reuse
+    # existing stage output.
+    # ------------------------------------------------------------------
+    "evidence": {
+        # Stage 13 is a MANUAL detailed review of a subset of pairs selected
+        # under one near-duplicate threshold. It is not orchestrated and
+        # cannot be regenerated, so a run at another threshold or snapshot has
+        # none of its own. Null means "this configuration has one, require
+        # it". A string means "it has none, and this is why", which the
+        # release manifest records instead of another configuration's digest.
+        "stage13_review_absent_reason": None,
+    },
     "observability": {
         "structured_logging": True,
         "record_slurm_identifiers": True,

@@ -514,6 +514,19 @@ def stage_command(
             str(threshold_mA),
         ]
 
+        # Stage 13 is a manual review of pairs selected under one threshold.
+        # It is not orchestrated and cannot be regenerated, so a run at a
+        # different threshold has none. Whether this configuration has one is
+        # declared in the configuration, never guessed from the filesystem:
+        # inheriting another configuration's review would put a SHA256 in this
+        # release manifest for evidence that does not describe this release.
+        review_absent_reason = resolved.get(
+            "evidence.stage13_review_absent_reason"
+        )
+
+        if review_absent_reason:
+            command.extend(["--no-stage13-review", str(review_absent_reason)])
+
         retained = expectations.get("retained_chain_count")
         removed = expectations.get("removed_chain_count")
 

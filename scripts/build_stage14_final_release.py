@@ -87,6 +87,21 @@ def parse_args():
     )
 
     p.add_argument(
+        "--no-stage13-review",
+        default=None,
+        metavar="REASON",
+        help=(
+            "Publish without a Stage-13 detailed review, stating why. "
+            "Stage 13 is a MANUAL review of a subset of pairs selected under "
+            "one near-duplicate threshold; it is not orchestrated and cannot "
+            "be regenerated. A run at a different threshold reviews a "
+            "different pair set, so borrowing another configuration's review "
+            "SHA256 into this release manifest would be false provenance. "
+            "This flag records the absence explicitly instead."
+        ),
+    )
+
+    p.add_argument(
         "--expected-mapping-rows",
         type=int,
         default=99_854,
@@ -225,6 +240,21 @@ def main():
         / "_SUCCESS"
     )
 
+    if args.no_stage13_review:
+        assert not stage13_success.is_file(), (
+            "A Stage-13 review exists for this configuration at "
+            f"{stage13_success}; --no-stage13-review would understate the "
+            "evidence available. Remove the flag."
+        )
+    else:
+        assert stage13_success.is_file(), (
+            f"No Stage-13 detailed review at {stage13_success}. Stage 13 is a "
+            "manual review of pairs selected under one near-duplicate "
+            "threshold and is not orchestrated, so a run at another threshold "
+            "has none. Pass --no-stage13-review \"<reason>\" to publish "
+            "without it; the manifest will say so."
+        )
+
     required = [
         canonical,
         mapping_path,
@@ -239,7 +269,6 @@ def main():
         stage8_summary,
         stage8_success,
         source_manifest,
-        stage13_success,
         args.policy_config,
     ]
 
@@ -968,8 +997,17 @@ def main():
             "stage8_success_sha256":
                 sha256(stage8_success),
 
-            "stage13_success_sha256":
-                sha256(stage13_success),
+            "stage13_success_sha256": (
+                None
+                if args.no_stage13_review
+                else sha256(stage13_success)
+            ),
+
+            "stage13_review_present":
+                not args.no_stage13_review,
+
+            "stage13_review_absent_reason":
+                args.no_stage13_review,
 
             "stage14_graph_success_sha256":
                 sha256(graph_success),

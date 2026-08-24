@@ -563,6 +563,8 @@ class ResolvedRunConfig:
             "representative_selection": data["representative_selection"],
             # -- dataset-version acceptance gates -------------------------
             "expectations": data.get("expectations", {}),
+            # -- evidence declarations ------------------------------------
+            "evidence": data.get("evidence", {}),
             # -- infrastructure -------------------------------------------
             # `executor` is a front-end choice, not a stage input.
             "execution": {
