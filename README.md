@@ -37,9 +37,10 @@ It also contains the downstream OpenFold work that consumes that dataset.
 12. [Historical run workflow](#12-historical-run-workflow)
 13. [Frozen COMP702 result](#13-frozen-comp702-result-frozen)
 14. [Testing](#14-testing)
-15. [Current status](#15-current-status)
-16. [Future work](#16-future-work)
-17. [Authority order](#17-authority-order)
+15. [OpenFold training view and retraining](#15-openfold-training-view-and-retraining)
+16. [Current status](#16-current-status)
+17. [Future work](#17-future-work)
+18. [Authority order](#18-authority-order)
 
 Deeper detail lives in [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md),
 [`docs/CONFIGURATION.md`](docs/CONFIGURATION.md),
@@ -64,7 +65,8 @@ the Backbone Rigid Invariant (BRI), and produces a deduplicated dataset in
 which every removal decision is individually justified and auditable.
 
 The deduplicated dataset is then intended as the training population for
-OpenFold retraining — see [§15](#15-current-status) and [§16](#16-future-work)
+OpenFold retraining — see [§15](#15-openfold-training-view-and-retraining),
+[§16](#16-current-status) and [§17](#17-future-work)
 for exactly how far that has and has not progressed.
 
 ---
@@ -321,7 +323,7 @@ pytest tests -q          # runs the full suite
 
 * **Slurm** (`sbatch`) for HPC execution.
 * **MMseqs2** for Stage 17 MSA generation — downstream, see
-  [§15](#15-current-status).
+  [§15](#15-openfold-training-view-and-retraining).
 * Mol\* is loaded in the browser from a CDN by the pair viewer; no local
   install is required.
 
@@ -909,6 +911,15 @@ snapshot pinning and preservation; canonical stage ordering and identity;
 historical-run read-only guarantees; and UI/CLI equivalence against a live
 server.
 
+The OpenFold training-view layer adds its own tests: the run encoding and its
+round trip; the arithmetic placing Gold `label_seq_id` values on OpenFold's
+seqres index, including a non-standard numbering origin; refusal — rather than
+silent damage — when a lineage falls outside the deposited sequence, duplicates
+a residue, or names an absent chain; and, for the alignment index, a known-good
+index corrupted in each way it could plausibly be wrong (chain pointed at the
+wrong MSA, truncated byte range, dangling reference, missing chain) with the
+verifier required to fail on each. A verifier that cannot fail is not evidence.
+
 Tests that read the large gitignored frozen outputs skip cleanly when absent.
 
 A heavier regression re-runs the real Stage 14a/b entry points on a compute
@@ -922,7 +933,204 @@ It writes only to a scratch regression root; the frozen release is read-only.
 
 ---
 
-## 15. Current status
+## 15. OpenFold training view and retraining
+
+This section covers the wiring between the frozen PDBClean Gold dataset and
+OpenFold training. The deduplication science in §2–§13 is unchanged by it: what
+follows only decides *which residues OpenFold reads* and *how it finds the
+corresponding MSA*.
+
+### 15.1 The retained-chain training view [IMPLEMENTED]
+
+OpenFold builds every structural feature from `mmcif_object.chain_to_seqres`:
+`make_mmcif_features` takes `num_res = len(chain_to_seqres[chain_id])` and
+`get_atom_coords` then walks `range(num_res)`. That sequence is the *deposited*
+polymer read from `_entity_poly_seq`, and it includes residues Protocol 3.2
+removed.
+
+The MSAs, however, were searched on each chain's `retained_sequence`. Feeding
+OpenFold the deposited sequence therefore produces structure features of one
+length and MSA features of another — and **the pipeline does not raise**. On
+`102l_A` it silently produced `aatype (165, 21)` against `msa (1648, 163)`.
+Training on that would learn against misaligned evolutionary signal, which is
+worse than a crash.
+
+The invariant now enforced for every training example is:
+
+```
+OpenFold projected sequence == Gold retained_sequence == MSA query row
+```
+
+character for character.
+
+[`src/pdbclean/openfold_training_view.py`](src/pdbclean/openfold_training_view.py)
+rebuilds one chain's `chain_to_seqres` and `seqres_to_structure` restricted to
+Gold's `retained_label_seq_ids` and re-indexed to `0..L-1`. Coordinates, the
+header, the model, the loss and the MSA semantics are untouched. The residue set
+is **not** recomputed: it is taken from the same `retained_label_seq_ids` lineage
+that `geometric_validation.reconstruct_retained_backbone_chain` uses, so the
+project has one definition of "retained", not two.
+
+OpenFold places Gold's residue ids on its own index as
+`seq_idx = label_seq_id − min(_entity_poly_seq.num)`. That origin is **read from
+the deposited file**, not assumed to be 1: an off-by-one there would shift every
+residue against its coordinates while every length stayed correct, and nothing
+downstream would notice.
+
+### 15.2 Compact indexes [IMPLEMENTED]
+
+Both indexes exist to avoid materialising hundreds of thousands of files against
+a filesystem already near its inode quota.
+
+**Alignment index** — `build_alignment_index.py`. OpenFold resolves an entry as
+`open(join(alignment_dir, db))`, `seek(start)`, `read(size)`. Nothing requires
+`db` to be a *packed* database, so each entry points at its own existing
+`<sequence_sha256>.a3m` with `start=0`. That is the identical contract at **zero
+duplicated bytes and zero new inodes**; packing would have copied 161 GiB.
+Equivalence to a packed entry was confirmed against OpenFold's own
+`_parse_msa_data` by reading the same MSA both ways.
+
+**Projection index** — `build_projection_index.py`. Every one of the 499,770
+lineages is a single contiguous run, so a chain's retained residues cost two
+integers rather than a residue list (28 MB rather than hundreds).
+
+Each projection entry also carries a truncated SHA256 of the retained sequence,
+and the dataloader adapter verifies the projected sequence against it on every
+sample. A length check is not sufficient — see §15.4. That digest is also the MSA
+store's content address, so structure and MSA are tied together at load time.
+
+### 15.3 Caches and the training population [IMPLEMENTED]
+
+`build_chain_data_cache.py` drives OpenFold's train chain-data cache from the
+Gold manifest rather than from a directory listing, because upstream's
+`generate_chain_data_cache.py` records `chain_to_seqres` for every chain of every
+entry. Using that here would have described a different population in two ways:
+the sampler's length-based sampling probability and `max_single_aa_prop` filter
+would be computed over residues Protocol 3.2 removed, and chains Gold did not
+retain would be described. `seq` is therefore the retained sequence. Only
+`resolution` and `release_date` come from the deposited file, read with
+OpenFold's own `_get_header` so the values match what OpenFold would compute.
+
+The cache is not optional: `OpenFoldDataset.looped_samples` indexes
+`chain_data_cache[chain_id]` directly, so a missing cache is a `TypeError` on the
+first batch, and a chain missing *from* it is dropped from training with only a
+log line.
+
+### 15.4 Eleven excluded chains [IMPLEMENTED]
+
+Full-population validation found 11 chains whose projected sequence differs from
+the retained sequence **at identical length**: `1aw8_B`, `1aw8_E`, `6rxh_B`,
+`6v24_A`, `8au0_A`, `8au0_C`, `8tx9_A`, `8tx9_B`, `8tx9_D`, `9ixd_A`, `9ixf_A`.
+
+The cause is upstream and is not a PDBClean defect. Entries with point
+microheterogeneity carry two `_entity_poly_seq` rows for one residue number
+(MET/MSE at 101 in `8tx9`, THR/AEI at 19 in `6v24`, PYR/SER at 1 in `1aw8`).
+OpenFold's `_get_protein_chains` appends every row, so its seqres runs one
+residue long and every index past that point shifts. **OpenFold cannot build
+correct features for these chains with or without the projection.**
+
+They are excluded rather than repaired: repairing would mean changing OpenFold's
+core polymer parsing for every structure to fix a handful, and the alternative to
+exclusion is training a chain against an MSA built for a different sequence. The
+exclusion is recorded with its chain list in
+`training_view/excluded_chains.json`, so the trained population is auditable and
+never silently smaller than Gold.
+
+**Gold population 499,770 → trainable population 499,759.**
+
+### 15.5 Validation [IMPLEMENTED]
+
+Heavy validation runs as Slurm CPU array jobs; none of it runs on a login node.
+
+| Check | Result |
+|-------|--------|
+| MSA corpus complete, unduplicated, correctly attributed | 142,056 / 142,056, 0 missing, 0 orphan, 0 misattributed |
+| Alignment index resolves to each chain's own MSA | 499,770 chains, 0 uncovered, 2,000 read back |
+| Projected sequence == retained sequence (full population) | 499,759 / 499,770 |
+| Terminal-trimmed chains covered | 8,841 |
+| `auth_chain_id != label_chain_id` chains covered | 249,033 |
+| Structure/MSA feature widths agree | 1,600 / 1,600 |
+| Dataloader preflight through the real feature pipeline | 12 / 12, dims agree after cropping |
+
+Counting entries proves nothing on its own here: an off-by-one in the chain
+mapping still gives every chain *an* MSA. The population check therefore follows
+each entry exactly as OpenFold will and compares the delivered sequence to the
+chain's own Gold sequence.
+
+### 15.6 The OpenFold input-view adapter
+
+OpenFold itself is **not** vendored into this repository. A working copy is used
+at `/mnt/fastscratch/users/sgsrehm1/openfold_src`, taken from commit
+`da89cd28446abcd7be95459b7b349dedaee666c0` of `saifrhman/702_BeyondAF`. It lives
+on fastscratch because `$HOME` is at its inode quota.
+
+The changes to it are confined to the input view and to operational limits:
+
+* `data_modules.py` — a `projection_index` argument on `OpenFoldSingleDataset`,
+  the projection and digest check in `_parse_mmcif`, and
+  `train_projection_index_path` on `OpenFoldDataModule`. A chain with no
+  projection entry raises rather than falling back to the deposited polymer.
+* `train_openfold.py` — a `--train_projection_index_path` flag, and
+  `OPENFOLD_SAVE_TOP_K` / `OPENFOLD_MILESTONE_EVERY_N_EPOCHS` so checkpoint
+  retention can be bounded. Upstream keeps every epoch's checkpoint
+  (`save_top_k=-1`); at ~1.5 GB each that would exceed the filesystem quota long
+  before the step budget is reached.
+
+No model architecture, loss, MSA semantics, BRI science, duplicate science or
+retained-chain identity is modified.
+
+### 15.7 Reported conflict: MSA sharing between sequence-identical chains
+
+§16 records the frozen Stage-17 policy as *"an MSA is **not** shared between
+sequence-identical retained chains."* **The implemented corpus does share
+them.** 499,770 chains resolve to 142,056 distinct MSAs, so 357,714 chains reuse
+an MSA generated for an identical sequence.
+
+Per §18, this is reported rather than silently resolved.
+
+The scientific argument for sharing is that an MSA is a deterministic function of
+the query sequence and the reference database, so two identical retained
+sequences searched separately yield the same alignment; sharing avoids 3.5× the
+search compute and 161 GiB of duplicated storage for no change in result. That
+argument was **not** ratified as a change to the frozen policy before the corpus
+was built, so the policy text and the artefact disagree and the decision is
+outstanding.
+
+Nothing about the *provenance* is ambiguous: the store is content-addressed by
+`sha256(retained_sequence)`, and every chain's mapping is verified.
+
+### 15.8 Retraining status [IN PROGRESS]
+
+A from-scratch training run is in progress on the trainable population. It uses
+random initialisation — **no pretrained AlphaFold or OpenFold weights are
+loaded** — because the scientific goal is a new model trained on the
+geometry-cleaned dataset.
+
+Configuration: AF2 `initial_training` preset, crop 256, 128 MSA clusters, bf16,
+1×A100, per-GPU batch 1 with gradient accumulation 8 (**global batch 8**), Adam
+with the AlphaFold LR schedule (1,000-step warmup, decay from 50,000).
+Continuation across the wall clock uses Lightning's SLURM requeue, which restores
+global step, optimizer and scheduler, so the step counter never resets.
+
+**This is not a reproduction of AlphaFold's training protocol**, and must not be
+described as one:
+
+* budget ~409,600 samples ≈ 51,200 optimizer steps — roughly **5%** of AF2's
+  initial-training sample budget, and **less than one pass** over the 499,759
+  chains;
+* **no templates** — the alignment index carries only `.a3m`, so
+  `make_template_features` takes its empty branch and `max_template_date` is
+  inert;
+* MSAs are UniRef30 via MMseqs2 only, not AF2's UniRef90 + BFD + Mgnify stack;
+* no distillation set;
+* global batch 8 versus AF2's 128;
+* no fine-tuning stage and no held-out validation set.
+
+**No trained model, accuracy, generalisation or failure-mode result is claimed.**
+
+---
+
+## 16. Current status
 
 ### Completed and frozen
 
@@ -934,10 +1142,14 @@ It writes only to a scratch regression root; the frozen release is read-only.
 
 ### In progress
 
-* **Stage 15 — OpenFold training-population preparation.** **[IN PROGRESS]**
+* **Stage 15 — OpenFold training-population preparation.** **[IMPLEMENTED]**
+  499,770 retained chains, 118,197 source entries.
 * **Stage 16 — exact snapshot/source materialisation and retained-chain
-  training-view preparation.** **[IN PROGRESS]**
-* **Stage 17 — fresh MMseqs2 alignment/MSA generation.** **[IN PROGRESS]**
+  training-view preparation.** **[IMPLEMENTED]** All 118,197 mmCIFs
+  materialised; the retained-chain training view is validated over the full
+  population. See [§15](#15-openfold-training-view-and-retraining).
+* **Stage 17 — fresh MMseqs2 alignment/MSA generation.** **[IMPLEMENTED]**
+  142,056 MSAs, complete, unduplicated and correctly attributed.
 
   The frozen policy for this stage: MMseqs2; the query for each chain is that
   chain's exact PDBClean `retained_sequence`; a fresh MSA is generated for
@@ -956,20 +1168,28 @@ It writes only to a scratch regression root; the frozen release is read-only.
 
 ### Not yet done
 
-* **Stage 18** — full structure ↔ alignment coverage validation. **[FUTURE]**
-* **Stage 19** — OpenFold dataloader smoke test. **[FUTURE]**
-* **Stage 20** — GPU training smoke test. **[FUTURE]**
-* **Stage 21** — full OpenFold retraining. **[FUTURE]**
+* **Stage 18** — full structure ↔ alignment coverage validation.
+  **[IMPLEMENTED]** Every retained chain resolves to its own MSA and to a
+  projected structure of the same length; see
+  [§15.5](#155-validation-implemented).
+* **Stage 19** — OpenFold dataloader smoke test. **[IMPLEMENTED]** Real chains
+  traverse the full feature pipeline with agreeing dimensions.
+* **Stage 20** — GPU training smoke test. **[IMPLEMENTED]** Eight optimizer
+  steps on real data with finite loss and gradients; checkpoint written and
+  reloaded; peak 9.45 GiB.
+* **Stage 21** — full OpenFold retraining. **[IN PROGRESS]** A from-scratch run
+  is executing; see [§15.8](#158-retraining-status-in-progress) for its budget
+  and for why it is not an AlphaFold-protocol reproduction.
 * **Stage 22** — new checkpoint generation and downstream prediction /
   evaluation. **[FUTURE]**
 
-**No training or evaluation results exist.** No model has been trained on the
-deduplicated dataset, and no accuracy, generalisation or failure-mode result is
-claimed anywhere in this repository.
+**No training or evaluation results exist.** No trained model is published, and
+no accuracy, generalisation or failure-mode result is claimed anywhere in this
+repository. A training run being in progress is not a result.
 
 ---
 
-## 16. Future work
+## 17. Future work
 
 Everything in this section is **[FUTURE]**. None of it is implemented, and none
 of these questions has been answered.
@@ -1020,7 +1240,7 @@ feasible. OpenFold remains the current active training target.
 
 ---
 
-## 17. Authority order
+## 18. Authority order
 
 When sources disagree, resolve in this order:
 

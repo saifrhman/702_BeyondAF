@@ -1,0 +1,4 @@
+{
+  "data.data_module.data_loaders.num_workers": 1,
+  "data.data_module.data_loaders.batch_size": 1
+}
