@@ -106,9 +106,24 @@ echo "MSA store:  $MSA_STORE"
 echo "Started:    $(date --iso-8601=seconds)"
 echo "============================================================"
 
+# A shard's identity is (shard_id, shard_count): shard 0 of 512 and shard 0 of
+# 256 are different, overlapping slices of the query set. Resuming on shard_id
+# alone would treat one as the other and silently omit every sequence in the
+# difference, which is why the marker records the shard count it was produced
+# under and a mismatch forces recomputation rather than a skip.
 if [[ -f "$SHARD_SUCCESS" ]]; then
-    echo "Shard already complete; nothing to do."
-    exit 0
+    RECORDED_COUNT="$(sed -n 's/^shard_count\t//p' "$SHARD_SUCCESS" 2>/dev/null || true)"
+
+    if [[ "$RECORDED_COUNT" == "$SHARD_COUNT" ]]; then
+        echo "Shard already complete for shard_count=$SHARD_COUNT; nothing to do."
+        exit 0
+    fi
+
+    echo "Existing marker was produced under shard_count=${RECORDED_COUNT:-unknown},"
+    echo "but this array has shard_count=$SHARD_COUNT. The slice differs, so the"
+    echo "shard is recomputed. Already-published MSAs are content-addressed and"
+    echo "will simply be rewritten identically."
+    rm -f "$SHARD_SUCCESS"
 fi
 
 if [[ ! -x "$MMSEQS" ]]; then
@@ -181,8 +196,16 @@ echo "total sequences: $TOTAL_QUERIES"
 echo "this shard:      $SHARD_QUERIES"
 
 if (( SHARD_QUERIES == 0 )); then
+    # Reachable only when shard_count exceeds the query count. Nothing was
+    # produced, so the marker must say zero rather than reference $PRODUCED,
+    # which is not assigned until after unpacking.
     echo "Empty shard; nothing to search."
-    date --iso-8601=seconds > "$SHARD_SUCCESS"
+    {
+        printf 'completed_at\t%s\n' "$(date --iso-8601=seconds)"
+        printf 'shard_id\t%s\n' "$SHARD_ID"
+        printf 'shard_count\t%s\n' "$SHARD_COUNT"
+        printf 'a3m_produced\t%s\n' 0
+    } > "$SHARD_SUCCESS"
     exit 0
 fi
 
@@ -400,7 +423,12 @@ rm -rf "$WORK"
     printf 'completed_at\t%s\n' "$(date --iso-8601=seconds)"
 } > "$SHARD_DIR/shard_provenance.tsv"
 
-date --iso-8601=seconds > "$SHARD_SUCCESS"
+{
+    printf 'completed_at\t%s\n' "$(date --iso-8601=seconds)"
+    printf 'shard_id\t%s\n' "$SHARD_ID"
+    printf 'shard_count\t%s\n' "$SHARD_COUNT"
+    printf 'a3m_produced\t%s\n' "$PRODUCED"
+} > "$SHARD_SUCCESS"
 
 echo
 echo "============================================================"
