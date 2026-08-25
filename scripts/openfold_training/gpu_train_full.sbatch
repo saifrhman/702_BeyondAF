@@ -3,7 +3,7 @@
 #SBATCH --partition=gpu-l40s
 #SBATCH --gres=gpu:l40s:2
 #SBATCH --nodes=1
-#SBATCH --ntasks=1
+#SBATCH --ntasks-per-node=1
 #SBATCH --cpus-per-task=16
 #SBATCH --time=3-00:00:00
 #SBATCH --signal=SIGUSR1@180
@@ -34,10 +34,27 @@ TOTAL_EPOCHS="${2:?total epochs required}"
 EPOCH_LEN="${3:?train_epoch_len required}"
 GPUS="${4:-2}"
 ACCUM="${5:-4}"
+SUPERSEDE_JOB="${6:-}"
 
 # Global batch = GPUS * per-GPU batch(1) * ACCUM. Keep that product fixed when
 # changing GPU count, or the run is not the same experiment.
 echo "global batch    : $(( GPUS * ACCUM ))  (gpus=$GPUS x batch 1 x accum=$ACCUM)"
+
+# Under SLURM, Lightning takes its world size from SLURM_NTASKS rather than from
+# --gpus, and the training command must be launched by srun so that one task
+# exists per GPU. Getting this wrong does not fail loudly: Lightning reports
+# "MEMBER: 1/1", trains on a single GPU while holding the others idle, and the
+# effective global batch silently becomes GPUS times smaller than intended.
+# Refuse to start rather than train a different experiment than the one named.
+NTASKS="${SLURM_NTASKS:-1}"
+
+if [[ "$NTASKS" != "$GPUS" ]]; then
+    echo "FATAL: SLURM_NTASKS=$NTASKS but GPUS=$GPUS." >&2
+    echo "       Submit with --ntasks-per-node=$GPUS so Lightning starts one" >&2
+    echo "       rank per GPU, or the run would use one GPU at global batch" >&2
+    echo "       $(( GPUS * ACCUM / GPUS )) instead of $(( GPUS * ACCUM ))." >&2
+    exit 2
+fi
 
 REPO=/mnt/fastscratch/users/sgsrehm1/COMP702_pdbclean_pipeline
 BASE="$REPO/outputs/openfold_training/20260101/pdbclean-dedup-v1"
@@ -54,6 +71,29 @@ ENV=/mnt/fastscratch/users/sgsrehm1/envs/openfold_train
 . "$ENV/etc/conda/activate.d/10-cache-dirs.sh"
 
 export PYTHONPATH="$REPO/src${PYTHONPATH:+:$PYTHONPATH}"
+# torch JIT-compiles CUDA extensions by shelling out to ninja, so the env bin
+# must be on PATH -- sourcing the cache-dirs hook alone does not do that, and
+# the failure surfaces only as "Ninja is required to load C++ extensions".
+export PATH="$ENV/bin:$PATH"
+
+
+# Attention kernel. This OpenFold enables DeepSpeed's fused Evoformer attention
+# only under long_sequence_inference, which asserts not-train, so training runs
+# the unfused path by default. The fused kernel is the same arithmetic with a
+# different reduction order, but that is verified rather than assumed: the
+# benchmark writes a verdict and this job reads it at start-up. Deferring the
+# decision to run time means a job can sit in the queue while the evidence is
+# still being gathered, instead of forfeiting its queue position.
+EXP_CONFIG="$REPO/scripts/openfold_training/gpu_full_config.json"
+VERDICT="$VIEW/attention_kernel_benchmark.json"
+
+if [[ -f "$VERDICT" ]] && grep -q '"verdict": "adopt"' "$VERDICT"; then
+    export CUTLASS_PATH="$OFSRC/cutlass"
+    EXP_CONFIG="$REPO/scripts/openfold_training/gpu_full_config_fused.json"
+    echo "attention       : fused DeepSpeed Evoformer kernel (benchmark verdict: adopt)"
+else
+    echo "attention       : unfused (no adopt verdict on file)"
+fi
 
 # Each checkpoint is ~1.5 GB, and upstream keeps every epoch's -- which would
 # exceed the fastscratch quota long before the step budget is reached. Keep one
@@ -63,6 +103,78 @@ export OPENFOLD_SAVE_TOP_K=1
 export OPENFOLD_MILESTONE_EVERY_N_EPOCHS=50
 
 mkdir -p "$RUN_ROOT" "$LOGDIR"
+
+# Handoff. Exactly one job may write this run root: two would race on the
+# checkpoint file and interleave the logger. The claim is taken only now, once
+# Slurm has actually granted the GPUs, so a job already training keeps making
+# progress for the whole time this one sits in the queue. At most its in-flight
+# epoch is lost, because the resume point below is its last checkpoint.
+#
+# The holder is read from the run root rather than passed in, because a job
+# queued behind two successive predecessors cannot know at submission time which
+# one it will actually be superseding.
+CLAIM="$RUN_ROOT/.active_job"
+CLAIM_TIER="$RUN_ROOT/.active_gpu_tier"
+
+# Rank the GPU this job was actually given. Evoformer is memory-bandwidth
+# bound, so the ordering follows HBM bandwidth rather than peak FLOPS:
+# H100 3.35 TB/s > A100 2.04 > L40S 0.86 > A40 0.70.
+gpu_tier() {
+    local name
+    name="$(nvidia-smi --query-gpu=name --format=csv,noheader 2>/dev/null | head -1)"
+
+    case "$name" in
+        *H100*) echo 4 ;;
+        *A100*) echo 3 ;;
+        *L40S*) echo 2 ;;
+        *A40*)  echo 1 ;;
+        *)      echo 0 ;;
+    esac
+}
+
+MY_TIER="$(gpu_tier)"
+MY_GPU="$(nvidia-smi --query-gpu=name --format=csv,noheader 2>/dev/null | head -1)"
+echo "this gpu        : $MY_GPU (tier $MY_TIER)"
+
+HOLDER=""
+[[ -f "$CLAIM" ]] && HOLDER="$(cat "$CLAIM" 2>/dev/null || true)"
+[[ -n "$SUPERSEDE_JOB" ]] && HOLDER="${HOLDER:-$SUPERSEDE_JOB}"
+
+HOLDER_TIER=0
+[[ -f "$CLAIM_TIER" ]] && HOLDER_TIER="$(cat "$CLAIM_TIER" 2>/dev/null || echo 0)"
+
+# Only ever move the run to faster hardware. Several jobs are queued on
+# different partitions at once so that whichever frees first can take over;
+# without this check the last one to start would win regardless of speed, and
+# an A100 landing after an H100 would quietly slow the run down.
+if [[ -n "$HOLDER" && "$HOLDER" != "${SLURM_JOB_ID}" ]] \
+   && squeue -j "$HOLDER" -h -o "%T" 2>/dev/null | grep -q . \
+   && (( MY_TIER <= HOLDER_TIER )); then
+    echo "STANDING DOWN: job $HOLDER already trains on tier $HOLDER_TIER hardware;" \
+         "this job is tier $MY_TIER ($MY_GPU). Not superseding a faster or equal GPU."
+    exit 0
+fi
+
+if [[ -n "$HOLDER" && "$HOLDER" != "${SLURM_JOB_ID}" ]]; then
+    if squeue -j "$HOLDER" -h -o "%T" 2>/dev/null | grep -q .; then
+        echo "superseding job : $HOLDER"
+        scancel "$HOLDER" || true
+
+        for _ in $(seq 1 60); do
+            squeue -j "$HOLDER" -h -o "%T" 2>/dev/null | grep -q . || break
+            sleep 5
+        done
+
+        # Let the dying ranks finish flushing before anything is read or written.
+        sleep 20
+        echo "superseded      : $HOLDER is gone"
+    else
+        echo "previous holder : $HOLDER (already finished)"
+    fi
+fi
+
+echo "${SLURM_JOB_ID}" > "$CLAIM"
+echo "$MY_TIER" > "$CLAIM_TIER"
 
 echo "=== identity ==="
 echo "host            : $(hostname)"
@@ -100,7 +212,7 @@ echo "=== training ==="
 cd "$OFSRC"
 
 set -x
-"$ENV/bin/python" train_openfold.py \
+srun --kill-on-bad-exit=1 "$ENV/bin/python" train_openfold.py \
     "$MMCIF" \
     "$MSAS" \
     "$MMCIF" \
@@ -111,7 +223,7 @@ set -x
     --train_projection_index_path "$VIEW/projection_index.json" \
     --train_chain_data_cache_path "$VIEW/train_chain_data_cache.json" \
     --train_filter_path "$VIEW/train_filter_view.txt" \
-    --experiment_config_json "$REPO/scripts/openfold_training/gpu_full_config.json" \
+    --experiment_config_json "$EXP_CONFIG" \
     --train_epoch_len "$EPOCH_LEN" \
     --max_epochs "$TOTAL_EPOCHS" \
     --gpus "$GPUS" \
