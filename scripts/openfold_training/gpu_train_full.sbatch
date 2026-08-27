@@ -76,6 +76,15 @@ export PYTHONPATH="$REPO/src${PYTHONPATH:+:$PYTHONPATH}"
 # the failure surfaces only as "Ninja is required to load C++ extensions".
 export PATH="$ENV/bin:$PATH"
 
+# Host C++ compiler for any JIT-built CUDA extension. Prepending $ENV/bin is
+# required for ninja, but it also shadows /usr/bin/gcc with conda's -- and this
+# env has gcc_impl_linux-64 without gxx_impl_linux-64, so $ENV/libexec/gcc ships
+# cc1, cc1obj and cc1objplus but no cc1plus. C++ sources then die with
+# "gcc: fatal error: cannot execute 'cc1plus'". The node's own gcc is complete.
+export CC=/usr/bin/gcc
+export CXX=/usr/bin/g++
+export NVCC_PREPEND_FLAGS="-ccbin ${CXX}"
+
 
 # Attention kernel. This OpenFold enables DeepSpeed's fused Evoformer attention
 # only under long_sequence_inference, which asserts not-train, so training runs
@@ -89,8 +98,26 @@ VERDICT="$VIEW/attention_kernel_benchmark.json"
 
 if [[ -f "$VERDICT" ]] && grep -q '"verdict": "adopt"' "$VERDICT"; then
     export CUTLASS_PATH="$OFSRC/cutlass"
-    EXP_CONFIG="$REPO/scripts/openfold_training/gpu_full_config_fused.json"
-    echo "attention       : fused DeepSpeed Evoformer kernel (benchmark verdict: adopt)"
+
+    # The kernel is JIT-built per GPU architecture -- the benchmark compiled it
+    # for sm_89 on an L40S, and an H100 needs a fresh sm_90 build. Force that
+    # build here, before training starts, so a compile failure costs a few
+    # minutes at start-up instead of killing a run that is hours in. Falling
+    # back to the unfused path is always correct: it is the same arithmetic.
+    KBUILD="$LOGDIR/kernel_build_${SLURM_JOB_ID}.log"
+
+    if "$ENV/bin/python" -c "
+from deepspeed.ops.op_builder import EvoformerAttnBuilder
+builder = EvoformerAttnBuilder()
+assert builder.NAME == 'evoformer_attn', f'wrong builder: {builder.NAME}'
+builder.load()
+" >"$KBUILD" 2>&1; then
+        EXP_CONFIG="$REPO/scripts/openfold_training/gpu_full_config_fused.json"
+        echo "attention       : fused DeepSpeed Evoformer kernel (verdict adopt, built for this GPU)"
+    else
+        echo "attention       : unfused -- verdict is adopt but the kernel would not"
+        echo "                  build on $(hostname); see $KBUILD"
+    fi
 else
     echo "attention       : unfused (no adopt verdict on file)"
 fi
