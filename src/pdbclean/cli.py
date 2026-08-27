@@ -11,14 +11,36 @@ a UI-configured run and a CLI-configured run produce the same
 Subcommands
 -----------
 
+Inspection -- safe on a login node, no scientific computation:
+
 ``snapshots``       list the PDB snapshots available in the archive
 ``config``          show the fully resolved configuration and where each value came from
 ``plan``            show the stage plan for a configuration, including reuse decisions
-``run``             create a run, write provenance, execute or submit the outstanding stages
-``status``          list recorded runs, or show one run in detail
+``stages``          describe the pipeline stages and their order
 ``stage-command``   print the argv a single stage would be executed with
 ``duplicates``      query the Duplicate Explorer from the terminal
+``status``          list recorded runs, or show one run in detail
+
+Execution:
+
+``run``             create a run, write provenance, execute or submit the outstanding stages
+``submit``          submit stages of an existing frozen run to Slurm
+``jobs``            show the live Slurm and validation state of one run
+
 ``ui``              serve the web UI over the same backend
+
+Scientific configuration
+------------------------
+
+The two experimental axes are set through ``--set`` and are never conflated
+(README §7.3).  ``duplicate_search.near_duplicate_threshold_angstrom`` is the
+near-duplicate threshold tau that *classifies*; ``bri.representation_precision_angstrom``
+is the grid p that BRI is *represented* on.  ``tau / p`` must be an integer, and
+``brain_filter.threshold_angstrom`` may never be tighter than tau -- the
+prefilter is lossless only while it is at least as loose as the classifier.
+
+Both threshold studies in README §13.1 were produced this way, without a code
+change; ``pdbclean config --sources`` then shows the override and its origin.
 """
 
 from __future__ import annotations
@@ -132,8 +154,12 @@ def add_config_arguments(parser: argparse.ArgumentParser) -> None:
         metavar="KEY=VALUE",
         help=(
             "Override one resolved value, e.g. "
-            "--set duplicate_search.near_duplicate_threshold_angstrom=0.010. "
-            "Repeatable. Overrides are recorded in provenance."
+            "--set duplicate_search.near_duplicate_threshold_angstrom=0.005. "
+            "Repeatable. Overrides are recorded in provenance and change the "
+            "run's scientific identity, so a threshold study is a separate "
+            "identified run rather than an edit to the frozen one. Values "
+            "fixed by definition (Brain dimension, L-infinity metric, the "
+            "complete-BRI classification basis) are refused."
         ),
     )
     parser.add_argument(
@@ -1683,6 +1709,32 @@ def build_parser() -> argparse.ArgumentParser:
             "COMP702 PDBClean: geometric redundancy detection and removal "
             "over a PDB snapshot."
         ),
+        epilog=(
+            "examples:\n"
+            "  pdbclean snapshots                     list available snapshots\n"
+            "  pdbclean config --sources              show every resolved value "
+            "and where it came from\n"
+            "  pdbclean plan                          show what would run, and "
+            "what would be reused\n"
+            "  pdbclean stages                        describe the pipeline "
+            "stages in order\n"
+            "  pdbclean duplicates --pdb-id 102l      inspect detected "
+            "duplicate pairs\n"
+            "\n"
+            "  # reproduce the frozen 2026-01-01 release\n"
+            "  pdbclean run --config config/pdbclean/protocol_3_2_comp702_v1.yaml \\\n"
+            "               --executor slurm\n"
+            "\n"
+            "  # threshold study: halve tau (README section 13.1)\n"
+            "  pdbclean run --config config/pdbclean/protocol_3_2_comp702_v1.yaml \\\n"
+            "               --set duplicate_search.near_duplicate_threshold_angstrom=0.005 \\\n"
+            "               --set brain_filter.threshold_angstrom=0.005 \\\n"
+            "               --executor slurm\n"
+            "\n"
+            "Runs are dry-run by default: --executor is an explicit choice, "
+            "never an accident.\n"
+        ),
+        formatter_class=argparse.RawDescriptionHelpFormatter,
     )
 
     sub = parser.add_subparsers(dest="command", required=True)

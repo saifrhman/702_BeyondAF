@@ -167,6 +167,15 @@ They are two independent experimental axes:
 
 Both are configurable; each independently changes the scientific identity.
 
+The **tau** axis has been measured. A run at tau = 0.005 A against the frozen
+tau = 0.010 A moves the retained set by only 0.7% (503,113 against 499,770
+chains) while quadrupling the number of non-clique components -- the empirical
+argument against transitive removal. The Brain prefilter radius was measured
+separately at 0.10 A, which is equally sound but costs 21.8x the candidate
+pairs. Full tables, findings and the exact `--set` commands are in README
+section 13.1; the outputs are under `outputs/pdbclean_tau0p005/` and
+`outputs/pdbclean_brain0p10/`.
+
 **Grid compatibility.** A threshold must be an exact whole number of
 representation units -- `tau / p` must be an integer:
 

@@ -36,6 +36,7 @@ It also contains the downstream OpenFold work that consumes that dataset.
 11. [The web UI](#11-the-web-ui)
 12. [Historical run workflow](#12-historical-run-workflow)
 13. [Frozen COMP702 result](#13-frozen-comp702-result-frozen)
+    - 13.1 [Threshold sensitivity](#131-threshold-sensitivity-implemented) — τ and Brain-threshold results
 14. [Testing](#14-testing)
 15. [OpenFold training view and retraining](#15-openfold-training-view-and-retraining)
 16. [Current status](#16-current-status)
@@ -516,6 +517,13 @@ These are two **distinct experimental axes** and are never conflated:
 Both are configurable, independently, and each produces a distinct scientific
 identity.
 
+The τ question has been answered at the frozen snapshot, together with a
+measurement of what the Brain prefilter threshold costs — results, tables and
+reproduction commands in
+[§13.1](#131-threshold-sensitivity-implemented). The *p* question remains open,
+because the executable stages implement only p = 0.001 Å; see
+[§17](#17-future-work) item D.
+
 **Grid compatibility.** A threshold must be an exact whole number of
 representation units: `τ / p` must be an integer. `p = 0.001, τ = 0.010` → 10
 units; `p = 0.002, τ = 0.010` → 5 units; `p = 0.003, τ = 0.010` is **rejected**
@@ -891,6 +899,97 @@ never generic expectations, and a different snapshot derives its own counts.
 Full detail: `docs/PDBCLEAN_2026_FINDINGS_AND_DECISIONS.md` and
 `docs/provenance/pdbclean_20260101_dedup_v1.json`.
 
+### 13.1 Threshold sensitivity [IMPLEMENTED]
+
+[§7.3](#73-precision-p-versus-threshold-τ) poses τ and the Brain threshold as
+research questions. Both have now been run at the frozen snapshot, holding
+everything else fixed, so the sensitivity is measured rather than argued.
+
+**τ = 0.005 Å against the frozen τ = 0.010 Å.** The Brain threshold moves with
+τ, because the prefilter is only sound when it is at least as loose as the
+classifier.
+
+| Quantity | τ = 0.005 Å | τ = 0.010 Å (frozen) | Change |
+|----------|------------:|---------------------:|-------:|
+| Brain candidate pairs | 1,805,248 | 3,240,429 | −44.3% |
+| Brain participating chains | 200,729 | 305,747 | −34.3% |
+| Brain components | 43,715 | 56,517 | −22.7% |
+| Near duplicates (total) | 931,644 | 1,072,751 | −13.2% |
+| — graph edges (*m* ≥ 2) | 930,588 | 1,068,256 | −12.9% |
+| — *m* = 1 pairs | 1,056 | 4,495 | −76.5% |
+| Edge components | 20,249 | 20,789 | −2.6% |
+| — cliques | 18,967 | 20,494 | −7.5% |
+| — **non-cliques** | **1,282** | **295** | **×4.35** |
+| Chains touching an edge | 96,714 | 99,854 | −3.1% |
+| Chains with no edge | 481,046 | 477,906 | +0.7% |
+| Representatives (*m* ≥ 2) | 21,303 | 21,100 | +1.0% |
+| **Removed chains** | **75,411** | **78,754** | **−4.2%** |
+| **Retained chains** | **503,113** | **499,770** | **+0.7%** |
+
+Four things follow, and the third is the one that matters most.
+
+**The edge sets nest exactly.** The τ = 0.005 Å edge set is the τ = 0.010 Å
+edge set restricted to `d ≤ 5` units — not approximately, but bin for bin
+across the whole distance histogram, 930,588 edges on both sides:
+
+| `d` (mÅ) | 0 | 1 | 2 | 3 | 4 | 5 |
+|---|---:|---:|---:|---:|---:|---:|
+| edges | 17,364 | 26,392 | 103,142 | 469,193 | 189,238 | 125,259 |
+
+That is a monotonicity check on the whole search stack. An exact radius search
+at a smaller radius *must* return a subset, and two independent runs of the
+compressed cover tree over 578,524 chains agree to the single edge.
+
+**The retained set barely moves.** Halving τ removes 3,343 fewer chains — 4.2%
+of the removals, but only 0.7% of the retained population. The headline
+deduplication result is not balanced on the choice of τ.
+
+**Non-transitivity gets worse as τ tightens.** Non-clique components rise from
+295 to 1,282. Fewer edges make components sparser, so more of them contain
+chains that are *not* mutually near-duplicate. This is direct empirical support
+for the Stage-14 rule in [§2.6](#26-redundancy-resolution-stage-14): a connected
+component is not a duplicate equivalence class, and a design that removed
+transitively would have removed chains with no direct edge to their
+representative in 1,282 components at τ = 0.005 Å, against 295 at the frozen
+threshold. Tightening the threshold makes transitive removal *more* wrong, not
+less.
+
+**The Brain prefilter is cheap only because it is tight.** Holding τ = 0.010 Å
+and loosening the Brain threshold to 0.10 Å:
+
+| Brain threshold | Candidate pairs | Relative cost |
+|-----------------|----------------:|--------------:|
+| 0.01 Å (frozen) | 3,240,429 | 1× |
+| 0.10 Å | 70,651,044 | **21.8×** |
+
+Both settings are *sound* — the prefilter is lossless at any threshold at least
+as large as τ, so the final classification is identical either way. The 21.8×
+is purely the cost of handing the cover tree more candidates to reject. This
+run covers the prefilter stage only; the downstream stages were not executed,
+because the answer they would produce is already known to be unchanged.
+
+Reproducing either study is a configuration override, not a code change:
+
+```bash
+# tau study
+pdbclean run --config config/pdbclean/protocol_3_2_comp702_v1.yaml \
+  --set duplicate_search.near_duplicate_threshold_angstrom=0.005 \
+  --set brain_filter.threshold_angstrom=0.005 \
+  --executor slurm
+
+# Brain prefilter cost study
+pdbclean run --config config/pdbclean/protocol_3_2_comp702_v1.yaml \
+  --set brain_filter.threshold_angstrom=0.100 \
+  --executor slurm
+```
+
+τ must land exactly on the representation grid *p*, so `τ / p` is an integer —
+see [§7.3](#73-precision-p-versus-threshold-τ). `0.005 / 0.001 = 5` is
+accepted; a value like `0.0035` is rejected at configuration time rather than
+silently rounded.
+
+Outputs: `outputs/pdbclean_tau0p005/` and `outputs/pdbclean_brain0p10/`.
+
 ---
 
 ## 14. Testing
@@ -1139,6 +1238,9 @@ described as one:
   [§13](#13-frozen-comp702-result-frozen). **[FROZEN]**
 * Configuration, provenance, orchestration, UI, Duplicate Explorer, Mol\*
   integration and historical-run inspection. **[IMPLEMENTED]**
+* **Threshold sensitivity studies.** τ = 0.005 Å run to completion against the
+  frozen τ = 0.010 Å, and the Brain prefilter cost measured at 0.10 Å. See
+  [§13.1](#131-threshold-sensitivity-implemented). **[IMPLEMENTED]**
 
 ### In progress
 
@@ -1202,9 +1304,14 @@ failure behaviour.
 run with and without geometric redundancy removal, to isolate the effect of
 deduplication itself.
 
-**C. Threshold studies.** Vary the complete-BRI near-duplicate threshold τ and
-observe the effect on the duplicate graph, the retained set and downstream
-model behaviour.
+**C. Threshold studies.** *Partly answered* — see
+[§13.1](#131-threshold-sensitivity-implemented). τ = 0.005 Å has been run
+against the frozen τ = 0.010 Å, and the Brain prefilter cost measured at
+0.10 Å. What remains is the *downstream* half of the question: whether a model
+trained on the τ = 0.005 Å retained set behaves differently from one trained on
+the frozen set. Since the two sets differ by only 3,343 chains out of ~500,000,
+that comparison needs a design that can resolve a small effect, and it is not
+worth GPU time until **A** and **B** are done.
 
 **D. Representation-precision studies.** Vary p while retaining 0.001 Å as the
 validated default, and study how stable redundancy relationships are under
