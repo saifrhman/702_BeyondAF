@@ -174,6 +174,29 @@ ALIVE="$(squeue -u "$USER" --name=of_train_full -h -o '%i %T' 2>/dev/null)"
 
 if [[ -n "$ALIVE" ]]; then
     say "training covered by: $(echo "$ALIVE" | tr '\n' ';')"
+
+    # RUNNING is not the same as progressing. A hung job keeps the GPU for the
+    # rest of its wall clock without producing a single step -- the worst
+    # possible use of a slot this run may have queued days for, and invisible to
+    # every check above, because Slurm sees a perfectly healthy job.
+    #
+    # Lightning flushes its CSV every 100 steps, roughly 40 minutes at the rate
+    # this run gets, so hours of silence means something is wrong. This only
+    # warns: killing a training job on a timing heuristic could throw away real
+    # work that was merely slow, and that is not a call to make automatically.
+    if grep -q RUNNING <<<"$ALIVE"; then
+        NEWEST="$(find "$RUN_ROOT/csv_logs" -name metrics.csv -printf '%T@\n' 2>/dev/null \
+                  | sort -rn | head -1)"
+        if [[ -n "$NEWEST" ]]; then
+            AGE=$(( $(date +%s) - ${NEWEST%.*} ))
+            say "last metrics write: $((AGE / 60)) min ago"
+            if (( AGE > 10800 )); then
+                say "WARNING: a job is RUNNING but nothing has been logged for $((AGE / 3600))h."
+                say "         Possible hang holding the GPU. Check the newest log in"
+                say "         /mnt/fastscratch/users/sgsrehm1/openfold_cache/logs/"
+            fi
+        fi
+    fi
     exit 0
 fi
 
