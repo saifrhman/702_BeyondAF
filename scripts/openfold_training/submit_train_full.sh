@@ -1,0 +1,88 @@
+#!/bin/bash -l
+#
+# Submit the OpenFold retraining lineage.
+#
+# One run, several queues. The same job is submitted to every GPU partition the
+# account can reach, and whichever starts first begins training; when a faster
+# GPU frees up, that job supersedes the slower one through the claim files in
+# the run root. gpu_train_full.sbatch only ever ratchets upward in HBM
+# bandwidth, so a late A100 stands down rather than displacing a running H100.
+#
+# This script is also what the watchdog replays to rescue a stalled run, which
+# is why it is a file in the repo and not a command typed once into a terminal:
+# a rescue must reproduce the submission exactly, including the arguments that
+# define the experiment.
+#
+# Usage:  submit_train_full.sh [run_name] [total_epochs] [epoch_len] [gpus] [accum]
+
+set -uo pipefail
+
+RUN_NAME="${1:-pdbclean_dedup_v1_scratch}"
+TOTAL_EPOCHS="${2:-400}"
+EPOCH_LEN="${3:-1024}"
+GPUS="${4:-1}"
+ACCUM="${5:-8}"
+
+REPO=/mnt/fastscratch/users/sgsrehm1/COMP702_pdbclean_pipeline
+SBATCH="$REPO/scripts/openfold_training/gpu_train_full.sbatch"
+LOGS=/mnt/fastscratch/users/sgsrehm1/openfold_cache/logs
+RUN_ROOT="/mnt/fastscratch/users/sgsrehm1/openfold_runs/$RUN_NAME"
+
+mkdir -p "$LOGS"
+
+# Already covered? Submitting on top of a live lineage would only make the
+# claim logic kill one of the two, losing an in-flight epoch for nothing.
+EXISTING="$(squeue -u "$USER" --name=of_train_full -h -o '%i %T %P' 2>/dev/null)"
+if [[ -n "$EXISTING" && "${FORCE:-0}" != "1" ]]; then
+    echo "training already queued or running:"
+    echo "$EXISTING" | sed 's/^/  /'
+    echo "nothing submitted. Set FORCE=1 to submit anyway."
+    exit 0
+fi
+
+echo "run          : $RUN_NAME"
+echo "experiment   : $TOTAL_EPOCHS epochs x $EPOCH_LEN samples, ${GPUS} gpu x batch 1 x accum $ACCUM"
+echo "global batch : $((GPUS * ACCUM))"
+echo "steps/epoch  : $((EPOCH_LEN / (GPUS * ACCUM)))"
+echo "total steps  : $((TOTAL_EPOCHS * EPOCH_LEN / (GPUS * ACCUM)))"
+echo
+
+# tag  partition          gres          walltime      -- ordered fastest first
+TARGETS=(
+    "h100 gpu-h100        gpu:h100:$GPUS 3-00:00:00"
+    "a100 gpu-a100-lowbig gpu:a100:$GPUS 1-00:00:00"
+    "l40s gpu-l40s        gpu:l40s:$GPUS 3-00:00:00"
+)
+
+SUBMITTED=()
+
+for target in "${TARGETS[@]}"; do
+    read -r tag part gres walltime <<<"$target"
+
+    jid="$(sbatch --parsable \
+              --partition="$part" \
+              --gres="$gres" \
+              --time="$walltime" \
+              --ntasks-per-node="$GPUS" \
+              --output="$LOGS/${tag}_%j.out" \
+              --error="$LOGS/${tag}_%j.err" \
+              "$SBATCH" "$RUN_NAME" "$TOTAL_EPOCHS" "$EPOCH_LEN" "$GPUS" "$ACCUM" 2>&1)"
+
+    if [[ "$jid" =~ ^[0-9]+$ ]]; then
+        echo "submitted    : $jid  $part ($tag, $walltime)"
+        SUBMITTED+=("$jid")
+    else
+        # A partition the account cannot reach is not a failure of the run --
+        # the other queues still cover it. Say so and keep going.
+        echo "skipped      : $part -- $jid"
+    fi
+done
+
+if (( ${#SUBMITTED[@]} == 0 )); then
+    echo "FATAL: no partition accepted the job" >&2
+    exit 1
+fi
+
+echo
+echo "run root     : $RUN_ROOT"
+echo "watch with   : squeue -u $USER --name=of_train_full"
