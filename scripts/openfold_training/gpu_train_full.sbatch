@@ -85,6 +85,26 @@ export CC=/usr/bin/gcc
 export CXX=/usr/bin/g++
 export NVCC_PREPEND_FLAGS="-ccbin ${CXX}"
 
+# One kernel cache per GPU architecture. torch keys its JIT extension cache by
+# extension name alone, so every GPU this run touches shares one directory. The
+# arch shows up in the compile flags (-gencode ... sm_80 vs sm_90, -DGPU_ARCH),
+# so torch does notice and rebuild rather than loading a wrong-architecture .so
+# -- correctness was never at risk. What it costs is about four minutes of
+# rebuild at every handover, and the tier ratchet hands over deliberately
+# (L40S -> A100 -> H100). Worse, a job building for one architecture while
+# another still trains on a second writes into the same directory.
+#
+# Split by architecture and a handover pays the build once per GPU type ever,
+# instead of once per handover, with no chance of two types colliding.
+ARCH="$(nvidia-smi --query-gpu=compute_cap --format=csv,noheader 2>/dev/null | head -1 | tr -d '. ')"
+if [[ ! "$ARCH" =~ ^[0-9]+$ ]]; then
+    # Older drivers have no compute_cap field. The GPU name separates the
+    # architectures just as well; it is only ever a cache key.
+    ARCH="$(nvidia-smi --query-gpu=name --format=csv,noheader 2>/dev/null | head -1 | tr -cd '[:alnum:]')"
+fi
+export TORCH_EXTENSIONS_DIR="${TORCH_EXTENSIONS_DIR}/sm_${ARCH:-unknown}"
+mkdir -p "$TORCH_EXTENSIONS_DIR"
+echo "kernel cache    : $TORCH_EXTENSIONS_DIR"
 
 # Attention kernel. This OpenFold enables DeepSpeed's fused Evoformer attention
 # only under long_sequence_inference, which asserts not-train, so training runs
