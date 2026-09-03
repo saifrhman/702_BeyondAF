@@ -71,7 +71,7 @@ if [[ -s "$SUMMARY" ]]; then
     LAST_STEP="${LAST_STEP:--1}"
 fi
 
-say "progress: epoch $LAST_EPOCH, global_step $LAST_STEP (target $((TOTAL_EPOCHS - 1)))"
+say "progress: epoch $LAST_EPOCH of $TOTAL_EPOCHS (final index $((TOTAL_EPOCHS - 1))), global_step $LAST_STEP"
 
 if (( LAST_EPOCH >= TOTAL_EPOCHS - 1 )); then
     say "done: run reached epoch $LAST_EPOCH of $TOTAL_EPOCHS; chain ends here"
