@@ -111,6 +111,32 @@ fi
 # and the watchdog would fail in exactly the silent way it exists to prevent.
 # Scheduled first, the chain survives any failure of this instance's own body.
 #
+# Everything from here needs Slurm, and Slurm is not always there: this session
+# saw "slurm_load_partitions: Unable to contact slurm controller" from an
+# ordinary squeue. An unreachable controller makes squeue print nothing and exit
+# non-zero, which is indistinguishable from "no such job" if only the output is
+# read -- and reading it that way is the worst mistake this script could make.
+# It would conclude the run had died and submit a second trainer onto a live run
+# root, the double-writer the claim file exists to prevent.
+#
+# So probe first, and treat a blip as something to wait out rather than act on.
+# A chain that snaps on a transient outage is a watchdog that has stopped
+# watching, so the probe retries before giving up.
+controller_up() { squeue -u "$USER" -h -o '%i' >/dev/null 2>&1; }
+
+for attempt in 1 2 3 4 5; do
+    controller_up && break
+    say "Slurm controller unreachable (attempt $attempt/5); waiting 30s"
+    sleep 30
+done
+
+if ! controller_up; then
+    say "ERROR: Slurm controller still unreachable. No successor scheduled and no"
+    say "       rescue attempted -- sbatch would fail too. Resubmit by hand:"
+    say "       sbatch $SELF $RUN_ROOT $INTERVAL $TOTAL_EPOCHS"
+    exit 1
+fi
+
 # One chain only. Two would race to resubmit and could put two training jobs on
 # the same run root, which the claim file resolves only by killing one.
 OTHER_WD="$(squeue -u "$USER" --name=of_train_watchdog -h -o '%i' 2>/dev/null \
@@ -119,8 +145,19 @@ OTHER_WD="$(squeue -u "$USER" --name=of_train_watchdog -h -o '%i' 2>/dev/null \
 if [[ -n "$OTHER_WD" ]]; then
     say "another heartbeat ($OTHER_WD) is already queued; not scheduling a second chain"
 else
-    NEXT="$(sbatch --parsable --begin="now+${INTERVAL}" \
-                "$SELF" "$RUN_ROOT" "$INTERVAL" "$TOTAL_EPOCHS" 2>&1)"
+    # Retried, because this one call is the whole chain. Every later heartbeat
+    # exists only if this succeeds, so a single transient refusal here would end
+    # the watching silently -- the exact failure mode this script was written
+    # for, reproduced in the script itself.
+    NEXT=""
+    for attempt in 1 2 3; do
+        NEXT="$(sbatch --parsable --begin="now+${INTERVAL}" \
+                    "$SELF" "$RUN_ROOT" "$INTERVAL" "$TOTAL_EPOCHS" 2>&1)"
+        [[ "$NEXT" =~ ^[0-9]+$ ]] && break
+        say "scheduling attempt $attempt/3 failed: $NEXT"
+        sleep 30
+    done
+
     if [[ "$NEXT" =~ ^[0-9]+$ ]]; then
         say "next heartbeat : job $NEXT in ${INTERVAL}s"
     else
@@ -140,7 +177,22 @@ if [[ -n "$ALIVE" ]]; then
     exit 0
 fi
 
-say "NO training job is running or queued -- the run is stalled"
+# An empty answer is the only one that triggers action, so it gets checked
+# twice. The controller could have gone down in the seconds since the probe, and
+# a false empty costs a duplicate trainer on a live run root -- far worse than
+# waiting one more heartbeat to be sure.
+sleep 10
+if ! controller_up; then
+    say "controller went away mid-check; treating this heartbeat as inconclusive"
+    exit 0
+fi
+ALIVE="$(squeue -u "$USER" --name=of_train_full -h -o '%i %T' 2>/dev/null)"
+if [[ -n "$ALIVE" ]]; then
+    say "training covered on recheck: $(echo "$ALIVE" | tr '\n' ';')"
+    exit 0
+fi
+
+say "NO training job is running or queued (confirmed twice) -- the run is stalled"
 
 # -- 5. stall guard -----------------------------------------------------------
 # A run that dies instantly every time would otherwise be resubmitted forever,
