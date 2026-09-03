@@ -183,6 +183,29 @@ MY_TIER="$(gpu_tier)"
 MY_GPU="$(nvidia-smi --query-gpu=name --format=csv,noheader 2>/dev/null | head -1)"
 echo "this gpu        : $MY_GPU (tier $MY_TIER)"
 
+# Tier floor: the best hardware this run has ever trained on, and from then on
+# the worst it will accept. The existing ratchet only stops a slower GPU
+# displacing a *live* holder -- it says nothing about the gap after one ends,
+# where a slower job could pick the run up unopposed and quietly keep it there.
+#
+# Pinning closes that. It is a deliberate trade of throughput for consistency:
+# a pinned run waits for its tier rather than training slower, so if the tier is
+# busy for a week, the run waits a week. That is the intended behaviour, not an
+# oversight.
+#
+# To unpin, lower or delete this file:  rm $RUN_ROOT/.min_gpu_tier
+FLOOR_FILE="$RUN_ROOT/.min_gpu_tier"
+FLOOR=0
+[[ -f "$FLOOR_FILE" ]] && FLOOR="$(cat "$FLOOR_FILE" 2>/dev/null || echo 0)"
+[[ "$FLOOR" =~ ^[0-9]+$ ]] || FLOOR=0
+
+if (( MY_TIER < FLOOR )); then
+    echo "STANDING DOWN: this run is pinned to tier $FLOOR and above, and this job"
+    echo "               is tier $MY_TIER ($MY_GPU). Releasing the node now rather"
+    echo "               than holding it idle. To unpin: rm $FLOOR_FILE"
+    exit 0
+fi
+
 HOLDER=""
 [[ -f "$CLAIM" ]] && HOLDER="$(cat "$CLAIM" 2>/dev/null || true)"
 [[ -n "$SUPERSEDE_JOB" ]] && HOLDER="${HOLDER:-$SUPERSEDE_JOB}"
@@ -222,6 +245,17 @@ fi
 
 echo "${SLURM_JOB_ID}" > "$CLAIM"
 echo "$MY_TIER" > "$CLAIM_TIER"
+
+# Raise the floor only after the claim is held, never before. A job that stood
+# down or died on the way here has not trained on this tier, and promising a
+# tier the run has not actually reached would strand it: nothing slower would be
+# allowed to pick it up, and nothing faster ever arrived.
+if (( MY_TIER > FLOOR )); then
+    echo "$MY_TIER" > "$FLOOR_FILE"
+    echo "tier floor      : raised to $MY_TIER -- this run will not accept slower hardware again"
+else
+    echo "tier floor      : $FLOOR"
+fi
 
 echo "=== identity ==="
 echo "host            : $(hostname)"

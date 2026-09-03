@@ -47,17 +47,30 @@ echo "steps/epoch  : $((EPOCH_LEN / (GPUS * ACCUM)))"
 echo "total steps  : $((TOTAL_EPOCHS * EPOCH_LEN / (GPUS * ACCUM)))"
 echo
 
-# tag  partition          gres          walltime      -- ordered fastest first
+# Once the run is pinned to a tier there is no point queueing below it: those
+# jobs would allocate a GPU, read the floor, stand down and release it. Cheap,
+# but it burns queue priority and puts noise in the logs for no possible gain.
+FLOOR=0
+[[ -f "$RUN_ROOT/.min_gpu_tier" ]] && FLOOR="$(cat "$RUN_ROOT/.min_gpu_tier" 2>/dev/null || echo 0)"
+[[ "$FLOOR" =~ ^[0-9]+$ ]] || FLOOR=0
+(( FLOOR > 0 )) && echo "tier floor   : $FLOOR (submitting only to partitions at or above it)"
+
+# tag  partition          gres          walltime   tier  -- ordered fastest first
 TARGETS=(
-    "h100 gpu-h100        gpu:h100:$GPUS 3-00:00:00"
-    "a100 gpu-a100-lowbig gpu:a100:$GPUS 1-00:00:00"
-    "l40s gpu-l40s        gpu:l40s:$GPUS 3-00:00:00"
+    "h100 gpu-h100        gpu:h100:$GPUS 3-00:00:00 4"
+    "a100 gpu-a100-lowbig gpu:a100:$GPUS 1-00:00:00 3"
+    "l40s gpu-l40s        gpu:l40s:$GPUS 3-00:00:00 2"
 )
 
 SUBMITTED=()
 
 for target in "${TARGETS[@]}"; do
-    read -r tag part gres walltime <<<"$target"
+    read -r tag part gres walltime tier <<<"$target"
+
+    if (( tier < FLOOR )); then
+        echo "skipped      : $part -- tier $tier is below this run's floor of $FLOOR"
+        continue
+    fi
 
     jid="$(sbatch --parsable \
               --partition="$part" \
