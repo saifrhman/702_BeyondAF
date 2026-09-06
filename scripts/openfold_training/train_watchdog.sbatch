@@ -124,16 +124,26 @@ fi
 # watching, so the probe retries before giving up.
 controller_up() { squeue -u "$USER" -h -o '%i' >/dev/null 2>&1; }
 
-for attempt in 1 2 3 4 5; do
+# Wait most of the wall clock out rather than a token 2.5 minutes. On 2026-09-05
+# at 14:28 a controller outage outlasted the original five attempts, this job
+# exited, and with it went the whole chain -- the run trained on unwatched for
+# 29 hours. The chain is serial, so every giving-up here is permanent; the only
+# cost of waiting longer is one idle low-priority CPU slot, against a watchdog
+# that stops existing. 14 x 30s = 7 min, leaving 3 min of the 10-minute limit
+# for the rest of this script.
+for attempt in $(seq 1 14); do
     controller_up && break
-    say "Slurm controller unreachable (attempt $attempt/5); waiting 30s"
+    say "Slurm controller unreachable (attempt $attempt/14); waiting 30s"
     sleep 30
 done
 
 if ! controller_up; then
-    say "ERROR: Slurm controller still unreachable. No successor scheduled and no"
-    say "       rescue attempted -- sbatch would fail too. Resubmit by hand:"
+    say "ERROR: Slurm controller unreachable for 7 minutes. No successor scheduled"
+    say "       and no rescue attempted -- sbatch would fail too. THE CHAIN ENDS"
+    say "       HERE and nothing is watching the run. Re-arm with:"
     say "       sbatch $SELF $RUN_ROOT $INTERVAL $TOTAL_EPOCHS"
+    say "       gpu_train_full.sbatch also re-arms it at its next (re)start, so an"
+    say "       outage longer than this is covered within one requeue cycle."
     exit 1
 fi
 

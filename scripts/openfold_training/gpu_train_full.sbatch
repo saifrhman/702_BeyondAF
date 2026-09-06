@@ -257,6 +257,37 @@ else
     echo "tier floor      : $FLOOR"
 fi
 
+# -- re-arm the watchdog ------------------------------------------------------
+# The watchdog chain is serial: each heartbeat schedules the next, so any single
+# failure to reach sbatch ends the watching for good. That happened on
+# 2026-09-05 -- a Slurm controller outage outlasted the retry window, the chain
+# stopped, and this run trained unobserved for 29 hours. It survived, but only
+# because nothing went wrong during them.
+#
+# So the training job re-arms it. This runs at every start and every requeue,
+# which bounds any gap in coverage to one requeue cycle instead of forever. The
+# two mechanisms fail independently: the watchdog rescues dead training, and
+# live training revives a dead watchdog.
+#
+# Only ever one chain. The watchdog's own duplicate guard would stop a second
+# from scheduling successors, but it would still burn a slot and log a
+# confusing line, so check here too.
+WATCHDOG="$REPO/scripts/openfold_training/train_watchdog.sbatch"
+if squeue -u "$USER" -h -o '%i' >/dev/null 2>&1; then
+    if squeue -u "$USER" --name=of_train_watchdog -h -o '%i' 2>/dev/null | grep -q .; then
+        echo "watchdog        : already armed"
+    elif [[ -x "$WATCHDOG" ]]; then
+        WD="$(sbatch --parsable "$WATCHDOG" "$RUN_ROOT" 1800 "$TOTAL_EPOCHS" 2>&1)"
+        if [[ "$WD" =~ ^[0-9]+$ ]]; then
+            echo "watchdog        : re-armed as job $WD (chain was not running)"
+        else
+            echo "watchdog        : WARNING could not re-arm: $WD"
+        fi
+    fi
+else
+    echo "watchdog        : WARNING Slurm controller unreachable; not re-armed"
+fi
+
 echo "=== identity ==="
 echo "host            : $(hostname)"
 echo "slurm job       : ${SLURM_JOB_ID}"
