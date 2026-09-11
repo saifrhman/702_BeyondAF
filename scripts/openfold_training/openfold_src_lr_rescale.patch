@@ -1,0 +1,84 @@
+# Patch applied to the vendored OpenFold checkout at
+#   /mnt/fastscratch/users/sgsrehm1/openfold_src
+# which is not a git repository, so the change is recorded here instead.
+# Provenance: da89cd28446abcd7be95459b7b349dedaee666c0
+# Originals kept as *.pre_lr_rescale.orig beside each file.
+# Applied 2026-09-11 at global_step 25216 (epoch 196).
+#
+# With no OPENFOLD_LR_* set, behaviour is identical to upstream.
+
+--- a/openfold/utils/lr_schedulers.py
++++ b/openfold/utils/lr_schedulers.py
+@@ -58,8 +58,25 @@
+ 
+         return state_dict
+ 
++    # Position is restored from the checkpoint; configuration is not.
++    #
++    # state_dict() above persists *every* attribute except the optimizer, so the
++    # schedule's shape -- max_lr, the decay points, the factor -- travels inside
++    # the checkpoint. The plain dict update this used to do therefore let a
++    # checkpoint silently overwrite a schedule set in code: change the values,
++    # resume, and the old ones win, with nothing in any log to say the change had
++    # not applied. That is the worst kind of bug, because the run looks fine.
++    #
++    # What has to survive a resume is where the optimizer had got to. The shape
++    # of the schedule is a decision, and decisions belong in code that can be
++    # read and reviewed, not baked into a 1.5 GB binary. So restore the counters
++    # and let the constructor supply the rest.
++    _POSITION_KEYS = ("last_epoch", "_step_count", "_last_lr", "base_lrs")
++
+     def load_state_dict(self, state_dict):
+-        self.__dict__.update(state_dict)
++        self.__dict__.update({
++            k: v for k, v in state_dict.items() if k in self._POSITION_KEYS
++        })
+ 
+     def get_lr(self):
+         if(not self._get_lr_called_within_step):
+--- a/train_openfold.py
++++ b/train_openfold.py
+@@ -236,9 +236,42 @@
+                 if 'initial_lr' not in group:
+                     group['initial_lr'] = learning_rate
+ 
++        # The stock schedule starts decaying at step 50,000 and steps again only
++        # every 50,000 after that, which suits a run far longer than this one: at
++        # a 51,200-step budget it yields a single 5% step in the last 1,200 steps,
++        # so the model trains at the constant 1e-3 plateau throughout. Left alone
++        # that is not an anneal, and with a global batch of 8 -- a sixteenth of
++        # the batch the 1e-3 was chosen for -- the model wanders rather than
++        # settles.
++        #
++        # Read from the environment, defaulting to the upstream values, so an
++        # unset environment reproduces stock behaviour exactly and any change is
++        # declared in the submitting script rather than hidden here. Same idiom as
++        # OPENFOLD_SAVE_TOP_K above.
++        lr_kwargs = dict(
++            max_lr=float(os.environ.get("OPENFOLD_LR_MAX", 1e-3)),
++            warmup_no_steps=int(os.environ.get("OPENFOLD_LR_WARMUP_STEPS", 1000)),
++            start_decay_after_n_steps=int(
++                os.environ.get("OPENFOLD_LR_START_DECAY_AFTER", 50000)),
++            decay_every_n_steps=int(
++                os.environ.get("OPENFOLD_LR_DECAY_EVERY", 50000)),
++            decay_factor=float(os.environ.get("OPENFOLD_LR_DECAY_FACTOR", 0.95)),
++        )
++
+         lr_scheduler = AlphaFoldLRScheduler(
+             optimizer,
+-            last_epoch=self.last_lr_step
++            last_epoch=self.last_lr_step,
++            **lr_kwargs,
++        )
++
++        # Printed, not just logged, because the failure this guards against is a
++        # schedule change that silently does not apply. One line in the job log
++        # settles what was actually in force for a given run.
++        print(
++            "lr schedule     : max {max_lr:g}, warmup {warmup_no_steps}, "
++            "decay {decay_factor:g} every {decay_every_n_steps} steps "
++            "after step {start_decay_after_n_steps}".format(**lr_kwargs),
++            flush=True,
+         )
+ 
+         return {

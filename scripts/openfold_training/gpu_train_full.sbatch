@@ -149,6 +149,39 @@ fi
 export OPENFOLD_SAVE_TOP_K=1
 export OPENFOLD_MILESTONE_EVERY_N_EPOCHS=50
 
+# Learning-rate schedule, rescaled to this run's budget.
+#
+# Upstream starts decaying at step 50,000 and steps again only every 50,000
+# after that. Against a 51,200-step budget that is one 5% reduction across the
+# final 1,200 steps: the run would sit at a flat 1e-3 from warmup to the end.
+# AlphaFold pairs that 1e-3 with a global batch of 128; this run uses 8, so the
+# plateau is noisier here than the value was ever chosen for, and the epoch
+# metrics showed it -- ten-epoch means of lddt_ca swinging about +/-0.025 with
+# no sustained trend from roughly epoch 100 onward, some five times the
+# sampling noise of the metric itself.
+#
+# So anneal on this run's own scale, keeping AlphaFold's staircase shape and
+# its 0.95 factor and changing only the spacing: decay begins at step 25,600 --
+# epoch 200, the exact halfway point of 400 -- and steps every 1,200 steps
+# (9.4 epochs) thereafter, reaching 3.24e-4, about a third of maximum, at the
+# final step. That leaves 59% of the learning-rate mass still to spend, so the
+# back half of training still learns rather than merely freezing in place.
+#
+# Two things this deliberately does NOT do. It does not touch max_lr, which
+# would change the first 200 epochs retroactively in interpretation if not in
+# fact. And it does not add the gradient-norm clipping at 0.1 that AlphaFold
+# specifies and this fork omits entirely: that is a real and separate deviation,
+# but changing both at once would make the effect of either unattributable, and
+# the per-step loss shows no spike pathology to justify the urgency (median 35.0,
+# max 71.3, nothing above three times the median across 190 logged steps).
+#
+# Unset these and the scheduler reverts to upstream defaults exactly.
+export OPENFOLD_LR_MAX=0.001
+export OPENFOLD_LR_WARMUP_STEPS=1000
+export OPENFOLD_LR_START_DECAY_AFTER=25600
+export OPENFOLD_LR_DECAY_EVERY=1200
+export OPENFOLD_LR_DECAY_FACTOR=0.95
+
 mkdir -p "$RUN_ROOT" "$LOGDIR"
 
 # Handoff. Exactly one job may write this run root: two would race on the
