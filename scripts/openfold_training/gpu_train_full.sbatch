@@ -175,12 +175,16 @@ export OPENFOLD_MILESTONE_EVERY_N_EPOCHS=50
 # the per-step loss shows no spike pathology to justify the urgency (median 35.0,
 # max 71.3, nothing above three times the median across 190 logged steps).
 #
-# Unset these and the scheduler reverts to upstream defaults exactly.
-export OPENFOLD_LR_MAX=0.001
-export OPENFOLD_LR_WARMUP_STEPS=1000
-export OPENFOLD_LR_START_DECAY_AFTER=25600
-export OPENFOLD_LR_DECAY_EVERY=1200
-export OPENFOLD_LR_DECAY_FACTOR=0.95
+# The schedule is NOT set here. It lives in $RUN_ROOT/lr_schedule.json, because
+# it is a property of the experiment rather than of the job that happens to be
+# running it -- and because exports added to this file cannot reach a lineage
+# already in flight: Slurm requeues the batch script as it was stored at
+# submission, so this run, submitted in September and requeueing every three
+# days, would never see them. OPENFOLD_LR_* still override the file if set, but
+# setting them here would let the job script silently overrule the run's own
+# recorded schedule, which is the wrong way round.
+#
+# Absent that file and those variables, the scheduler is upstream's exactly.
 
 mkdir -p "$RUN_ROOT" "$LOGDIR"
 

@@ -5,7 +5,8 @@
 # Originals kept as *.pre_lr_rescale.orig beside each file.
 # Applied 2026-09-11 at global_step 25216 (epoch 196).
 #
-# With no OPENFOLD_LR_* set, behaviour is identical to upstream.
+# Schedule resolution: upstream defaults < $RUN_ROOT/lr_schedule.json < OPENFOLD_LR_*
+# With neither the file nor the variables, behaviour is identical to upstream.
 
 --- a/openfold/utils/lr_schedulers.py
 +++ b/openfold/utils/lr_schedulers.py
@@ -38,7 +39,7 @@
          if(not self._get_lr_called_within_step):
 --- a/train_openfold.py
 +++ b/train_openfold.py
-@@ -236,9 +236,42 @@
+@@ -236,10 +236,88 @@
                  if 'initial_lr' not in group:
                      group['initial_lr'] = learning_rate
  
@@ -50,19 +51,63 @@
 +        # the batch the 1e-3 was chosen for -- the model wanders rather than
 +        # settles.
 +        #
-+        # Read from the environment, defaulting to the upstream values, so an
-+        # unset environment reproduces stock behaviour exactly and any change is
-+        # declared in the submitting script rather than hidden here. Same idiom as
-+        # OPENFOLD_SAVE_TOP_K above.
++        # Resolved in three layers: upstream defaults, then a JSON file in the run
++        # root, then the environment. An unset environment and no file reproduce
++        # stock behaviour exactly.
++        #
++        # The file layer exists because the environment alone cannot reach a run
++        # already in flight. Slurm requeues the batch script as it was stored at
++        # submission, so exports added to that script afterwards never arrive --
++        # a schedule declared there would apply only to a lineage submitted after
++        # the edit, and this run's lineage began in September and requeues every
++        # three days. Cancelling to pick up the new script would surrender an H100
++        # allocation that took hours to win. The run root is read fresh by every
++        # process at startup, belongs to exactly one run, and sits beside the
++        # checkpoints it governs, so the schedule travels with the experiment
++        # rather than with the job script.
 +        lr_kwargs = dict(
-+            max_lr=float(os.environ.get("OPENFOLD_LR_MAX", 1e-3)),
-+            warmup_no_steps=int(os.environ.get("OPENFOLD_LR_WARMUP_STEPS", 1000)),
-+            start_decay_after_n_steps=int(
-+                os.environ.get("OPENFOLD_LR_START_DECAY_AFTER", 50000)),
-+            decay_every_n_steps=int(
-+                os.environ.get("OPENFOLD_LR_DECAY_EVERY", 50000)),
-+            decay_factor=float(os.environ.get("OPENFOLD_LR_DECAY_FACTOR", 0.95)),
++            max_lr=1e-3,
++            warmup_no_steps=1000,
++            start_decay_after_n_steps=50000,
++            decay_every_n_steps=50000,
++            decay_factor=0.95,
 +        )
++        _casts = {
++            "max_lr": float, "warmup_no_steps": int,
++            "start_decay_after_n_steps": int, "decay_every_n_steps": int,
++            "decay_factor": float,
++        }
++
++        lr_source = "upstream defaults"
++        run_root = getattr(self.trainer, "default_root_dir", None) if self.trainer else None
++        if run_root:
++            sched_file = os.path.join(run_root, "lr_schedule.json")
++            if os.path.isfile(sched_file):
++                try:
++                    with open(sched_file) as fh:
++                        from_file = json.load(fh)
++                    unknown = set(from_file) - set(lr_kwargs)
++                    if unknown:
++                        # Loudly, rather than ignoring it: a typo here would leave
++                        # the intended schedule unapplied and look like success.
++                        raise ValueError(f"unknown key(s): {sorted(unknown)}")
++                    lr_kwargs.update({k: _casts[k](v) for k, v in from_file.items()})
++                    lr_source = sched_file
++                except Exception as e:
++                    raise RuntimeError(f"could not read {sched_file}: {e}") from e
++
++        env_map = {
++            "max_lr": "OPENFOLD_LR_MAX",
++            "warmup_no_steps": "OPENFOLD_LR_WARMUP_STEPS",
++            "start_decay_after_n_steps": "OPENFOLD_LR_START_DECAY_AFTER",
++            "decay_every_n_steps": "OPENFOLD_LR_DECAY_EVERY",
++            "decay_factor": "OPENFOLD_LR_DECAY_FACTOR",
++        }
++        overridden = [k for k, e in env_map.items() if os.environ.get(e) is not None]
++        for k in overridden:
++            lr_kwargs[k] = _casts[k](os.environ[env_map[k]])
++        if overridden:
++            lr_source = f"{lr_source} + environment ({', '.join(sorted(overridden))})"
 +
          lr_scheduler = AlphaFoldLRScheduler(
              optimizer,
@@ -80,5 +125,7 @@
 +            "after step {start_decay_after_n_steps}".format(**lr_kwargs),
 +            flush=True,
          )
++        print(f"lr schedule src : {lr_source}", flush=True)
  
          return {
+             "optimizer": optimizer,
