@@ -298,26 +298,57 @@ def scatter_projection(input: Path, output: Path):
 
 
 def plot_comparison_curve(
-    pdb_inv_root: Path, columns: list[str], ref_path: str = "", off_set: int = 0
+    pdb_inv_root: Path,
+    columns: list[str],
+    ref_path: str = "",
+    off_set: int = 0,
+    groups: list[dict] | None = None,
+    references: list[dict] | None = None,
+    figsize: tuple[float, float] = (15, 8),
+    residue_index: list[int] | None = None,
 ):
-    """Plot features from BRI files against ColabFold data."""
+    """Plot features from BRI files against ColabFold data.
+
+    The original call -- a directory of invariant CSVs plus one PDB reference
+    fetched by id -- is unchanged. Three optional arguments let a caller supply
+    invariants it has already computed, which is what a comparison across
+    prediction *conditions* needs:
+
+    :param groups: prediction sets to overlay, each
+        ``{"label": str, "color": str, "frames": [DataFrame, ...]}``. One line is
+        drawn per frame, so repeats within a group still show as a spread, as
+        they do in the light-grey default. When given, ``pdb_inv_root`` is not
+        read.
+    :param references: experimental references already computed, each
+        ``{"label": str, "color": str, "frame": DataFrame}``. Use this instead of
+        ``ref_path`` when the structure is on disk rather than fetchable by id,
+        or when more than one reference conformation is being shown.
+    :param figsize: figure size. The 15x8 default suits a slide; a figure bound
+        for a single text column wants roughly the column width, so that it is
+        included at scale 1 and its labels keep the size they were set at.
+    :param residue_index: x positions for the group lines. Defaults to
+        ``1..len(frame)``, which is only right when the frames start at the
+        first residue; pass the real residue numbering when plotting a
+        restricted support.
+    """
 
     pdb_data = {col: [] for col in columns}
 
     # Load ploting data
     tick_r = 0
-    for file in pdb_inv_root.glob("*.csv"):
-        try:
-            df = pd.read_csv(file)
-            tick_r = len(df)
-            for col in columns:
-                if col in df.columns:
-                    values: FloatArray = pd.to_numeric(df[col], errors="coerce")
-                    pdb_data[col].append(values)
-        except Exception as e:
-            logging.warning(f"Failed to read {file}: {e}")
+    if groups is None:
+        for file in pdb_inv_root.glob("*.csv"):
+            try:
+                df = pd.read_csv(file)
+                tick_r = len(df)
+                for col in columns:
+                    if col in df.columns:
+                        values: FloatArray = pd.to_numeric(df[col], errors="coerce")
+                        pdb_data[col].append(values)
+            except Exception as e:
+                logging.warning(f"Failed to read {file}: {e}")
 
-    fig, axes = plt.subplots(len(columns), 1, figsize=(15, 8), sharex=True)
+    fig, axes = plt.subplots(len(columns), 1, figsize=figsize, sharex=True)
 
     # Plot loaded data
     for i, col in enumerate(columns):
@@ -325,10 +356,73 @@ def plot_comparison_curve(
         for arr in pdb_data[col]:
             ax.plot(range(1, 1 + len(arr)), arr, color="lightgray", alpha=0.4)
 
+        if groups:
+            for group in groups:
+                frames = [f for f in group["frames"] if col in f.columns]
+
+                if not frames:
+                    continue
+
+                stack = pd.concat(
+                    [pd.to_numeric(f[col], errors="coerce").reset_index(drop=True)
+                     for f in frames],
+                    axis=1,
+                )
+                xs = residue_index or list(range(1, 1 + len(stack)))
+                tick_r = max(tick_r, len(stack))
+
+                if group.get("band") and stack.shape[1] > 1:
+                    # Five overlapping lines per panel hide each other and the
+                    # reference underneath. The band carries the same
+                    # information -- the full spread across repeats -- in one
+                    # readable mark, with the median drawn over it.
+                    ax.fill_between(
+                        xs, stack.min(axis=1), stack.max(axis=1),
+                        color=group["color"], alpha=group.get("band_alpha", 0.30),
+                        linewidth=0,
+                        label=group["label"] if i == 0 else None,
+                    )
+                    ax.plot(
+                        xs, stack.median(axis=1), color=group["color"],
+                        linewidth=group.get("linewidth", 0.8), alpha=0.95,
+                    )
+                else:
+                    for n in range(stack.shape[1]):
+                        ax.plot(
+                            xs, stack.iloc[:, n],
+                            color=group["color"],
+                            alpha=group.get("alpha", 0.55),
+                            linewidth=group.get("linewidth", 0.7),
+                            # one legend entry per group, not per repeat
+                            label=group["label"] if (i == 0 and n == 0) else None,
+                        )
+
         ax.set_ylabel(col)
         _apply_y_limits(ax, col)
-        ax.set_xticks(list(range(1, tick_r, 50)) + [tick_r])
+        if residue_index:
+            lo, hi = residue_index[0], residue_index[-1]
+            ax.set_xticks(list(range(lo, hi, 50)) + [hi])
+            ax.set_xlim(lo, hi)
+        else:
+            ax.set_xticks(list(range(1, tick_r, 50)) + [tick_r])
         ax.grid(alpha=0.3)
+
+    if references:
+        for i, col in enumerate(columns):
+            ax = axes[i] if len(columns) > 1 else axes
+            for ref in references:
+                frame = ref["frame"]
+                if col not in frame.columns:
+                    continue
+                ax.plot(
+                    frame["residue_id"].to_list(),
+                    pd.to_numeric(frame[col], errors="coerce"),
+                    color=ref["color"],
+                    linewidth=ref.get("linewidth", 1.0),
+                    marker="o",
+                    markersize=ref.get("markersize", 1.2),
+                    label=ref["label"] if i == 0 else None,
+                )
 
     if ref_path:
         ref_info = Path(ref_path)
@@ -384,6 +478,26 @@ def plot_comparison_curve(
                 )
 
     plt.xlabel("Residue Index")
+
+    # With several prediction conditions and more than one reference
+    # conformation on the same axes, colour alone no longer identifies a
+    # curve, so a legend is required. The single-group default needs none and
+    # keeps its original appearance.
+    if groups or references:
+        first = axes[0] if len(columns) > 1 else axes
+        handles, labels = first.get_legend_handles_labels()
+        if handles:
+            fig.legend(
+                handles,
+                labels,
+                loc="upper center",
+                bbox_to_anchor=(0.5, 1.0),
+                ncol=min(4, len(handles)),
+                frameon=False,
+            )
+            fig.tight_layout(rect=(0, 0, 1, 0.965))
+            return fig
+
     fig.tight_layout()
     return fig
 
