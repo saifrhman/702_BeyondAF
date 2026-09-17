@@ -115,8 +115,8 @@ def test_bootstrap_exposes_defaults_and_the_stage_chain(ui):
     stage_ids = [stage["stage_id"] for stage in payload["stages"]]
 
     assert stage_ids[0] == "snapshot"
-    assert stage_ids[-1] == "gold_release"
-    assert len(stage_ids) == 15
+    assert stage_ids[-1] == "sequence_clustering"
+    assert len(stage_ids) == 16
 
 
 def test_bootstrap_lists_the_frozen_profile(ui):

@@ -839,6 +839,21 @@ class Handler(BaseHTTPRequestHandler):
             "representative_policy": resolved.get(
                 "representative_selection.policy_name"
             ),
+            # Stage 15. Reported for every run, enabled or not, so the view
+            # states which population the configuration describes rather than
+            # leaving the reader to infer it from the release name.
+            "sequence_clustering": {
+                "enabled": bool(
+                    resolved.get("sequence_clustering.enabled", False)
+                ),
+                "min_seq_id": resolved.get("sequence_clustering.min_seq_id"),
+                "coverage": resolved.get("sequence_clustering.coverage"),
+                "cov_mode": resolved.get("sequence_clustering.cov_mode"),
+                "subcommand": resolved.get("sequence_clustering.subcommand"),
+                "release_suffix": resolved.get(
+                    "sequence_clustering.release_suffix"
+                ),
+            },
         }
 
         if release:
@@ -1220,8 +1235,19 @@ class Handler(BaseHTTPRequestHandler):
                     continue
 
                 provenance["snapshot_id"] = loaded.get("snapshot")
-                provenance["stage"] = "Stage 14c — Final Gold release"
+                # Two kinds of release now carry a release_manifest.json. The
+                # Stage-15 one declares itself; anything without the marker is
+                # a geometric Gold release, which is what every pre-Stage-15
+                # manifest is.
+                provenance["stage"] = (
+                    "Stage 15 — Sequence-redundancy resolution"
+                    if loaded.get("release_kind") == "geometric_then_sequence"
+                    else "Stage 14c — Final Gold release"
+                )
                 provenance["release_name"] = loaded.get("release_name")
+                provenance["release_kind"] = loaded.get(
+                    "release_kind", "geometric"
+                )
                 break
 
         # A run directory names the run and both configuration hashes.

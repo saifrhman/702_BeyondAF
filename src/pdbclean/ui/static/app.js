@@ -1733,9 +1733,18 @@ async function loadRelease(runId) {
                 el("tr", {}, [
                     el("td", {}, [
                         artefactLink(absolute, artifact.path, {
-                            stage: "Stage 14c — Final Gold release",
+                            // Two kinds of release carry a manifest now. The
+                            // Stage-15 one declares itself; everything else is
+                            // a geometric Gold release.
+                            stage:
+                                release.release_kind === "geometric_then_sequence"
+                                    ? "Stage 15 — Sequence-redundancy resolution"
+                                    : "Stage 14c — Final Gold release",
                             snapshot: payload.snapshot,
-                            producer: "scripts/build_stage14_final_release.py",
+                            producer:
+                                release.release_kind === "geometric_then_sequence"
+                                    ? "pdbclean.sequence_clustering_production"
+                                    : "scripts/build_stage14_final_release.py",
                             validation: "validation_pass",
                         }),
                     ]),
