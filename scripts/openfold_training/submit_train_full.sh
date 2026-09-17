@@ -32,7 +32,11 @@ mkdir -p "$LOGS"
 
 # Already covered? Submitting on top of a live lineage would only make the
 # claim logic kill one of the two, losing an in-flight epoch for nothing.
-EXISTING="$(squeue -u "$USER" --name=of_train_full -h -o '%i %T %P' 2>/dev/null)"
+# A second lineage (a different prepared population) is a different
+# experiment and must not be mistaken for this one, so the guard and the claim
+# logic key on a job name the caller can set.
+JOB_NAME="${OF_JOB_NAME:-of_train_full}"
+EXISTING="$(squeue -u "$USER" --name="$JOB_NAME" -h -o '%i %T %P' 2>/dev/null)"
 if [[ -n "$EXISTING" && "${FORCE:-0}" != "1" ]]; then
     echo "training already queued or running:"
     echo "$EXISTING" | sed 's/^/  /'
@@ -77,6 +81,7 @@ for target in "${TARGETS[@]}"; do
               --gres="$gres" \
               --time="$walltime" \
               --ntasks-per-node="$GPUS" \
+              --job-name="$JOB_NAME" \
               --output="$LOGS/${tag}_%j.out" \
               --error="$LOGS/${tag}_%j.err" \
               "$SBATCH" "$RUN_NAME" "$TOTAL_EPOCHS" "$EPOCH_LEN" "$GPUS" "$ACCUM" 2>&1)"
@@ -98,4 +103,4 @@ fi
 
 echo
 echo "run root     : $RUN_ROOT"
-echo "watch with   : squeue -u $USER --name=of_train_full"
+echo "watch with   : squeue -u $USER --name=$JOB_NAME"

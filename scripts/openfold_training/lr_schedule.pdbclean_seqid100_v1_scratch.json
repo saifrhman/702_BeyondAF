@@ -1,0 +1,7 @@
+{
+  "max_lr": 0.001,
+  "warmup_no_steps": 1000,
+  "start_decay_after_n_steps": 25600,
+  "decay_every_n_steps": 1200,
+  "decay_factor": 0.95
+}

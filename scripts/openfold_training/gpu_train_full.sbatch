@@ -57,8 +57,13 @@ if [[ "$NTASKS" != "$GPUS" ]]; then
 fi
 
 REPO=/mnt/fastscratch/users/sgsrehm1/COMP702_pdbclean_pipeline
-BASE="$REPO/outputs/openfold_training/20260101/pdbclean-dedup-v1"
+# Which prepared population this run trains on. Defaults to the geometric
+# (PDBClean-dedup-v1) view, so an unqualified submission is the run that has
+# always been submitted here; the sequence-reduced Stage-15 view is selected by
+# exporting OF_TRAIN_BASE and OF_ALIGN_INDEX, which sbatch carries into the job.
+BASE="${OF_TRAIN_BASE:-$REPO/outputs/openfold_training/20260101/pdbclean-dedup-v1}"
 VIEW="$BASE/training_view"
+ALIGN_INDEX="${OF_ALIGN_INDEX:-$BASE/alignment_index/pdbclean_dedup_v1.index}"
 OFSRC=/mnt/fastscratch/users/sgsrehm1/openfold_src
 
 MMCIF=/users/sgsrehm1/scratch/COMP702_openfold_20260101/pdbclean-dedup-v1/mmcif
@@ -350,7 +355,7 @@ fi
 echo
 echo "=== dataset identity ==="
 sha256sum \
-    "$BASE/alignment_index/pdbclean_dedup_v1.index" \
+    "$ALIGN_INDEX" \
     "$VIEW/projection_index.json" \
     "$VIEW/train_chain_data_cache.json" \
     "$VIEW/train_filter_view.txt"
@@ -368,7 +373,7 @@ srun --kill-on-bad-exit=1 "$ENV/bin/python" train_openfold.py \
     "$RUN_ROOT" \
     2026-01-01 \
     --config_preset initial_training \
-    --alignment_index_path "$BASE/alignment_index/pdbclean_dedup_v1.index" \
+    --alignment_index_path "$ALIGN_INDEX" \
     --train_projection_index_path "$VIEW/projection_index.json" \
     --train_chain_data_cache_path "$VIEW/train_chain_data_cache.json" \
     --train_filter_path "$VIEW/train_filter_view.txt" \
