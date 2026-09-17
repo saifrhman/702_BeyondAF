@@ -619,6 +619,50 @@ STAGES: tuple[StageSpec, ...] = (
         ),
         entry_point="scripts/build_stage14_final_release.py",
     ),
+    StageSpec(
+        stage_id="sequence_clustering",
+        canonical_stage="Stage 15",
+        ordinal=16,
+        title="Sequence-redundancy resolution",
+        layer=LAYER_GOLD,
+        purpose=(
+            "Cluster the retained chains of the Gold release by sequence and "
+            "keep one chain per cluster, chosen by the same deterministic "
+            "ranking Stage 14b applies to geometric components. Geometry runs "
+            "first and is not recomputed; this stage answers the separate "
+            "question of which survivors are redundant by sequence."
+        ),
+        directory=_protocol_dir("sequence_clustering"),
+        primary_output="finalized/retained_chains.parquet",
+        input_count_keys=("input_chain_count",),
+        output_count_keys=("retained_chain_count",),
+        scientific_parameters=(
+            "sequence_clustering.enabled",
+            "sequence_clustering.subcommand",
+            "sequence_clustering.min_seq_id",
+            "sequence_clustering.coverage",
+            "sequence_clustering.cov_mode",
+            "sequence_clustering.cluster_mode",
+            "sequence_clustering.policy_version",
+            "sequence_clustering.release_suffix",
+        ),
+        compatibility={
+            "snapshot": "snapshot.snapshot_id",
+            "cleaning_protocol": "release.protocol_version",
+            "min_seq_id": "sequence_clustering.min_seq_id",
+            "coverage": "sequence_clustering.coverage",
+            "cov_mode": "sequence_clustering.cov_mode",
+            "cluster_mode": "sequence_clustering.cluster_mode",
+            "policy_version": "sequence_clustering.policy_version",
+        },
+        depends_on=("gold_release",),
+        validation=(
+            "Chain accounting reconciles exactly, every removed chain resolves "
+            "to exactly one retained representative, no representative is "
+            "itself removed, and the stage is deterministic on re-run."
+        ),
+        entry_point="pdbclean.sequence_clustering_production",
+    ),
 )
 
 
@@ -845,6 +889,18 @@ STAGE_EXECUTION: dict[str, StageExecution] = {
             "--threshold-mA",
         ),
         resources=SlurmResources(time_limit="02:00:00", memory="16G", cpus=2),
+    ),
+    # Clustering 499,770 sequences with easy-cluster took 17 s wall on 8
+    # threads in a trial run; the identity search that follows it is the
+    # larger half. Sized with generous headroom because a lower min_seq_id
+    # makes both halves dearer, not cheaper.
+    "sequence_clustering": StageExecution(
+        stage_id="sequence_clustering",
+        required_arguments=(
+            "--config",
+            "--pipeline-git-commit",
+        ),
+        resources=SlurmResources(time_limit="04:00:00", memory="64G", cpus=16),
     ),
 }
 
@@ -1304,6 +1360,20 @@ CANONICAL_TIMELINE: tuple[CanonicalStage, ...] = (
         purpose=(
             "Publish the retained-chain dataset, the removed-chain audit and "
             "the release manifest."
+        ),
+    ),
+    CanonicalStage(
+        key="stage_15",
+        label="Stage 15",
+        title="Sequence-redundancy resolution",
+        position=21,
+        role=ROLE_SCIENTIFIC,
+        producer="sequence_clustering",
+        purpose=(
+            "Cluster the geometric survivors by sequence and keep one chain "
+            "per cluster, publishing the result as its own release. Optional: "
+            "a run with the stage disabled publishes the geometry-only "
+            "population instead."
         ),
     ),
 )
@@ -2117,6 +2187,53 @@ _DESCRIPTIONS: dict[str, dict[str, Any]] = {
         "implementation_note": (
             "COMP702 release engineering. "
             "scripts/build_stage14_final_release.py."
+        ),
+    },
+    "stage_15": {
+        "rationale": (
+            "Geometric and sequence redundancy are different properties, and "
+            "removing one does not remove the other. A population deduplicated "
+            "by shape still contains chains whose sequences are "
+            "indistinguishable, which a sequence-aware consumer may or may "
+            "not want."
+        ),
+        "scientific_method": (
+            "The retained chains of a completed Gold release are clustered on "
+            "their retained (post-trimming) sequences with MMseqs2 "
+            "easy-cluster, under a configured identity threshold and a "
+            "bidirectional coverage requirement so that a short chain cannot "
+            "be absorbed into a long one on the strength of a shared "
+            "domain.\\n\\n"
+            "MMseqs2 decides cluster MEMBERSHIP only. The survivor within "
+            "each cluster is chosen by the same deterministic ranking Stage "
+            "14b applies to geometric components -- untrimmed preferred, then "
+            "fewer defective residues, then better resolution where the "
+            "cluster's experimental methods are comparable, then a canonical "
+            "chain-key tie-break -- because the clusterer's own set-cover "
+            "nomination is greedy and order-dependent.\\n\\n"
+            "Every removed chain is attributed to one retained "
+            "representative, never merely to a cluster, and the pairwise "
+            "sequence identity to that representative is recorded."
+        ),
+        "stage_input": (
+            "The retained-chain dataset of a completed geometric Gold "
+            "release, read-only."
+        ),
+        "stage_output": (
+            "A separately identified release in the same shape as the "
+            "geometric one: data/retained_chains.parquet, "
+            "audit/removed_chain_audit.parquet carrying the cluster id, the "
+            "representative and the pairwise identity, release_manifest.json "
+            "and _SUCCESS."
+        ),
+        "downstream_role": (
+            "The geometry-then-sequence population, as an alternative to the "
+            "geometry-only release for downstream training preparation."
+        ),
+        "implementation_note": (
+            "COMP702 sequence-redundancy resolution. "
+            "pdbclean.sequence_clustering_production; optional, switched by "
+            "sequence_clustering.enabled."
         ),
     },
 }

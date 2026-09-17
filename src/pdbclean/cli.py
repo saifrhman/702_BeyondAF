@@ -616,6 +616,23 @@ def stage_command(
             ]
         )
 
+    if stage_id == "sequence_clustering":
+        # Stage 15 reads everything it needs -- the input release, the
+        # thresholds, the release suffix it publishes under -- from the frozen
+        # configuration, so it takes the same two arguments as the other
+        # single-job production stages.
+        return _finish(
+            [
+                interpreter,
+                "-m",
+                "pdbclean.sequence_clustering_production",
+                "--config",
+                config_path,
+                "--pipeline-git-commit",
+                pipeline_git_commit,
+            ]
+        )
+
     if stage_id == "length_buckets":
         return _finish(
             [

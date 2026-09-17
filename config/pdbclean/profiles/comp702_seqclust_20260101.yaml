@@ -1,0 +1,64 @@
+# COMP702 geometry-then-sequence profile: PDB snapshot 2026-01-01.
+#
+# Identical to `comp702_frozen_20260101.yaml` through the geometric stages --
+# the complete-BRI work is not recomputed -- and then enables Stage 15, which
+# clusters the geometric survivors by sequence and keeps one chain per cluster.
+#
+# The result is published under its own release identifier:
+#
+#     PDBClean-20260101-protocol3.2-comp702-v1-dedup-v1-seqid100-v1
+#
+# The geometry-only release it derives from,
+#
+#     PDBClean-20260101-protocol3.2-comp702-v1-dedup-v1
+#
+# is read-only input and is never modified. Selecting the frozen profile
+# instead, or setting `sequence_clustering.enabled: false` here, produces the
+# geometry-only population from the same configuration -- that switch is the
+# only difference between the two datasets.
+
+snapshot:
+  mode: fixed
+  snapshot_id: "20260101"
+
+sequence_clustering:
+  enabled: true
+
+  # MMseqs2 is used to decide cluster MEMBERSHIP only. The survivor within each
+  # cluster is chosen by the project's own deterministic ranking, not by the
+  # clusterer's nomination -- its greedy set cover is order-dependent and was
+  # observed on this population to place byte-identical sequences under
+  # different representatives.
+  tool: mmseqs2
+  subcommand: easy-cluster
+
+  # 100% identity: remove only chains indistinguishable from their
+  # representative over the covered region. Lower values start discarding
+  # genuine homologues a structure model has reason to see; sweep this key to
+  # study that trade-off.
+  min_seq_id: 1.0
+
+  # Bidirectional 80% coverage: the alignment must cover at least 80% of BOTH
+  # sequences, so a short chain cannot be absorbed into a long one on a shared
+  # domain.
+  coverage: 0.8
+  cov_mode: 0
+  cluster_mode: 0
+
+  input_release_suffix: dedup-v1
+  release_suffix: dedup-v1-seqid100-v1
+
+  policy_name: comp702_sequence_representative_selection
+  policy_version: "1.0"
+  ranking:
+    - terminal_trimmed_false_preferred
+    - lower_dirty_residue_count_preferred
+    - comparable_method_resolution_preferred
+    - canonical_chain_key_tiebreak
+
+# Geometric expectation gates, unchanged from the frozen profile: this run
+# consumes that release and must be told what it should contain.
+expectations:
+  canonical_input_chain_count: 578524
+  retained_chain_count: 499770
+  removed_chain_count: 78754

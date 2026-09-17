@@ -267,6 +267,48 @@ VALIDATED_DEFAULTS: dict[str, Any] = {
         "old_snapshot_comparison": False,
     },
     # ------------------------------------------------------------------
+    # Stage 15 sequence-redundancy resolution, applied AFTER geometry.
+    #
+    # `enabled` is the switch that decides which population a run publishes:
+    # false gives the geometry-only release, true gives geometry-then-sequence
+    # under its own release identifier. Nothing else needs to change.
+    #
+    # min_seq_id defaults to 1.0. At 1.0 the stage removes only chains whose
+    # sequence is indistinguishable from their representative's over the
+    # covered region, which is the redundancy no one disputes; every looser
+    # threshold starts discarding genuine homologues that a structure model
+    # has reason to see. It is the conservative default for a training
+    # population, and the value is configuration, so a study can sweep it.
+    #
+    # coverage/cov_mode default to 0.8 / 0 (bidirectional): the alignment must
+    # cover at least 80% of BOTH sequences, so a short chain cannot be absorbed
+    # into a long one on the strength of a shared domain.
+    #
+    # subcommand is easy-cluster, not easy-linclust: linclust is linear-time
+    # but misses remote homology in the 30-50% identity band, which is exactly
+    # where a threshold sweep is interesting.
+    # ------------------------------------------------------------------
+    "sequence_clustering": {
+        "enabled": False,
+        "tool": "mmseqs2",
+        "subcommand": "easy-cluster",
+        "min_seq_id": 1.0,
+        "coverage": 0.8,
+        "cov_mode": 0,
+        "cluster_mode": 0,
+        "mmseqs_binary": None,
+        "input_release_suffix": "dedup-v1",
+        "release_suffix": "dedup-v1-seqclust-v1",
+        "policy_name": "comp702_sequence_representative_selection",
+        "policy_version": "1.0",
+        "ranking": [
+            "terminal_trimmed_false_preferred",
+            "lower_dirty_residue_count_preferred",
+            "comparable_method_resolution_preferred",
+            "canonical_chain_key_tiebreak",
+        ],
+    },
+    # ------------------------------------------------------------------
     # Infrastructure / execution parameters (not scientific)
     # ------------------------------------------------------------------
     "execution": {

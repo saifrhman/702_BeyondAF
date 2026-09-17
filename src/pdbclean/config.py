@@ -413,6 +413,84 @@ def _validate_execution(config: dict[str, Any]) -> None:
             )
 
 
+def _validate_sequence_clustering(config: dict[str, Any]) -> None:
+    """Validate the optional Stage-15 sequence-redundancy section.
+
+    The section is optional: a configuration that omits it describes a
+    geometry-only run, which is what every pre-Stage-15 configuration does.
+    When present it is checked strictly, because these values decide which
+    chains a release contains.
+    """
+
+    section = config.get("sequence_clustering")
+
+    if section is None:
+        return
+
+    if not isinstance(section, dict):
+        raise ConfigError("sequence_clustering must be a mapping")
+
+    if not isinstance(section.get("enabled", False), bool):
+        raise ConfigError("sequence_clustering.enabled must be a boolean")
+
+    if not section.get("enabled", False):
+        return
+
+    subcommand = section.get("subcommand")
+
+    if subcommand not in ("easy-cluster", "easy-linclust"):
+        raise ConfigError(
+            "sequence_clustering.subcommand must be 'easy-cluster' or "
+            f"'easy-linclust', got {subcommand!r}"
+        )
+
+    min_seq_id = section.get("min_seq_id")
+
+    if not isinstance(min_seq_id, (int, float)) or not 0.0 < float(min_seq_id) <= 1.0:
+        raise ConfigError(
+            "sequence_clustering.min_seq_id must be a fraction in (0, 1], "
+            f"got {min_seq_id!r}"
+        )
+
+    coverage = section.get("coverage")
+
+    if not isinstance(coverage, (int, float)) or not 0.0 < float(coverage) <= 1.0:
+        raise ConfigError(
+            "sequence_clustering.coverage must be a fraction in (0, 1], "
+            f"got {coverage!r}"
+        )
+
+    if section.get("cov_mode") not in (0, 1, 2, 3, 4, 5):
+        raise ConfigError(
+            "sequence_clustering.cov_mode must be an MMseqs2 coverage mode "
+            f"(0-5), got {section.get('cov_mode')!r}"
+        )
+
+    if section.get("cluster_mode") not in (0, 1, 2, 3):
+        raise ConfigError(
+            "sequence_clustering.cluster_mode must be an MMseqs2 cluster mode "
+            f"(0-3), got {section.get('cluster_mode')!r}"
+        )
+
+    source = section.get("input_release_suffix")
+    target = section.get("release_suffix")
+
+    for name, value in (("input_release_suffix", source),
+                        ("release_suffix", target)):
+        if not isinstance(value, str) or not value.strip():
+            raise ConfigError(
+                f"sequence_clustering.{name} must be a non-empty string"
+            )
+
+    # The stage must never publish over the release it consumes.
+    if source == target:
+        raise ConfigError(
+            "sequence_clustering.release_suffix must differ from "
+            "input_release_suffix; the stage publishes a new release and "
+            "never overwrites its input"
+        )
+
+
 def load_config(path: str | Path) -> LoadedConfig:
     """Load, expand, validate, and checksum a YAML configuration."""
 
@@ -447,6 +525,7 @@ def load_config(path: str | Path) -> LoadedConfig:
     _validate_duplicate_search(expanded)
     _validate_storage(expanded)
     _validate_execution(expanded)
+    _validate_sequence_clustering(expanded)
 
     return LoadedConfig(
         path=config_path,
