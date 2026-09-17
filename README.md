@@ -203,6 +203,39 @@ Representative selection walks each component with a deterministic
 quality-ordered greedy **direct-edge cover**. Chains with *m* = 1 are all
 retained.
 
+This removes redundancy **of shape only**. Two chains with an identical
+sequence but different coordinates are not near-duplicates under this
+criterion and both survive, so the retained population still carries sequence
+redundancy by design — 499,770 retained chains hold 142,056 distinct
+sequences. Removing that is the separate, optional job of
+[§2.6.1](#261-sequence-redundancy-resolution-stage-14d-optional).
+
+### 2.6.1 Sequence-redundancy resolution (Stage 14d, optional)
+
+Clusters the Stage-14c survivors on their **retained (post-trimming)**
+sequences with MMseqs2 and keeps one chain per cluster.
+
+MMseqs2 decides cluster *membership only*. The survivor is chosen by the same
+deterministic ranking Stage 14b applies to geometric components, with the
+helpers imported from that entry point rather than copied — the clusterer's own
+greedy set cover is order-dependent and was observed placing byte-identical
+sequences under different representatives.
+
+Two parameters carry the scientific weight:
+
+* `min_seq_id` — 1.0 by default. Removes only chains indistinguishable from
+  their representative; anything looser discards homologues a structure model
+  has reason to see.
+* `coverage` / `cov_mode` — bidirectional, so a short chain cannot be absorbed
+  into a long one on a shared domain. **At 0.8 the operation is not exact**: it
+  merges length variants, and in the executed 0.8 run it merged `2OLO` into
+  `2OLN` and deleted one of the two observed conformations of a fold switcher.
+  At 1.0, with the exact post-pass enabled, the result is exactly one chain per
+  distinct sequence.
+
+`docs/sequence_redundancy.md` records the threshold sweep, the validation
+gates, the determinism check and the population counts.
+
 ### 2.7 What the result is, and is not
 
 The output is **a geometrically deduplicated PDB chain dataset under COMP702
@@ -242,6 +275,7 @@ reference it rather than repeating it.
 | **Stage 14a** — Geometric redundancy graph | Build the near-duplicate graph | `scripts/build_stage14_geometric_graph.py` | `task_scripts/run_stage14_geometric_graph.sbatch` | `stage14_geometric_graph/` | gold |
 | **Stage 14b** — Representative selection | Direct-edge cover | `scripts/select_stage14_representatives.py` | `task_scripts/run_stage14_representatives.sbatch` | `representative_mapping.parquet` | gold |
 | **Stage 14c** — Final Gold release | Publish the retained dataset | `scripts/build_stage14_final_release.py` | `task_scripts/run_stage14_final_release.sbatch` | `data/retained_chains.parquet` | gold |
+| **Stage 14d** — Sequence-redundancy resolution *(optional)* | Cluster the survivors by sequence, keep one per cluster | `pdbclean.sequence_clustering_production` | *single job* | `sequence_clustering/` + its own release | gold |
 
 **Shared producers.** Stages 3 and 4 share one implementation, because
 `compute_bri` applies the precision grid at the point of computation. Stages 8
@@ -251,7 +285,12 @@ registry, the UI and provenance — because they are distinct scientific
 concepts.
 
 **Stage 14a/b/c** are *engineering subdivisions* of scientific Stage 14, not
-separate scientific stages.
+separate scientific stages. **Stage 14d** is a fourth, and differs from the
+others in being **optional**: it is disabled by default, and a run that leaves
+it off publishes the geometry-only population and nothing else. When enabled it
+consumes the Stage-14c release read-only and publishes a second release under
+its own identifier, so the two populations coexist rather than one replacing
+the other. See [`docs/sequence_redundancy.md`](docs/sequence_redundancy.md).
 
 **Stages 11–13** are investigation and validation passes. They are **not** on
 the release path and are **never** a deletion relation. `Stage 13` in
@@ -380,6 +419,29 @@ pdbclean run --config config/pdbclean/profiles/comp702_frozen_20260101.yaml --ye
 pdbclean run --snapshot 2026-04-15 --yes
 pdbclean run --set duplicate_search.near_duplicate_threshold_angstrom=0.005 --yes
 pdbclean run --plan-only            # resolve and plan, create nothing
+```
+
+### Choosing which population a run publishes
+
+Two profiles ship, and the only scientific difference between them is whether
+Stage 14d runs:
+
+```bash
+# geometry only -- the frozen 499,770-chain population
+pdbclean run --config config/pdbclean/profiles/comp702_frozen_20260101.yaml --yes
+
+# geometry, then sequence-redundancy resolution -- publishes a second release
+pdbclean run --config config/pdbclean/profiles/comp702_seqclust_20260101.yaml --yes
+```
+
+With the stage disabled the planner reports it as *not applicable* rather than
+as work forever outstanding, so a geometry-only run plans clean. The switch is
+a single key:
+
+```bash
+pdbclean run --set sequence_clustering.enabled=true \
+             --set sequence_clustering.coverage=1.0 \
+             --set sequence_clustering.exact_post_pass=true --yes
 ```
 
 ### Local execution
@@ -895,6 +957,20 @@ Release: `outputs/releases/PDBClean-20260101-protocol3.2-comp702-v1-dedup-v1`
 | retained dataset | `8ae52ad96586c2552f74083b480350973c86bdcca41ae1f30f7353472d769c8b` |
 | removed-chain audit | `4cb3bea6c6a61f27de60818d097cf72c0c047f603d13f76c8286bbae647d3360` |
 | release manifest | `1e6d6b249b6530fb501351fe6bd8d78647d3dad549db67e3fde486c2e3f8b918` |
+
+#### Releases derived from it
+
+Stage 14d publishes under its own identifier and never writes into the release
+above, which remains byte-identical to its publication. Three exist:
+
+| Release suffix | Parameters | Retained | Note |
+|---|---|---|---|
+| `-seqid100-v1` | identity 1.0, coverage 0.8 | 84,156 | **Not exact** — merges length variants; 518 removals below 50% identity, and `2OLO` merged into `2OLN`. |
+| `-seqid100-cov100-v1` | identity 1.0, coverage 1.0 | 143,226 | Exact: every removal at 100% identity. 1,170 survivors still share a sequence (MMseqs2 non-transitivity). |
+| `-seqid100-cov100-exact-v1` | identity 1.0, coverage 1.0, exact post-pass | **142,056** | Exactly one chain per distinct sequence. **This is the population currently training.** |
+
+See [`docs/sequence_redundancy.md`](docs/sequence_redundancy.md) for the sweep
+that motivates coverage 1.0 and the per-release validation gates.
 | `_SUCCESS` | `945c6c34358b127ea07365384f6f50429af315a26d9878233e4638cacf34c400` |
 
 Every artefact in this table is clickable in the UI's Gold release page and
@@ -1147,6 +1223,16 @@ exclusion is recorded with its chain list in
 never silently smaller than Gold.
 
 **Gold population 499,770 → trainable population 499,759.**
+
+> **Note.** The figures in this section describe the *geometry-only*
+> population. The run now training uses the Stage-14d population instead —
+> 142,056 chains, of which 138,056 train and 4,000 are held out. The held-out
+> set is chosen so that no validation chain shares a complete-BRI near-duplicate
+> edge *or* an identical sequence with any training chain, which the redundancy
+> graph already knows and so costs a lookup rather than a search. Checkpoints
+> are selected on `val/lddt_ca` every 5 epochs alongside the milestone
+> schedule. Its projection lives in
+> `outputs/openfold_training/20260101/pdbclean-final-v1/`.
 
 ### 15.5 Validation [IMPLEMENTED]
 
