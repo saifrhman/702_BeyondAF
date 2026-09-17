@@ -64,6 +64,21 @@ REPO=/mnt/fastscratch/users/sgsrehm1/COMP702_pdbclean_pipeline
 BASE="${OF_TRAIN_BASE:-$REPO/outputs/openfold_training/20260101/pdbclean-dedup-v1}"
 VIEW="$BASE/training_view"
 ALIGN_INDEX="${OF_ALIGN_INDEX:-$BASE/alignment_index/pdbclean_dedup_v1.index}"
+
+# Held-out validation. Absent these, the run behaves exactly as it always has:
+# no validation loader, no held-out metric, checkpoint selection by recency.
+VAL_ARGS=()
+if [[ -n "${OF_VAL_DATA_DIR:-}" ]]; then
+    VAL_ARGS=(
+        --val_data_dir "$OF_VAL_DATA_DIR"
+        --val_alignment_dir "$OF_VAL_ALIGNMENT_DIR"
+        --val_mmcif_data_cache_path "$OF_VAL_CACHE"
+        --check_val_every_n_epoch "${OF_VAL_EVERY_N_EPOCHS:-5}"
+    )
+    echo "validation      : $OF_VAL_DATA_DIR every ${OF_VAL_EVERY_N_EPOCHS:-5} epochs"
+else
+    echo "validation      : none configured"
+fi
 OFSRC=/mnt/fastscratch/users/sgsrehm1/openfold_src
 
 MMCIF=/users/sgsrehm1/scratch/COMP702_openfold_20260101/pdbclean-dedup-v1/mmcif
@@ -319,7 +334,23 @@ if squeue -u "$USER" -h -o '%i' >/dev/null 2>&1; then
     if squeue -u "$USER" --name=of_train_watchdog -h -o '%i' 2>/dev/null | grep -q .; then
         echo "watchdog        : already armed"
     elif [[ -x "$WATCHDOG" ]]; then
-        WD="$(sbatch --parsable "$WATCHDOG" "$RUN_ROOT" 1800 "$TOTAL_EPOCHS" 2>&1)"
+        # The watchdog declares a stall when no new epoch has been recorded
+        # within this many seconds, so the interval must exceed the time one
+        # epoch actually takes. It was 1800 s against an epoch of roughly
+        # 98 min (128 optimiser steps at ~46 s), which made a false stall
+        # certain: every 30 minutes it submitted a rescue, the rescue claimed
+        # the run root, the running job stood down and the in-flight epoch was
+        # lost. The seqid100 lineage sat at step 199 for two and a half hours
+        # that way, with eight jobs queued.
+        #
+        # EPOCH_LEN samples at ACCUM per step is EPOCH_LEN/(GPUS*ACCUM) steps;
+        # at a conservative 60 s per step that is the expected epoch, and the
+        # watchdog waits three of them before calling a stall.
+        STEPS_PER_EPOCH=$(( EPOCH_LEN / (GPUS * ACCUM) ))
+        STALL_SECONDS=$(( STEPS_PER_EPOCH * 60 * 3 ))
+        (( STALL_SECONDS < 1800 )) && STALL_SECONDS=1800
+        echo "watchdog        : stall threshold ${STALL_SECONDS}s (~3 epochs of ${STEPS_PER_EPOCH} steps)"
+        WD="$(sbatch --parsable "$WATCHDOG" "$RUN_ROOT" "$STALL_SECONDS" "$TOTAL_EPOCHS" 2>&1)"
         if [[ "$WD" =~ ^[0-9]+$ ]]; then
             echo "watchdog        : re-armed as job $WD (chain was not running)"
         else
@@ -389,6 +420,7 @@ srun --kill-on-bad-exit=1 "$ENV/bin/python" train_openfold.py \
     --log_lr \
     --num_sanity_val_steps 0 \
     --checkpoint_every_epoch \
+    "${VAL_ARGS[@]}" \
     $RESUME
 STATUS=$?
 set +x

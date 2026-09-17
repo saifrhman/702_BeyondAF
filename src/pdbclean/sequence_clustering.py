@@ -234,6 +234,55 @@ def choose_representatives(
     return representative_of_cluster, representative_of_chain, resolution_used
 
 
+def collapse_identical_sequences(
+    retained: list[str],
+    sequences: dict[str, str],
+    quality: dict[str, ChainQuality],
+    metadata: dict[str, Any],
+    policy,
+) -> tuple[list[str], dict[str, str]]:
+    """Collapse survivors that still carry a byte-identical sequence.
+
+    MMseqs2's clustering is not transitive, so a run can finish with two
+    survivors whose sequences are the same string -- 1,170 of them at identity
+    1.0 / coverage 1.0. That is not a judgement call about similarity; the
+    sequences are equal, so exactly one of them should remain.
+
+    This pass groups the survivors on the sequence itself and keeps one per
+    group under the same ranking the clusterer's output was chosen with, so the
+    two steps cannot disagree about what a good representative is. It runs on
+    the survivors only and needs no alignment, no clusterer and no search.
+
+    Returns the reduced survivor list and, for every chain it drops, the
+    survivor that now represents it.
+    """
+
+    groups: dict[str, list[str]] = {}
+
+    for key in retained:
+        groups.setdefault(sequences[key], []).append(key)
+
+    survivors: list[str] = []
+    absorbed: dict[str, str] = {}
+
+    for sequence in sorted(groups):
+        members = sorted(groups[sequence])
+
+        if len(members) == 1:
+            survivors.append(members[0])
+            continue
+
+        rank, _, _ = make_rank(policy, members, quality, metadata)
+        winner = min(members, key=rank)
+        survivors.append(winner)
+
+        for member in members:
+            if member != winner:
+                absorbed[member] = winner
+
+    return sorted(survivors), absorbed
+
+
 def reconcile(
     *,
     input_chains: Iterable[str],

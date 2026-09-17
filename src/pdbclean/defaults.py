@@ -297,6 +297,10 @@ VALIDATED_DEFAULTS: dict[str, Any] = {
         "cov_mode": 0,
         "cluster_mode": 0,
         "mmseqs_binary": None,
+        # Collapse survivors that still share a byte-identical sequence, which
+        # the clusterer's non-transitivity leaves behind. Off by default so an
+        # existing run's population is unchanged.
+        "exact_post_pass": False,
         "input_release_suffix": "dedup-v1",
         "release_suffix": "dedup-v1-seqclust-v1",
         "policy_name": "comp702_sequence_representative_selection",

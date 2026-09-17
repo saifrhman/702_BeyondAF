@@ -33,6 +33,7 @@ import pyarrow.parquet as pq
 from pdbclean.config import load_config
 from pdbclean.sequence_clustering import (
     POLICY_NAME,
+    collapse_identical_sequences,
     POLICY_VERSION,
     RANKING,
     ChainQuality,
@@ -257,6 +258,19 @@ def main() -> int:
     )
 
     retained_keys = sorted(set(rep_of_cluster.values()))
+
+    exact_post_pass = bool(section.get("exact_post_pass", False))
+    absorbed: dict[str, str] = {}
+
+    if exact_post_pass:
+        before = len(retained_keys)
+        retained_keys, absorbed = collapse_identical_sequences(
+            retained_keys, sequences, quality, metadata, policy)
+        for chain, winner in absorbed.items():
+            rep_of_chain[chain] = winner
+        print(f"  exact post-pass  {before:,} -> {len(retained_keys):,} "
+              f"({len(absorbed):,} collapsed onto an identical sequence)")
+
     removed_keys = sorted(set(keys) - set(retained_keys))
 
     gates = reconcile(
@@ -352,6 +366,8 @@ def main() -> int:
         "cluster_size_histogram": size_hist,
         "largest_cluster": sizes[-1] if sizes else 0,
         "resolution_term_clusters": resolution_clusters,
+        "exact_post_pass": exact_post_pass,
+        "exact_post_pass_collapsed": len(absorbed),
         "identity_resolved": resolved,
         "identity_bands": bands,
         "identity_methods": methods,

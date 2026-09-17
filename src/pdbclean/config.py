@@ -436,6 +436,11 @@ def _validate_sequence_clustering(config: dict[str, Any]) -> None:
     if not section.get("enabled", False):
         return
 
+    if not isinstance(section.get("exact_post_pass", False), bool):
+        raise ConfigError(
+            "sequence_clustering.exact_post_pass must be a boolean"
+        )
+
     subcommand = section.get("subcommand")
 
     if subcommand not in ("easy-cluster", "easy-linclust"):
