@@ -389,7 +389,7 @@ def main() -> int:
     print(f"  identity bands  {bands}")
     print(f"  identity method {methods}")
     print()
-    print("STAGE-15 SEQUENCE CLUSTERING PUBLICATION: PASS")
+    print("STAGE-14d SEQUENCE CLUSTERING PUBLICATION: PASS")
     return 0
 
 

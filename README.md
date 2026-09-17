@@ -109,7 +109,17 @@ direct-edge-safe representative     Stage 14
    selection
         ↓
 retained Gold dataset               the published release
+        ↓
+sequence-redundancy resolution      Stage 14d, OPTIONAL -- off unless asked
+        ↓
+sequence-reduced release            a separate release identifier
 ```
+
+The last two steps are optional and off by default. A run that does not enable
+them publishes the geometry-only population; enabling
+`sequence_clustering.enabled` publishes both, the second derived from the
+first and under its own identifier. See
+[`docs/sequence_redundancy.md`](docs/sequence_redundancy.md).
 
 ### 2.2 Complete BRI
 
@@ -206,7 +216,8 @@ invalid experiment.
 ## 3. Stage-to-code map
 
 The canonical scientific vocabulary is **Prerequisites A–C, then Stage 1
-through Stage 14**. Prerequisites are lettered so they can never be mistaken
+through Stage 14**, with Stage 14 realised by its subdivisions 14a, 14b, 14c
+and the optional 14d. Prerequisites are lettered so they can never be mistaken
 for scientific stages. This is the single canonical table; other sections
 reference it rather than repeating it.
 
@@ -264,7 +275,7 @@ both use.
 | `scripts/openfold_training/` | IN PROGRESS | OpenFold relaxation and BRI LAI work. Not part of PDBClean. |
 | `task_scripts/` | ACTIVE | Slurm wrappers for Stages 14a–c and the scientific regression harness. Every argument is derived from the resolved run configuration. |
 | `tests/pdbclean/` | TESTING | The full suite, including the scientific regression layer. |
-| `docs/` | DOCUMENTATION | Architecture, configuration, provenance, repository map, the pipeline specification and the development status log. |
+| `docs/` | DOCUMENTATION | Architecture, configuration, provenance, repository map, the pipeline specification, the development status log and [`sequence_redundancy.md`](docs/sequence_redundancy.md) (Stage 14d). |
 | `docs/provenance/` | FROZEN | Release provenance for the 20260101 publication and the Acta review. |
 | `outputs/pdbclean/<snapshot>/<protocol>/` | GENERATED / FROZEN | Stage outputs. The 20260101 tree is frozen. Gitignored (large). |
 | `outputs/releases/` | FROZEN | Published Gold releases. Immutable. |
@@ -275,8 +286,8 @@ both use.
 | `reproducibility/` | FROZEN | Pinned environment exports and `bri_version.txt`. |
 | `tools/` | FROZEN | The pinned BRI v1.2.2 reference implementation used by the differential gate. |
 | `reference/acta_2025/` | DOCUMENTATION | Wlodawer et al., *Acta Cryst D* 2025 (doi 10.1107/S2059798325001883). |
-| `data/` | LEGACY | The PDB707K sequence table. |
-| `code/COMP390_code/` | LEGACY / HISTORICAL | Minhao's COMP390 dissertation work, retained in full. See its `LEGACY.md`. |
+| `data/` | LEGACY | PDB707K-era inputs. The 126 MB sequence table itself lives in `~/COMP702_BeyondAF/data/`, which is where `scripts/01_prepare_pdb707k.py` reads it from. |
+| `code/COMP390_code/` | POINTER | Minhao's COMP390 dissertation work is **not** vendored here. It lives in `~/COMP702_BeyondAF/code/COMP390_code/`, which is what `config/comp702_paths.sh` and the audit scripts resolve to. Only `LEGACY.md` and one sbatch that exists nowhere else are kept. |
 | `sbatch/` | LEGACY / HISTORICAL | COMP390-era batch scripts. See its `LEGACY.md`. |
 | `logs/` | GENERATED | Slurm output. |
 
@@ -1244,6 +1255,12 @@ described as one:
 
 ### In progress
 
+These are roadmap numbers for the OpenFold preparation chain. They are distinct
+from the *registered* pipeline stages in [§4](#4-repository-architecture): the
+last registered stage is **Stage 14d**, sequence-redundancy resolution, which
+defines the population this chain then prepares. See
+[`docs/sequence_redundancy.md`](docs/sequence_redundancy.md).
+
 * **Stage 15 — OpenFold training-population preparation.** **[IMPLEMENTED]**
   499,770 retained chains, 118,197 source entries.
 * **Stage 16 — exact snapshot/source materialisation and retained-chain
@@ -1359,7 +1376,7 @@ When sources disagree, resolve in this order:
 6. the COMP702 proposal;
 7. scientific papers, including Wlodawer et al., *Acta Cryst D* 2025
    (doi 10.1107/S2059798325001883), in `reference/acta_2025/`;
-8. the COMP390 dissertation material in `code/COMP390_code/`.
+8. the COMP390 dissertation material in `~/COMP702_BeyondAF/code/COMP390_code/`.
 
 Where documentation conflicts with a frozen production artefact, the conflict
 is reported rather than silently resolved. One such conflict — the superseded
