@@ -307,9 +307,9 @@ def inspect_stage(
         return observation
 
     # A stage the configuration switches off is not outstanding work; it is
-    # not part of this run at all. Stage 15 is the switch that decides whether
+    # not part of this run at all. Stage 14d is the switch that decides whether
     # a run publishes the geometry-only population or the geometry-then-
-    # sequence one, so a disabled Stage 15 must plan as cleanly as an absent
+    # sequence one, so a disabled Stage 14d must plan as cleanly as an absent
     # one -- otherwise every geometry-only run would report permanent
     # outstanding work it is never going to do.
     if stage.stage_id == "sequence_clustering" and not resolved.get(

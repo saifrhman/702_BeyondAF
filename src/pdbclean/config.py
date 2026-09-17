@@ -414,10 +414,10 @@ def _validate_execution(config: dict[str, Any]) -> None:
 
 
 def _validate_sequence_clustering(config: dict[str, Any]) -> None:
-    """Validate the optional Stage-15 sequence-redundancy section.
+    """Validate the optional Stage-14d sequence-redundancy section.
 
     The section is optional: a configuration that omits it describes a
-    geometry-only run, which is what every pre-Stage-15 configuration does.
+    geometry-only run, which is what every pre-Stage-14d configuration does.
     When present it is checked strictly, because these values decide which
     chains a release contains.
     """

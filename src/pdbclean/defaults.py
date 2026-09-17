@@ -267,7 +267,7 @@ VALIDATED_DEFAULTS: dict[str, Any] = {
         "old_snapshot_comparison": False,
     },
     # ------------------------------------------------------------------
-    # Stage 15 sequence-redundancy resolution, applied AFTER geometry.
+    # Stage 14d sequence-redundancy resolution, applied AFTER geometry.
     #
     # `enabled` is the switch that decides which population a run publishes:
     # false gives the geometry-only release, true gives geometry-then-sequence

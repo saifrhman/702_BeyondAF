@@ -1,4 +1,4 @@
-"""Stage 15 -- sequence-redundancy resolution over a completed Gold release.
+"""Stage 14d -- sequence-redundancy resolution over a completed Gold release.
 
 Consumes the retained chains of the geometric release, clusters their retained
 (post-trimming) sequences with MMseqs2, keeps one chain per cluster under the
@@ -44,8 +44,8 @@ from pdbclean.sequence_clustering import (
 )
 from pdbclean.stage_registry import release_name
 
-SUCCESS_SCHEMA_NAME = "pdbclean_stage15_sequence_clustering_success"
-SUMMARY_SCHEMA_NAME = "pdbclean_stage15_sequence_clustering_global_summary"
+SUCCESS_SCHEMA_NAME = "pdbclean_stage14d_sequence_clustering_success"
+SUMMARY_SCHEMA_NAME = "pdbclean_stage14d_sequence_clustering_global_summary"
 SCHEMA_VERSION = "1.0"
 
 
@@ -167,7 +167,7 @@ def main() -> int:
 
     version = _mmseqs_version(binary)
 
-    print("=== Stage 15: sequence-redundancy resolution ===")
+    print("=== Stage 14d: sequence-redundancy resolution ===")
     print(f"  input release   {source_release}")
     print(f"  new release     {target_release}")
     print(f"  stage root      {stage_root}")
@@ -547,7 +547,7 @@ def _publish(target: Path, stage_root: Path, source: Path,
     }
     _write_json_atomic(manifest, target / "release_manifest.json")
     _write_json_atomic(
-        {"success_schema_name": "pdbclean_stage15_release_success",
+        {"success_schema_name": "pdbclean_stage14d_release_success",
          "success_schema_version": SCHEMA_VERSION,
          "release_name": target.name,
          "retained_chain_count": summary["retained_chain_count"],

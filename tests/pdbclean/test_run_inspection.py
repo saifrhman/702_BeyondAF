@@ -114,12 +114,12 @@ def test_expected_canonical_sequence(historical_run):
         "Stage 14a",
         "Stage 14b",
         "Stage 14c",
-        # Stage 15 is sequence-redundancy resolution. It appears in the
+        # Stage 14d is sequence-redundancy resolution. It appears in the
         # canonical timeline for every run, including historical geometry-only
         # ones, because the timeline describes the pipeline rather than what a
         # particular run chose to execute; whether it ran is carried by the
         # run's own stage records.
-        "Stage 15",
+        "Stage 14d",
     ]
 
 

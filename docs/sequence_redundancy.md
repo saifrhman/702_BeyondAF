@@ -1,4 +1,4 @@
-# Sequence-redundancy resolution (Stage 15)
+# Sequence-redundancy resolution (Stage 14d)
 
 What the stage does, why it exists, why its parameters have the values they do,
 and exactly how many chains came out.
@@ -26,10 +26,10 @@ only **142,056 distinct sequences**: on average each sequence appears about 3.5
 times. Training on that population shows the model the same sequence many times
 over, weighted by how often crystallographers happened to deposit it.
 
-Stage 15 asks the second question, after geometry has answered the first.
+Stage 14d asks the second question, after geometry has answered the first.
 
 Sources: `outputs/releases/PDBClean-20260101-protocol3.2-comp702-v1-dedup-v1/data/retained_chains.parquet`;
-distinct-sequence count from the Stage-15 run summary.
+distinct-sequence count from the Stage-14d run summary.
 
 ---
 
@@ -301,7 +301,7 @@ python -m pdbclean.sequence_clustering_production \
     --config <frozen stage config> --pipeline-git-commit <sha>
 ```
 
-The stage is registered as **Stage 15**, `depends_on=("gold_release",)`, and
+The stage is registered as **Stage 14d**, `depends_on=("gold_release",)`, and
 appears in `pdbclean stages`, `pdbclean plan` and `pdbclean run` like every
 other stage. It is **disabled by default**: a run that does not ask for it
 publishes the geometry-only population, and the planner reports the stage as

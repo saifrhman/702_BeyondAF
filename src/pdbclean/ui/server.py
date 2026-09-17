@@ -839,7 +839,7 @@ class Handler(BaseHTTPRequestHandler):
             "representative_policy": resolved.get(
                 "representative_selection.policy_name"
             ),
-            # Stage 15. Reported for every run, enabled or not, so the view
+            # Stage 14d. Reported for every run, enabled or not, so the view
             # states which population the configuration describes rather than
             # leaving the reader to infer it from the release name.
             "sequence_clustering": {
@@ -1236,11 +1236,11 @@ class Handler(BaseHTTPRequestHandler):
 
                 provenance["snapshot_id"] = loaded.get("snapshot")
                 # Two kinds of release now carry a release_manifest.json. The
-                # Stage-15 one declares itself; anything without the marker is
-                # a geometric Gold release, which is what every pre-Stage-15
+                # Stage-14d one declares itself; anything without the marker is
+                # a geometric Gold release, which is what every pre-Stage-14d
                 # manifest is.
                 provenance["stage"] = (
-                    "Stage 15 — Sequence-redundancy resolution"
+                    "Stage 14d — Sequence-redundancy resolution"
                     if loaded.get("release_kind") == "geometric_then_sequence"
                     else "Stage 14c — Final Gold release"
                 )

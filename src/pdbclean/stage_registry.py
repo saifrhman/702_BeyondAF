@@ -621,7 +621,7 @@ STAGES: tuple[StageSpec, ...] = (
     ),
     StageSpec(
         stage_id="sequence_clustering",
-        canonical_stage="Stage 15",
+        canonical_stage="Stage 14d",
         ordinal=16,
         title="Sequence-redundancy resolution",
         layer=LAYER_GOLD,
@@ -1363,12 +1363,13 @@ CANONICAL_TIMELINE: tuple[CanonicalStage, ...] = (
         ),
     ),
     CanonicalStage(
-        key="stage_15",
-        label="Stage 15",
+        key="stage_14d",
+        label="Stage 14d",
         title="Sequence-redundancy resolution",
         position=21,
         role=ROLE_SCIENTIFIC,
         producer="sequence_clustering",
+        parent="Stage 14",
         purpose=(
             "Cluster the geometric survivors by sequence and keep one chain "
             "per cluster, publishing the result as its own release. Optional: "
@@ -2189,7 +2190,7 @@ _DESCRIPTIONS: dict[str, dict[str, Any]] = {
             "scripts/build_stage14_final_release.py."
         ),
     },
-    "stage_15": {
+    "stage_14d": {
         "rationale": (
             "Geometric and sequence redundancy are different properties, and "
             "removing one does not remove the other. A population deduplicated "

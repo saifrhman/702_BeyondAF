@@ -101,7 +101,7 @@ def _materialise(paths, stage_id, summary, *, success=True, output=True):
 def test_every_stage_1_to_15_is_present():
     order = stage_order()
 
-    # snapshot selection + Stages 1-14 + Stage 15 sequence-redundancy
+    # snapshot selection + Stages 1-14 incl. 14d (sequence-redundancy)
     assert len(order) == 16
     assert order[0] == "snapshot"
     assert order[-1] == "sequence_clustering"
@@ -467,7 +467,7 @@ CANONICAL_MAPPING = {
     "redundancy_graph": "Stage 14a",
     "representative_selection": "Stage 14b",
     "gold_release": "Stage 14c",
-    "sequence_clustering": "Stage 15",
+    "sequence_clustering": "Stage 14d",
 }
 
 
@@ -556,7 +556,7 @@ def test_investigation_stages_are_declared_and_kept_off_the_release_path():
 def test_no_extra_scientific_stage_was_invented():
     """Stages 1-10, 14 and 15 are orchestrated; nothing else.
 
-    Stage 15 is sequence-redundancy resolution, which runs after the Gold
+    Stage 14d is sequence-redundancy resolution, which runs after the Gold
     release and is switched on per run by `sequence_clustering.enabled`.
     """
 
@@ -571,7 +571,7 @@ def test_no_extra_scientific_stage_was_invented():
         "Stage 1", "Stage 2", "Stage 3-4", "Stage 5", "Stage 6",
         "Stage 7", "Stage 8-9", "Stage 10",
         "Stage 14a", "Stage 14b", "Stage 14c",
-        "Stage 15",
+        "Stage 14d",
     }
 
 

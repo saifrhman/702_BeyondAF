@@ -617,7 +617,7 @@ def stage_command(
         )
 
     if stage_id == "sequence_clustering":
-        # Stage 15 reads everything it needs -- the input release, the
+        # Stage 14d reads everything it needs -- the input release, the
         # thresholds, the release suffix it publishes under -- from the frozen
         # configuration, so it takes the same two arguments as the other
         # single-job production stages.

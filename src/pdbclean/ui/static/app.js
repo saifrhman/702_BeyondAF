@@ -1734,11 +1734,11 @@ async function loadRelease(runId) {
                     el("td", {}, [
                         artefactLink(absolute, artifact.path, {
                             // Two kinds of release carry a manifest now. The
-                            // Stage-15 one declares itself; everything else is
+                            // Stage-14d one declares itself; everything else is
                             // a geometric Gold release.
                             stage:
                                 release.release_kind === "geometric_then_sequence"
-                                    ? "Stage 15 — Sequence-redundancy resolution"
+                                    ? "Stage 14d — Sequence-redundancy resolution"
                                     : "Stage 14c — Final Gold release",
                             snapshot: payload.snapshot,
                             producer:

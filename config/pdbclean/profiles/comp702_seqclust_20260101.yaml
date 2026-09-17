@@ -1,7 +1,7 @@
 # COMP702 geometry-then-sequence profile: PDB snapshot 2026-01-01.
 #
 # Identical to `comp702_frozen_20260101.yaml` through the geometric stages --
-# the complete-BRI work is not recomputed -- and then enables Stage 15, which
+# the complete-BRI work is not recomputed -- and then enables Stage 14d, which
 # clusters the geometric survivors by sequence and keeps one chain per cluster.
 #
 # The result is published under its own release identifier:
