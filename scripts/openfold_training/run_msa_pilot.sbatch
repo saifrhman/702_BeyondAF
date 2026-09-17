@@ -7,7 +7,7 @@
 #SBATCH --mem=400G
 #SBATCH --time=12:00:00
 
-# Stage 17 pilot: prove the MSA machinery on a small representative chain set
+# Stage 18 pilot: prove the MSA machinery on a small representative chain set
 # before ~500k production searches are committed.
 #
 # Protocol
@@ -567,7 +567,7 @@ fi
 echo
 echo "============================================================"
 echo "STATUS: PASS"
-echo "Stage 17 pilot succeeded on $EXPECTED_QUERIES representative chains."
+echo "Stage 18 pilot succeeded on $EXPECTED_QUERIES representative chains."
 echo "No production MSAs generated.  No run-specific data modified."
 echo "Completed: $(date --iso-8601=seconds)"
 echo "============================================================"

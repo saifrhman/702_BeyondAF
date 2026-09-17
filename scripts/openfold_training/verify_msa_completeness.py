@@ -15,7 +15,7 @@ them is safe to assume:
     the MSA stored under a sequence's SHA256 actually begins with that
     sequence.
 
-The third is the one that matters most and is easiest to skip.  The Stage-17
+The third is the one that matters most and is easiest to skip.  The Stage-18
 pilot failed precisely because outputs carried the right *content* under the
 wrong *name*; a corpus that is complete and unduplicated but misattributed is
 worse than a missing one, because nothing downstream will notice.

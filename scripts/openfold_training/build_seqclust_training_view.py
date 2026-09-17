@@ -1,4 +1,4 @@
-"""Project a Stage-15 (geometry-then-sequence) release into OpenFold inputs.
+"""Project a Stage-14d (geometry-then-sequence) release into OpenFold inputs.
 
 The surviving chains are a subset of the geometric release's retained chains,
 and MSAs are content-addressed by sequence SHA256, so alignment generation is a
@@ -54,7 +54,7 @@ def run(cmd: list[str], label: str) -> None:
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--release", required=True, type=Path,
-                    help="Stage-15 release directory (read-only)")
+                    help="Stage-14d release directory (read-only)")
     ap.add_argument("--msa-store", required=True, type=Path,
                     help="Directory of <sequence_sha256>.a3m")
     ap.add_argument("--output-root", required=True, type=Path)

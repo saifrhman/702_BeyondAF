@@ -7,14 +7,14 @@
 #SBATCH --mem=192G
 #SBATCH --time=1-00:00:00
 
-# Stage 17 prerequisite: build the MMseqs2 expandable-profile database from the
+# Stage 18 prerequisite: build the MMseqs2 expandable-profile database from the
 # already-downloaded, already-checksum-verified ColabFold UniRef30 archive.
 #
 # This is SHARED REFERENCE INFRASTRUCTURE, not run-specific data.  It contains
 # no snapshot identifier and no run identity: the same prepared database is
-# valid for any PDBClean run whose Stage-17 configuration names it.  The run's
+# valid for any PDBClean run whose Stage-18 configuration names it.  The run's
 # own snapshot, Gold release and query population are supplied downstream by
-# the Stage-17 search job, never by this script.
+# the Stage-18 search job, never by this script.
 #
 # Scope, deliberately bounded:
 #

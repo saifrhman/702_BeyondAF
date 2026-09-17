@@ -1,4 +1,4 @@
-"""Select a representative Stage-17 MSA pilot from a run's query population.
+"""Select a representative Stage-18 MSA pilot from a run's query population.
 
 The pilot exists to prove the MSA machinery before ~500k production searches
 are committed.  It is therefore chosen to hit the cases that actually break
@@ -290,7 +290,7 @@ def select_pilot(
         "sequence_sharing_pair_is_present": len(shared_pair) == 2,
         "note": (
             "Sequence-level statistics are audit information only. Production "
-            "Stage 17 searches every retained chain independently; identical "
+            "Stage 18 searches every retained chain independently; identical "
             "sequences never share an MSA identity."
         ),
         "chains": [
@@ -309,7 +309,7 @@ def select_pilot(
 def main() -> int:
     parser = argparse.ArgumentParser(
         description=(
-            "Select a deterministic, representative Stage-17 MSA pilot from a "
+            "Select a deterministic, representative Stage-18 MSA pilot from a "
             "run's existing query population."
         )
     )

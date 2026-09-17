@@ -373,7 +373,7 @@ pytest tests -q          # runs the full suite
 ### External tools
 
 * **Slurm** (`sbatch`) for HPC execution.
-* **MMseqs2** for Stage 17 MSA generation — downstream, see
+* **MMseqs2** for Stage 18 MSA generation — downstream, see
   [§15](#15-openfold-training-view-and-retraining).
 * Mol\* is loaded in the browser from a CDN by the pair viewer; no local
   install is required.
@@ -1277,7 +1277,7 @@ retained-chain identity is modified.
 
 ### 15.7 Reported conflict: MSA sharing between sequence-identical chains
 
-§16 records the frozen Stage-17 policy as *"an MSA is **not** shared between
+§16 records the frozen Stage-18 policy as *"an MSA is **not** shared between
 sequence-identical retained chains."* **The implemented corpus does share
 them.** 499,770 chains resolve to 142,056 distinct MSAs, so 357,714 chains reuse
 an MSA generated for an identical sequence.
@@ -1347,13 +1347,18 @@ last registered stage is **Stage 14d**, sequence-redundancy resolution, which
 defines the population this chain then prepares. See
 [`docs/sequence_redundancy.md`](docs/sequence_redundancy.md).
 
-* **Stage 15 — OpenFold training-population preparation.** **[IMPLEMENTED]**
+The chain begins at 16, not 15. **Stage 15 is deliberately unassigned**, held
+for sequence-redundancy resolution should it be promoted from a Stage-14
+subdivision to a scientific stage in its own right. The gap is intentional and
+not a missing entry.
+
+* **Stage 16 — OpenFold training-population preparation.** **[IMPLEMENTED]**
   499,770 retained chains, 118,197 source entries.
-* **Stage 16 — exact snapshot/source materialisation and retained-chain
+* **Stage 17 — exact snapshot/source materialisation and retained-chain
   training-view preparation.** **[IMPLEMENTED]** All 118,197 mmCIFs
   materialised; the retained-chain training view is validated over the full
   population. See [§15](#15-openfold-training-view-and-retraining).
-* **Stage 17 — fresh MMseqs2 alignment/MSA generation.** **[IMPLEMENTED]**
+* **Stage 18 — fresh MMseqs2 alignment/MSA generation.** **[IMPLEMENTED]**
   142,056 MSAs, complete, unduplicated and correctly attributed.
 
   The frozen policy for this stage: MMseqs2; the query for each chain is that
@@ -1373,19 +1378,19 @@ defines the population this chain then prepares. See
 
 ### Not yet done
 
-* **Stage 18** — full structure ↔ alignment coverage validation.
+* **Stage 19** — full structure ↔ alignment coverage validation.
   **[IMPLEMENTED]** Every retained chain resolves to its own MSA and to a
   projected structure of the same length; see
   [§15.5](#155-validation-implemented).
-* **Stage 19** — OpenFold dataloader smoke test. **[IMPLEMENTED]** Real chains
+* **Stage 20** — OpenFold dataloader smoke test. **[IMPLEMENTED]** Real chains
   traverse the full feature pipeline with agreeing dimensions.
-* **Stage 20** — GPU training smoke test. **[IMPLEMENTED]** Eight optimizer
+* **Stage 21** — GPU training smoke test. **[IMPLEMENTED]** Eight optimizer
   steps on real data with finite loss and gradients; checkpoint written and
   reloaded; peak 9.45 GiB.
-* **Stage 21** — full OpenFold retraining. **[IN PROGRESS]** A from-scratch run
+* **Stage 22** — full OpenFold retraining. **[IN PROGRESS]** A from-scratch run
   is executing; see [§15.8](#158-retraining-status-in-progress) for its budget
   and for why it is not an AlphaFold-protocol reproduction.
-* **Stage 22** — new checkpoint generation and downstream prediction /
+* **Stage 23** — new checkpoint generation and downstream prediction /
   evaluation. **[FUTURE]**
 
 **No training or evaluation results exist.** No trained model is published, and

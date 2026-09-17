@@ -7,7 +7,7 @@
 #SBATCH --mem=400G
 #SBATCH --time=24:00:00
 
-# Stage 17 production: MSAs for the OpenFold training set.
+# Stage 18 production: MSAs for the OpenFold training set.
 #
 # Scientifically identical to run_msa_pilot.sbatch
 # ------------------------------------------------
@@ -95,7 +95,7 @@ MSA_STORE="$OUT_ROOT/msas"
 mkdir -p "$SHARD_DIR" "$MSA_STORE"
 
 echo "============================================================"
-echo "Stage 17 production MSA shard"
+echo "Stage 18 production MSA shard"
 echo "Shard:      $SHARD_ID of $SHARD_COUNT"
 echo "Job:        ${SLURM_JOB_ID:-manual} (array ${SLURM_ARRAY_JOB_ID:-none})"
 echo "Node:       $(hostname)"
