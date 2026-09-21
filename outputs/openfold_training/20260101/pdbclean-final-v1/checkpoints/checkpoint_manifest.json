@@ -1,0 +1,44 @@
+{
+  "checkpoint": "1-256.ckpt",
+  "checkpoint_bytes": 1499871930,
+  "checkpoint_sha256": "7fde53c3a6c0944526167617a46ebba9211db67846680362df48c199c4b78aca",
+  "epoch": 1,
+  "epoch_metrics": {
+    "train/drmsd_ca": 24.166854858398438,
+    "train/lddt_ca": 0.06916958093643188,
+    "train/loss_epoch": 53.157649993896484
+  },
+  "global_step": 256,
+  "gpu": "NVIDIA H100 80GB HBM3",
+  "initialisation": "random -- no pretrained AlphaFold or OpenFold weights loaded",
+  "measured_epoch_wall_clock_minutes": 56,
+  "optimisation": {
+    "accumulate_grad_batches": 8,
+    "batch_size": 1,
+    "check_val_every_n_epoch": 5,
+    "config_preset": "initial_training",
+    "global_batch": 8,
+    "gpus": 1,
+    "lr_decay": "0.95 every 1200 steps after step 25600",
+    "lr_max": 0.001,
+    "lr_warmup_steps": 1000,
+    "max_epochs": 400,
+    "precision": "bf16",
+    "steps_per_epoch": 128,
+    "total_steps": 51200,
+    "train_epoch_len": 1024
+  },
+  "pipeline_git_commit": "db770e228ffbeef13daea171ab703ec2a0b2704f",
+  "population": {
+    "release": "PDBClean-20260101-protocol3.2-comp702-v1-dedup-v1-seqid100-cov100-exact-v1",
+    "training_chains": 138056,
+    "unique_sequences": 142056,
+    "validation_chains_in_split": 4000,
+    "validation_chains_used": 3969,
+    "validation_length_cap_residues": 768
+  },
+  "run_name": "pdbclean_final_v1_scratch",
+  "seed": 20260101,
+  "slurm_job": 10614448,
+  "status": "IN PROGRESS -- epoch 1 of 400; this is an early snapshot, not a trained model"
+}

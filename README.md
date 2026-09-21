@@ -21,8 +21,123 @@ It also contains the downstream OpenFold work that consumes that dataset.
 
 ---
 
+## Quickstart — running this on your own Barkla account
+
+Nothing in this repository names an individual account. Every path is derived
+at run time from `$USER` and from wherever you cloned it, so the setup is a
+clone, an environment, and a preflight check.
+
+**1. Clone it somewhere with space.** The repository is ~6 GB and the working
+data is much larger, so put it on fastscratch rather than in `$HOME`:
+
+```bash
+cd /mnt/fastscratch/users/$USER          # or $HOME/fastscratch
+git clone https://github.com/saifrhman/702_BeyondAF.git
+cd 702_BeyondAF
+```
+
+Large binaries (checkpoints, reference structures) are stored with Git LFS.
+If `git lfs` is not installed, the clone still works but those files arrive as
+small pointer text files:
+
+```bash
+git lfs install && git lfs pull         # only if you need the binaries
+```
+
+**2. Build the environment** from the pinned spec:
+
+```bash
+module load apps/anaconda3               # or however conda is provided
+conda env create -p "$HOME/fastscratch/envs/bri_env_1.2.2" \
+                 -f reproducibility/bri_environment.yml
+```
+
+**3. Check it resolves.** This is the step that saves you time — it reports
+every path the pipeline will use and prints the command that fixes anything
+missing. It writes nothing:
+
+```bash
+bash scripts/pdbclean_doctor.sh
+```
+
+```
+PDBClean preflight
+  user         abcd1234
+  repository   /mnt/fastscratch/users/abcd1234/702_BeyondAF
+Filesystem roots (derived from $USER; override any in the environment)
+  OK    PDBCLEAN_SCRATCH_ROOT          /mnt/scratch/users/abcd1234
+  OK    PDBCLEAN_FASTSCRATCH_ROOT      /mnt/fastscratch/users/abcd1234
+PDBClean pipeline
+  OK    python                         .../bri_env_1.2.2/bin/python (3.10.20)
+  OK    pdbclean package               importable from $PDBCLEAN_REPO_ROOT/src
+  OK    slurm                          /usr/bin/sbatch  partition nodes
+  13 ok, 0 note, 0 missing
+  Ready.
+```
+
+Fix every `MISS` before going further. A `NOTE` is only a warning — the
+OpenFold rows are all optional, and the PDBClean pipeline runs without them.
+
+**4. Look before you run.** Both commands are safe on a login node and change
+nothing:
+
+```bash
+source config/pdbclean/pipeline_env.sh
+pdbclean stages                          # the canonical pipeline, in order
+pdbclean plan --config config/pdbclean/profiles/comp702_frozen_20260101.yaml
+```
+
+`plan` prints what each stage *would* do, which inputs it needs and what it
+would publish. Read it before submitting anything.
+
+**5. Run a stage.** Locally for the cheap stages, Slurm for the rest:
+
+```bash
+# local, single machine
+pdbclean run --config <profile> --stage <name> --executor local
+
+# Slurm array (partition and array width come from the environment)
+pdbclean run --config <profile> --stage <name> --executor slurm
+```
+
+Two profiles ship with the repository:
+
+| Profile | Publishes |
+|---|---|
+| `comp702_frozen_20260101.yaml` | geometry only — the frozen 499,770-chain population |
+| `comp702_seqclust_20260101.yaml` | geometry, then sequence-redundancy resolution |
+
+**6. Verify your install** (optional but quick):
+
+```bash
+pytest tests -q          # 1,234 tests, ~7 minutes
+```
+
+### If your account is laid out differently
+
+Every variable takes the form `${VAR:-default}`, so exporting one beforehand
+always wins. The two that matter most:
+
+```bash
+export PDBCLEAN_SCRATCH_ROOT=/some/big/disk/$USER
+export PDBCLEAN_FASTSCRATCH_ROOT=/some/fast/disk/$USER
+```
+
+The full table is in [§5](#running-this-on-barkla-as-a-different-user). To
+supply a completely separate environment file, export `PDBCLEAN_ENV_FILE` and
+every wrapper will source that instead.
+
+### Retraining OpenFold
+
+That layer is optional and much heavier — a GPU allocation, an MSA store and
+the OpenFold source. It has its own document:
+[`docs/TRAINING.md`](docs/TRAINING.md).
+
+---
+
 ## Contents
 
+- [Quickstart — running this on your own Barkla account](#quickstart--running-this-on-your-own-barkla-account) — clone, environment, preflight
 1. [Motivation](#1-motivation)
 2. [The scientific pipeline](#2-the-scientific-pipeline)
 3. [Stage-to-code map](#3-stage-to-code-map)
@@ -46,8 +161,10 @@ It also contains the downstream OpenFold work that consumes that dataset.
 
 Deeper detail lives in [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md),
 [`docs/CONFIGURATION.md`](docs/CONFIGURATION.md),
-[`docs/PROVENANCE.md`](docs/PROVENANCE.md) and
-[`docs/REPOSITORY_MAP.md`](docs/REPOSITORY_MAP.md). This README is
+[`docs/PROVENANCE.md`](docs/PROVENANCE.md),
+[`docs/REPOSITORY_MAP.md`](docs/REPOSITORY_MAP.md),
+[`docs/sequence_redundancy.md`](docs/sequence_redundancy.md) and
+[`docs/TRAINING.md`](docs/TRAINING.md). This README is
 self-sufficient for understanding and operating the project; those documents
 expand on it rather than repeating it.
 
