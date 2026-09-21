@@ -20,10 +20,14 @@
 # Nothing is deleted. The originals are renamed to *.relocated and left in place
 # for a human to remove once the resumed run is confirmed healthy.
 
+# Portability: every path below comes from here, derived from $USER.
+# Override any of them in the environment; nothing names an individual.
+source "${PDBCLEAN_ENV_FILE:-$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/../../config/pdbclean/pipeline_env.sh}"
+
 set -uo pipefail
 
-SRC=/mnt/fastscratch/users/sgsrehm1
-DST=/mnt/scratch/users/sgsrehm1
+SRC=${PDBCLEAN_FASTSCRATCH_ROOT}
+DST=${PDBCLEAN_SCRATCH_ROOT}
 DIRS=(openfold_runs openfold_cache)
 LOG="$DST/relocate.log"
 

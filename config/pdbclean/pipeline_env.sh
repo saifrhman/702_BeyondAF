@@ -26,10 +26,41 @@ fi
 export PDBCLEAN_REPO_ROOT
 
 # ---------------------------------------------------------------------------
+# Barkla filesystem roots
+# ---------------------------------------------------------------------------
+# Barkla gives every user three areas under their own name. Deriving them from
+# $USER is what lets a second person run this pipeline without editing a single
+# script: nothing below names an individual.
+#
+# $HOME/scratch and $HOME/fastscratch are the conventional symlinks. Where they
+# are absent the /mnt paths are used directly, so both layouts work.
+#
+# These come first because the sections below are defined in terms of them.
+export PDBCLEAN_HOME_ROOT="${PDBCLEAN_HOME_ROOT:-$HOME}"
+
+if [[ -z "${PDBCLEAN_SCRATCH_ROOT:-}" ]]; then
+    if [[ -d "$HOME/scratch" ]]; then
+        PDBCLEAN_SCRATCH_ROOT="$HOME/scratch"
+    else
+        PDBCLEAN_SCRATCH_ROOT="/mnt/scratch/users/${USER}"
+    fi
+fi
+export PDBCLEAN_SCRATCH_ROOT
+
+if [[ -z "${PDBCLEAN_FASTSCRATCH_ROOT:-}" ]]; then
+    if [[ -d "$HOME/fastscratch" ]]; then
+        PDBCLEAN_FASTSCRATCH_ROOT="$HOME/fastscratch"
+    else
+        PDBCLEAN_FASTSCRATCH_ROOT="/mnt/fastscratch/users/${USER}"
+    fi
+fi
+export PDBCLEAN_FASTSCRATCH_ROOT
+
+# ---------------------------------------------------------------------------
 # Python interpreter and environment
 # ---------------------------------------------------------------------------
 # Conda environment activated by the Slurm array wrappers.
-export PDBCLEAN_CONDA_ENV="${PDBCLEAN_CONDA_ENV:-$HOME/fastscratch/envs/bri_env_1.2.2}"
+export PDBCLEAN_CONDA_ENV="${PDBCLEAN_CONDA_ENV:-$PDBCLEAN_FASTSCRATCH_ROOT/envs/bri_env_1.2.2}"
 
 # PDBCLEAN_PYTHON is the interpreter used by pipeline task scripts.
 #
@@ -54,7 +85,7 @@ export PDBCLEAN_PYTHON
 export PDBCLEAN_OUTPUT_ROOT="${PDBCLEAN_OUTPUT_ROOT:-$PDBCLEAN_REPO_ROOT/outputs/pdbclean}"
 export PDBCLEAN_RELEASE_ROOT="${PDBCLEAN_RELEASE_ROOT:-$PDBCLEAN_REPO_ROOT/outputs/releases}"
 export PDBCLEAN_RUN_ROOT="${PDBCLEAN_RUN_ROOT:-$PDBCLEAN_REPO_ROOT/outputs/runs}"
-export PDBCLEAN_LOG_ROOT="${PDBCLEAN_LOG_ROOT:-$HOME/fastscratch/pdbclean_logs}"
+export PDBCLEAN_LOG_ROOT="${PDBCLEAN_LOG_ROOT:-$PDBCLEAN_FASTSCRATCH_ROOT/pdbclean_logs}"
 
 # ---------------------------------------------------------------------------
 # Configuration defaults
@@ -73,3 +104,30 @@ export PDBCLEAN_ARRAY_WORKERS="${PDBCLEAN_ARRAY_WORKERS:-64}"
 export PDBCLEAN_ARRAY_CONCURRENCY="${PDBCLEAN_ARRAY_CONCURRENCY:-4}"
 
 export PYTHONPATH="${PDBCLEAN_REPO_ROOT}/src${PYTHONPATH:+:$PYTHONPATH}"
+
+# ---------------------------------------------------------------------------
+# OpenFold retraining layer
+# ---------------------------------------------------------------------------
+# These are large, mutable working areas and belong on scratch, not in the
+# repository. Each is overridable on its own, so a user who keeps one of them
+# somewhere unusual does not have to move the rest.
+export OPENFOLD_SRC="${OPENFOLD_SRC:-$PDBCLEAN_FASTSCRATCH_ROOT/openfold_src}"
+export OPENFOLD_TRAIN_ENV="${OPENFOLD_TRAIN_ENV:-$PDBCLEAN_FASTSCRATCH_ROOT/envs/openfold_train}"
+export OPENFOLD_CACHE_ROOT="${OPENFOLD_CACHE_ROOT:-$PDBCLEAN_FASTSCRATCH_ROOT/openfold_cache}"
+export OPENFOLD_LOG_ROOT="${OPENFOLD_LOG_ROOT:-$OPENFOLD_CACHE_ROOT/logs}"
+export OPENFOLD_RUNS_ROOT="${OPENFOLD_RUNS_ROOT:-$PDBCLEAN_FASTSCRATCH_ROOT/openfold_runs}"
+export OPENFOLD_MMCIF_DIR="${OPENFOLD_MMCIF_DIR:-$PDBCLEAN_SCRATCH_ROOT/COMP702_openfold_20260101/pdbclean-dedup-v1/mmcif}"
+export OPENFOLD_MSA_STORE="${OPENFOLD_MSA_STORE:-$PDBCLEAN_FASTSCRATCH_ROOT/COMP702_openfold_msa/20260101/pdbclean-dedup-v1/msas}"
+export MMSEQS_BIN="${MMSEQS_BIN:-$OPENFOLD_TRAIN_ENV/bin/mmseqs}"
+
+# Scratch space for compilers and kernel caches. Left on the default /tmp these
+# fill a compute node's local disk and the job dies mid-epoch.
+export TMPDIR="${TMPDIR:-$OPENFOLD_CACHE_ROOT/tmp}"
+export TRITON_CACHE_DIR="${TRITON_CACHE_DIR:-$OPENFOLD_CACHE_ROOT/triton}"
+export TORCH_EXTENSIONS_DIR="${TORCH_EXTENSIONS_DIR:-$OPENFOLD_CACHE_ROOT/torch_extensions}"
+
+# ---------------------------------------------------------------------------
+# COMP390 legacy tree (historical analyses only; not on the PDBClean path)
+# ---------------------------------------------------------------------------
+export COMP702_ROOT="${COMP702_ROOT:-$PDBCLEAN_HOME_ROOT/COMP702_BeyondAF}"
+export COMP390_ROOT="${COMP390_ROOT:-$COMP702_ROOT/code/COMP390_code}"

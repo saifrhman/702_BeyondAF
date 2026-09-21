@@ -31,6 +31,10 @@
 # problem, so this script verifies bytes locally and writes the provenance
 # record that job never reached.
 
+# Portability: every path below comes from here, derived from $USER.
+# Override any of them in the environment; nothing names an individual.
+source "${PDBCLEAN_ENV_FILE:-$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/../../config/pdbclean/pipeline_env.sh}"
+
 set -euo pipefail
 
 DBROOT="${1:?database root required}"
@@ -53,7 +57,7 @@ EXPECTED_SHA256="c1ab61697d751ab5bd876ce22c6c4bbed2f166d4e8b8e9b7768fd15691e8d4a
 DB_NAME="uniref30_2103_db"
 DB_PATH="$DBDIR/$DB_NAME"
 
-MMSEQS="${MMSEQS_BIN:-/users/sgsrehm1/COMP702_BeyondAF/envs/openfold_env/bin/mmseqs}"
+MMSEQS="${MMSEQS_BIN:-${MMSEQS_BIN}}"
 
 echo "============================================================"
 echo "MMSEQS UNIREF30 EXPANDABLE-PROFILE DATABASE PREPARATION"

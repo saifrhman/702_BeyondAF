@@ -36,6 +36,10 @@
 #
 # Nothing here is snapshot-specific: every path is an argument.
 
+# Portability: every path below comes from here, derived from $USER.
+# Override any of them in the environment; nothing names an individual.
+source "${PDBCLEAN_ENV_FILE:-$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/../../config/pdbclean/pipeline_env.sh}"
+
 set -euo pipefail
 
 DB_ROOT="${1:?mmseqs database root required}"
@@ -55,7 +59,7 @@ WORK="$PILOT_DIR/work"
 OUT="$PILOT_DIR/msas"
 MMSEQS_TMP="$WORK/tmp"
 
-MMSEQS="${MMSEQS_BIN:-/users/sgsrehm1/COMP702_BeyondAF/envs/openfold_env/bin/mmseqs}"
+MMSEQS="${MMSEQS_BIN:-${MMSEQS_BIN}}"
 THREADS="${SLURM_CPUS_PER_TASK:-16}"
 
 echo "============================================================"

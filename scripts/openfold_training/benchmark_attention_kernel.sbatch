@@ -7,13 +7,17 @@
 #SBATCH --cpus-per-task=8
 #SBATCH --time=02:00:00
 
+# Portability: every path below comes from here, derived from $USER.
+# Override any of them in the environment; nothing names an individual.
+source "${PDBCLEAN_ENV_FILE:-$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/../../config/pdbclean/pipeline_env.sh}"
+
 set -euo pipefail
 
-REPO=/mnt/fastscratch/users/sgsrehm1/COMP702_pdbclean_pipeline
+REPO=${PDBCLEAN_REPO_ROOT}
 BASE="$REPO/outputs/openfold_training/20260101/pdbclean-dedup-v1"
 VIEW="$BASE/training_view"
-OFSRC=/mnt/fastscratch/users/sgsrehm1/openfold_src
-ENV=/mnt/fastscratch/users/sgsrehm1/envs/openfold_train
+OFSRC=${OPENFOLD_SRC}
+ENV=${OPENFOLD_TRAIN_ENV}
 
 . "$ENV/etc/conda/activate.d/10-cache-dirs.sh"
 export PYTHONPATH="$REPO/src${PYTHONPATH:+:$PYTHONPATH}"
@@ -62,7 +66,7 @@ cd "$OFSRC"
 # back to random initialisation rather than trusting a half-written file -- the
 # kernel comparison stays valid either way, because both paths get identical
 # weights from an identical seed.
-LIVE=$(find /mnt/fastscratch/users/sgsrehm1/openfold_runs/pdbclean_dedup_v1_scratch \
+LIVE=$(find ${OPENFOLD_RUNS_ROOT}/pdbclean_dedup_v1_scratch \
        -name '*.ckpt' -printf '%T@ %p\n' 2>/dev/null | sort -rn | head -1 | cut -d' ' -f2-)
 
 CKPT=""
@@ -86,8 +90,8 @@ fi
 trap 'rm -f "$TMPDIR/attn_bench_$SLURM_JOB_ID.ckpt"' EXIT
 
 "$ENV/bin/python" "$REPO/scripts/openfold_training/benchmark_attention_kernel.py" \
-    --mmcif-dir /users/sgsrehm1/scratch/COMP702_openfold_20260101/pdbclean-dedup-v1/mmcif \
-    --msa-store /mnt/fastscratch/users/sgsrehm1/COMP702_openfold_msa/20260101/pdbclean-dedup-v1/msas \
+    --mmcif-dir ${OPENFOLD_MMCIF_DIR} \
+    --msa-store ${OPENFOLD_MSA_STORE} \
     --alignment-index "$BASE/alignment_index/pdbclean_dedup_v1.index" \
     --projection-index "$VIEW/projection_index.json" \
     --train-filter "$VIEW/train_filter_view.txt" \

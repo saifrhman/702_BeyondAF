@@ -6,16 +6,20 @@
 #SBATCH --cpus-per-task=4
 #SBATCH --time=01:00:00
 
+# Portability: every path below comes from here, derived from $USER.
+# Override any of them in the environment; nothing names an individual.
+source "${PDBCLEAN_ENV_FILE:-$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/../../config/pdbclean/pipeline_env.sh}"
+
 set -euo pipefail
 
-REPO=/mnt/fastscratch/users/sgsrehm1/COMP702_pdbclean_pipeline
+REPO=${PDBCLEAN_REPO_ROOT}
 BASE="$REPO/outputs/openfold_training/20260101/pdbclean-dedup-v1"
 OUT="$BASE/training_view"
 
-export TMPDIR=/mnt/fastscratch/users/sgsrehm1/openfold_cache/tmp
+export TMPDIR=${OPENFOLD_CACHE_ROOT}/tmp
 mkdir -p "$TMPDIR" "$OUT"
 
-PYTHON=/mnt/fastscratch/users/sgsrehm1/envs/bri_env_1.2.2/bin/python
+PYTHON=${PDBCLEAN_PYTHON}
 
 echo "host        : $(hostname)"
 echo "started     : $(date -Is)"

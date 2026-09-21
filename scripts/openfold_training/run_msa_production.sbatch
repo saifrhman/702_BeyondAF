@@ -50,6 +50,10 @@
 #
 # Nothing here is snapshot-specific: every path is an argument.
 
+# Portability: every path below comes from here, derived from $USER.
+# Override any of them in the environment; nothing names an individual.
+source "${PDBCLEAN_ENV_FILE:-$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/../../config/pdbclean/pipeline_env.sh}"
+
 set -euo pipefail
 
 DB_ROOT="${1:?mmseqs database root required}"
@@ -78,7 +82,7 @@ DB_NAME="uniref30_2103_db"
 DB="$DB_ROOT/db/$DB_NAME"
 DB_MARKER="$DB_ROOT/db/_UNIREF30_DB_SUCCESS"
 
-MMSEQS="${MMSEQS_BIN:-/users/sgsrehm1/COMP702_BeyondAF/envs/openfold_env/bin/mmseqs}"
+MMSEQS="${MMSEQS_BIN:-${MMSEQS_BIN}}"
 THREADS="${SLURM_CPUS_PER_TASK:-16}"
 
 SHARD_DIR="$OUT_ROOT/shards/$(printf '%05d' "$SHARD_ID")"

@@ -28,6 +28,7 @@ It also contains the downstream OpenFold work that consumes that dataset.
 3. [Stage-to-code map](#3-stage-to-code-map)
 4. [Repository architecture](#4-repository-architecture)
 5. [Installation](#5-installation)
+    - [Running this on Barkla as a different user](#running-this-on-barkla-as-a-different-user) — every path is derived from `$USER`
 6. [Running the pipeline](#6-running-the-pipeline)
 7. [Configuration architecture](#7-configuration-architecture)
 8. [Snapshot selection and preservation](#8-snapshot-selection-and-preservation)
@@ -341,7 +342,13 @@ breakdown.
 
 The pipeline needs Python ≥ 3.10 with `numpy`, `scipy`, `pyarrow`, `pandas`,
 `gemmi` and `PyYAML`. On Barkla the pinned environment is
-`~/fastscratch/envs/bri_env_1.2.2`, exported in `reproducibility/`.
+`$PDBCLEAN_FASTSCRATCH_ROOT/envs/bri_env_1.2.2` — that is, under your own
+account — and is exported in `reproducibility/bri_environment.yml`:
+
+```bash
+conda env create -p "$PDBCLEAN_FASTSCRATCH_ROOT/envs/bri_env_1.2.2" \
+                 -f reproducibility/bri_environment.yml
+```
 
 ```bash
 # editable install, provides the `pdbclean` entry point
@@ -350,6 +357,72 @@ pip install -e .
 # with test dependencies
 pip install -e ".[test]"
 ```
+
+### Running this on Barkla as a different user
+
+Nothing in the executable surface of this repository names an individual
+account. Every path is derived at run time from `$USER` and from where the
+clone happens to sit, by a single file:
+
+```
+config/pdbclean/pipeline_env.sh
+```
+
+Each shell and Slurm wrapper sources it on the line after its `#SBATCH`
+block, so cloning the repository and running it is the whole setup:
+
+```bash
+git clone <url> && cd COMP702_pdbclean_pipeline
+bash scripts/pdbclean_doctor.sh
+```
+
+`pdbclean_doctor.sh` resolves every path the pipeline will use, reports
+whether it exists, and for anything missing prints the command that fixes it.
+It writes nothing, and exits non-zero while the pipeline cannot yet run. Run
+it first; it is faster than discovering a missing directory inside a GPU
+allocation.
+
+**What is derived, and what you can override.** Every variable below follows
+`${VAR:-<default>}`, so exporting it beforehand always wins. Setting none of
+them is the expected case on Barkla.
+
+| Variable | Default | What it is |
+|---|---|---|
+| `PDBCLEAN_REPO_ROOT` | the clone's own location | Derived from the env file's path, so a clone anywhere works |
+| `PDBCLEAN_SCRATCH_ROOT` | `$HOME/scratch`, else `/mnt/scratch/users/$USER` | Bulk storage |
+| `PDBCLEAN_FASTSCRATCH_ROOT` | `$HOME/fastscratch`, else `/mnt/fastscratch/users/$USER` | Working storage |
+| `PDBCLEAN_PYTHON` | the pinned env's interpreter if present, else `python` | A bare `python` on a compute node has none of the dependencies |
+| `PDBCLEAN_CONDA_ENV` | `$PDBCLEAN_FASTSCRATCH_ROOT/envs/bri_env_1.2.2` | Rebuild from `reproducibility/bri_environment.yml` |
+| `PDBCLEAN_OUTPUT_ROOT` / `_RELEASE_ROOT` / `_RUN_ROOT` | under `$PDBCLEAN_REPO_ROOT/outputs/` | Created on first run |
+| `PDBCLEAN_SLURM_PARTITION` | `nodes` | Change for a different cluster |
+| `OPENFOLD_SRC`, `OPENFOLD_TRAIN_ENV`, `OPENFOLD_RUNS_ROOT`, `OPENFOLD_MSA_STORE`, `OPENFOLD_MMCIF_DIR`, `MMSEQS_BIN` | under the two scratch roots | Retraining only; the PDBClean pipeline does not need them |
+
+Two notes on the Barkla-specific parts. `$HOME/scratch` and `$HOME/fastscratch`
+are the conventional symlinks, but the `/mnt/...` paths are used directly where
+they are absent, so both layouts work. And `TMPDIR`, `TRITON_CACHE_DIR` and
+`TORCH_EXTENSIONS_DIR` are redirected onto fastscratch, because left on a
+compute node's local `/tmp` they fill the disk and the job dies mid-epoch.
+
+To keep the repository on one filesystem and the working data on another, or
+to run the whole thing outside Barkla, point the two roots wherever you like:
+
+```bash
+export PDBCLEAN_SCRATCH_ROOT=/some/big/disk/$USER
+export PDBCLEAN_FASTSCRATCH_ROOT=/some/fast/disk/$USER
+bash scripts/pdbclean_doctor.sh
+```
+
+An entirely separate environment file can be supplied instead, and the
+wrappers will source that rather than the default:
+
+```bash
+export PDBCLEAN_ENV_FILE=/path/to/my_pipeline_env.sh
+```
+
+One thing is deliberately *not* rewritten: the JSON manifests and logs under
+`outputs/` and `logs/` still contain absolute paths under the account that
+produced them. Those are provenance records of runs that actually happened —
+rewriting them would falsify the record. They are inputs to no code path.
 
 ### Without installing
 

@@ -15,6 +15,10 @@
 #
 # Usage:  submit_train_full.sh [run_name] [total_epochs] [epoch_len] [gpus] [accum]
 
+# Portability: every path below comes from here, derived from $USER.
+# Override any of them in the environment; nothing names an individual.
+source "${PDBCLEAN_ENV_FILE:-$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/../../config/pdbclean/pipeline_env.sh}"
+
 set -uo pipefail
 
 RUN_NAME="${1:-pdbclean_dedup_v1_scratch}"
@@ -23,10 +27,10 @@ EPOCH_LEN="${3:-1024}"
 GPUS="${4:-1}"
 ACCUM="${5:-8}"
 
-REPO=/mnt/fastscratch/users/sgsrehm1/COMP702_pdbclean_pipeline
+REPO=${PDBCLEAN_REPO_ROOT}
 SBATCH="$REPO/scripts/openfold_training/gpu_train_full.sbatch"
-LOGS=/mnt/fastscratch/users/sgsrehm1/openfold_cache/logs
-RUN_ROOT="/mnt/fastscratch/users/sgsrehm1/openfold_runs/$RUN_NAME"
+LOGS=${OPENFOLD_LOG_ROOT}
+RUN_ROOT="${OPENFOLD_RUNS_ROOT}/$RUN_NAME"
 
 mkdir -p "$LOGS"
 
