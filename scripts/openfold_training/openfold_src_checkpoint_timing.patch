@@ -1,0 +1,30 @@
+--- openfold_src/train_openfold.py (upstream)	2026-09-21 09:56:52.073994298 +0100
++++ openfold_src/train_openfold.py	2026-09-21 09:52:01.000000000 +0100
+@@ -451,6 +451,16 @@
+             every_n_epochs=1,
+             auto_insert_metric_name=False,
+             save_top_k=save_top_k,
++            # Lightning decides *when* to save, and its default is not "every
++            # epoch": _should_save_on_train_epoch_end returns False whenever
++            # check_val_every_n_epoch != 1, which moves every save to
++            # on_validation_end. Validating every 5 epochs therefore turns this
++            # rolling resume point into a once-every-5-epochs one, and a run
++            # that dies inside its first validation has never checkpointed at
++            # all -- which is exactly what happened here. This checkpoint is a
++            # resume point, so it must follow the training epoch, not the
++            # validation schedule.
++            save_on_train_epoch_end=True,
+         )
+         callbacks.append(mc)
+ 
+@@ -485,6 +495,10 @@
+                     auto_insert_metric_name=False,
+                     save_top_k=-1,
+                     filename="milestone-epoch{epoch}-step{step}",
++                    # Same reason as the rolling checkpoint above: a milestone
++                    # is a point in the training history, so it follows the
++                    # training epoch rather than the validation schedule.
++                    save_on_train_epoch_end=True,
+                 )
+             )
+ 
