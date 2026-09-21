@@ -6,8 +6,8 @@
 #SBATCH --cpus-per-task=1
 #SBATCH --mem=1G
 #SBATCH --time=00:10:00
-#SBATCH --output=/mnt/fastscratch/users/sgsrehm1/openfold_cache/logs/watchdog_%j.out
-#SBATCH --error=/mnt/fastscratch/users/sgsrehm1/openfold_cache/logs/watchdog_%j.out
+#SBATCH --output=watchdog_%j.out
+#SBATCH --error=watchdog_%j.out
 
 # Heartbeat for the OpenFold retraining lineage.
 #
@@ -33,13 +33,17 @@
 # To stop the chain deliberately:  touch $RUN_ROOT/.stop_training
 # It also stops itself once the run reaches its final epoch.
 
+# Portability: every path below comes from here, derived from $USER.
+# Override any of them in the environment; nothing names an individual.
+source "${PDBCLEAN_ENV_FILE:-$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/../../config/pdbclean/pipeline_env.sh}"
+
 set -uo pipefail   # deliberately not -e: a failed probe must never break the chain
 
 RUN_ROOT="${1:?run root required}"
 INTERVAL="${2:-1800}"       # seconds between heartbeats
 TOTAL_EPOCHS="${3:-400}"    # must match the --max_epochs the run was submitted with
 
-REPO=/mnt/fastscratch/users/sgsrehm1/COMP702_pdbclean_pipeline
+REPO=${PDBCLEAN_REPO_ROOT}
 SELF="$REPO/scripts/openfold_training/train_watchdog.sbatch"
 RESUBMIT="$RUN_ROOT/.resubmit_cmd"
 LOG="$RUN_ROOT/watchdog.log"
@@ -89,7 +93,16 @@ fi
 # Counted from the end of the row -- lfs wraps the filesystem onto its own line
 # when the path is long, which shifts every field if counted from the front.
 # The last four are always: files-used, files-quota, files-limit, grace.
-INODES="$(lfs quota -u "$USER" /mnt/fastscratch 2>/dev/null | tr -d '*' \
+#
+# Check the filesystem the run root is actually on, not a fixed one. The run
+# root moved to /mnt/scratch when the checkpoints were relocated, and a check
+# pinned to /mnt/fastscratch went on reporting that filesystem's pressure as
+# though checkpoints depended on it -- warning loudly about a quota no
+# checkpoint write touches, while the one that mattered went unwatched.
+QUOTA_FS="$(df -P "$RUN_ROOT" 2>/dev/null | awk 'NR==2 {print $6}')"
+QUOTA_FS="${QUOTA_FS:-/mnt/scratch}"
+
+INODES="$(lfs quota -u "$USER" "$QUOTA_FS" 2>/dev/null | tr -d '*' \
           | awk 'NF>=8 && $(NF-3) ~ /^[0-9]+$/ {print $(NF-3), $(NF-2); exit}')"
 if [[ -n "$INODES" ]]; then
     read -r USED SOFT <<<"$INODES"
@@ -100,8 +113,8 @@ if [[ -n "$INODES" ]]; then
         # forever. What actually matters is whether the few files a day this run
         # creates still fit, so alarm on the absolute count that remains.
         LEFT=$(( SOFT - USED ))
-        say "fastscratch inodes: $USED / $SOFT ($LEFT free)"
-        (( LEFT < 5000 )) && say "WARNING: under 5000 files of quota left; checkpoint writes are at risk"
+        say "$QUOTA_FS inodes: $USED / $SOFT ($LEFT free)"
+        (( LEFT < 5000 )) && say "WARNING: under 5000 files of quota left on $QUOTA_FS; checkpoint writes are at risk"
     fi
 fi
 
@@ -203,7 +216,7 @@ if [[ -n "$ALIVE" ]]; then
             if (( AGE > 10800 )); then
                 say "WARNING: a job is RUNNING but nothing has been logged for $((AGE / 3600))h."
                 say "         Possible hang holding the GPU. Check the newest log in"
-                say "         /mnt/fastscratch/users/sgsrehm1/openfold_cache/logs/"
+                say "         ${OPENFOLD_LOG_ROOT}/"
             fi
         fi
     fi
@@ -249,7 +262,7 @@ echo "$LAST_STEP" > "$RUN_ROOT/.watchdog_last_step"
 if (( STALLS >= 3 )); then
     say "GIVING UP: $STALLS rescues in a row made no progress past step $LAST_STEP."
     say "           Not resubmitting. Check the newest log in"
-    say "           /mnt/fastscratch/users/sgsrehm1/openfold_cache/logs/ then"
+    say "           ${OPENFOLD_LOG_ROOT}/ then"
     say "           rm $RUN_ROOT/.watchdog_stalls to re-arm."
     exit 0
 fi

@@ -27,6 +27,10 @@
 # fallback for a *fresh* submission after a hard failure, where there is no
 # requeue to inherit from.
 
+# Portability: every path below comes from here, derived from $USER.
+# Override any of them in the environment; nothing names an individual.
+source "${PDBCLEAN_ENV_FILE:-$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/../../config/pdbclean/pipeline_env.sh}"
+
 set -euo pipefail
 
 RUN_NAME="${1:?run name required}"
@@ -56,7 +60,7 @@ if [[ "$NTASKS" != "$GPUS" ]]; then
     exit 2
 fi
 
-REPO=/mnt/fastscratch/users/sgsrehm1/COMP702_pdbclean_pipeline
+REPO=${PDBCLEAN_REPO_ROOT}
 # Which prepared population this run trains on. Defaults to the geometric
 # (PDBClean-dedup-v1) view, so an unqualified submission is the run that has
 # always been submitted here; the sequence-reduced Stage-14d view is selected by
@@ -67,8 +71,20 @@ ALIGN_INDEX="${OF_ALIGN_INDEX:-$BASE/alignment_index/pdbclean_dedup_v1.index}"
 
 # Held-out validation. Absent these, the run behaves exactly as it always has:
 # no validation loader, no held-out metric, checkpoint selection by recency.
+#
+# The three paths are set together or not at all. Defaulting the other two off
+# OF_VAL_DATA_DIR would guess at a layout; a bare `set -u` abort would say only
+# "unbound variable" an hour into a GPU allocation. So say which one is missing.
 VAL_ARGS=()
 if [[ -n "${OF_VAL_DATA_DIR:-}" ]]; then
+    for _v in OF_VAL_ALIGNMENT_DIR OF_VAL_CACHE; do
+        if [[ -z "${!_v:-}" ]]; then
+            echo "OF_VAL_DATA_DIR is set but $_v is not; validation needs all three" >&2
+            exit 2
+        fi
+    done
+    unset _v
+
     VAL_ARGS=(
         --val_data_dir "$OF_VAL_DATA_DIR"
         --val_alignment_dir "$OF_VAL_ALIGNMENT_DIR"
@@ -79,15 +95,15 @@ if [[ -n "${OF_VAL_DATA_DIR:-}" ]]; then
 else
     echo "validation      : none configured"
 fi
-OFSRC=/mnt/fastscratch/users/sgsrehm1/openfold_src
+OFSRC=${OPENFOLD_SRC}
 
-MMCIF=/users/sgsrehm1/scratch/COMP702_openfold_20260101/pdbclean-dedup-v1/mmcif
-MSAS=/mnt/fastscratch/users/sgsrehm1/COMP702_openfold_msa/20260101/pdbclean-dedup-v1/msas
+MMCIF=${OPENFOLD_MMCIF_DIR}
+MSAS=${OPENFOLD_MSA_STORE}
 
-RUN_ROOT="/mnt/fastscratch/users/sgsrehm1/openfold_runs/$RUN_NAME"
+RUN_ROOT="${OPENFOLD_RUNS_ROOT}/$RUN_NAME"
 LOGDIR="$RUN_ROOT/slurm_logs"
 
-ENV=/mnt/fastscratch/users/sgsrehm1/envs/openfold_train
+ENV=${OPENFOLD_TRAIN_ENV}
 . "$ENV/etc/conda/activate.d/10-cache-dirs.sh"
 
 export PYTHONPATH="$REPO/src${PYTHONPATH:+:$PYTHONPATH}"
@@ -395,6 +411,21 @@ echo
 echo "=== training ==="
 
 cd "$OFSRC"
+
+# The #SBATCH header names one partition and the submitter overrides it with
+# another, so the job inherits whichever memory default each one carries:
+# gpu-l40s sets DefMemPerNode=UNLIMITED, gpu-h100 sets DefMemPerCPU=21150. With
+# both in the environment srun refuses to start --
+#
+#   srun: fatal: SLURM_MEM_PER_CPU, SLURM_MEM_PER_GPU, and SLURM_MEM_PER_NODE
+#         are mutually exclusive.
+#
+# and the job dies in about a second, which is long enough to look like a
+# scheduling hiccup and short enough to leave no useful log. Clearing all three
+# makes srun inherit the allocation sbatch already holds, which is what is
+# wanted in every case: the memory is decided by the allocation, not by which
+# partition's default happened to be read last.
+unset SLURM_MEM_PER_CPU SLURM_MEM_PER_GPU SLURM_MEM_PER_NODE
 
 set -x
 srun --kill-on-bad-exit=1 "$ENV/bin/python" train_openfold.py \
