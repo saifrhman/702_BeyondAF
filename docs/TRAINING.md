@@ -115,6 +115,22 @@ Only `val_mmcif_data_cache.json` is pruned: OpenFold enumerates validation
 chains from the alignment directory and then drops any chain absent from the
 cache, so every symlink stays in place.
 
+> **Pruning the cache is necessary but was not sufficient.** The filter in
+> `OpenFoldSingleDataset` runs only `if self.chain_data_cache is not None`, and
+> the **monomer** `OpenFoldDataModule` never stored the validation cache at
+> all: `train_openfold.py` passes `--val_mmcif_data_cache_path` inside
+> `**vars(args)`, the constructor had no matching parameter, and `**kwargs`
+> swallowed it silently. The eval dataset was therefore built with
+> `chain_data_cache=None`, no filter ran, and all 4,000 chains loaded —
+> including the 4,174-residue one. Three runs died at exactly the same
+> `98.31 GiB` allocation before this was found. The multimer module already
+> threaded the argument through correctly; only the monomer path was broken.
+> Fixed in `scripts/openfold_training/openfold_src_val_cache_path.patch`.
+>
+> The lesson generalises: a filter that silently no-ops when its input is
+> `None` will not tell you it did nothing. Verify the *effect* — chain count
+> and longest chain actually loaded — not the presence of the filtering code.
+
 ---
 
 ## 6. Running it
