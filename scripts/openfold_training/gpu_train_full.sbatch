@@ -92,7 +92,7 @@ ALIGN_INDEX="${OF_ALIGN_INDEX:-$BASE/alignment_index/pdbclean_dedup_v1.index}"
 # "unbound variable" an hour into a GPU allocation. So say which one is missing.
 VAL_ARGS=()
 if [[ -n "${OF_VAL_DATA_DIR:-}" ]]; then
-    for _v in OF_VAL_ALIGNMENT_DIR OF_VAL_CACHE; do
+    for _v in OF_VAL_ALIGNMENT_DIR OF_VAL_CACHE OF_VAL_PROJECTION; do
         if [[ -z "${!_v:-}" ]]; then
             echo "OF_VAL_DATA_DIR is set but $_v is not; validation needs all three" >&2
             exit 2
@@ -104,6 +104,10 @@ if [[ -n "${OF_VAL_DATA_DIR:-}" ]]; then
         --val_data_dir "$OF_VAL_DATA_DIR"
         --val_alignment_dir "$OF_VAL_ALIGNMENT_DIR"
         --val_mmcif_data_cache_path "$OF_VAL_CACHE"
+        # Validation must read the same residues training reads. Without this
+        # the featuriser falls back to the deposited polymer and peak memory
+        # stops being bounded by anything the split controls.
+        --val_projection_index_path "$OF_VAL_PROJECTION"
         --check_val_every_n_epoch "${OF_VAL_EVERY_N_EPOCHS:-5}"
     )
     echo "validation      : $OF_VAL_DATA_DIR every ${OF_VAL_EVERY_N_EPOCHS:-5} epochs"

@@ -1,0 +1,15 @@
+{
+  "chains": 4000,
+  "lineage_source": "Gold retained_label_seq_ids (openfold_training_chains.parquet)",
+  "max_runs_for_one_chain": 1,
+  "multi_run_lineages": 0,
+  "projection_index": "/mnt/fastscratch/users/sgsrehm1/COMP702_pdbclean_pipeline/outputs/openfold_training/20260101/pdbclean-final-v1/val_projection_index.json",
+  "projection_index_bytes": 224933,
+  "projection_index_sha256": "25b3914cf99edeae8306e5a910be57d76c497fa10b2cc20db8bc17820ce054f6",
+  "single_run_lineages": 4000,
+  "stage": "openfold_projection_index",
+  "stage_version": "1.0",
+  "total_runs": 4000,
+  "training_chains": "/mnt/fastscratch/users/sgsrehm1/COMP702_pdbclean_pipeline/outputs/openfold_training/20260101/pdbclean-final-v1/val_chains.parquet",
+  "training_chains_sha256": "a625120634c4cf5d55f51316e45a4a256b9ac7debb05915aa8cc632b25c1a559"
+}
