@@ -47,6 +47,15 @@ def main() -> int:
                     help="val_mmcif_data_cache.json to prune in place")
     ap.add_argument("--max-length", type=int, default=768,
                     help="longest validation chain to keep, in residues")
+    ap.add_argument("--min-length", type=int, default=4,
+                    help=("shortest validation chain to keep, in residues. "
+                          "Above 1 is a hard requirement, not a preference: "
+                          "make_sequence_features builds seq_length as "
+                          "[num_res] * num_res, so a single-residue chain has "
+                          "shape (1,), squeeze_features strips that last axis "
+                          "to a 0-dim scalar, and the following seq_length[0] "
+                          "raises IndexError. The default of 4 also drops "
+                          "chains too short for lDDT-CA to mean anything."))
     ap.add_argument("--dry-run", action="store_true")
     args = ap.parse_args()
 
@@ -54,8 +63,10 @@ def main() -> int:
     lengths = {k: len(v["seq"]) for k, v in original.items()}
 
     keep = {k: v for k, v in original.items()
-            if lengths[k] <= args.max_length}
+            if args.min_length <= lengths[k] <= args.max_length}
     drop = sorted((lengths[k], k) for k in original if k not in keep)
+    too_short = [(n, k) for n, k in drop if n < args.min_length]
+    too_long = [(n, k) for n, k in drop if n > args.max_length]
 
     print(f"cache          {args.cache}")
     print(f"cap            {args.max_length} residues")
@@ -64,7 +75,8 @@ def main() -> int:
     print(f"after          {len(keep):,} chains "
           f"(longest {max(lengths[k] for k in keep):,})")
     print(f"excluded       {len(drop):,} chains "
-          f"({100 * len(drop) / len(original):.2f}%)")
+          f"({100 * len(drop) / len(original):.2f}%)"
+          f"  [{len(too_short)} too short, {len(too_long)} too long]")
 
     if drop:
         shown = ", ".join(f"{k}({n})" for n, k in drop[-10:])
@@ -90,6 +102,8 @@ def main() -> int:
     manifest = {
         "stage": "validation_length_cap",
         "max_length_residues": args.max_length,
+        "min_length_residues": args.min_length,
+        "excluded_too_short": [k for _, k in too_short],
         "chains_before": len(original),
         "chains_after": len(keep),
         "chains_excluded": len(drop),
@@ -101,7 +115,10 @@ def main() -> int:
         "capped_cache_sha256": sha256_file(args.cache),
         "reason": (
             "OpenFold validation does not crop; template triangular attention "
-            "is ~cubic in chain length and the tail exhausted an 80 GB H100."
+            "is ~cubic in chain length and the tail exhausted an 80 GB H100. "
+            "The lower bound is separate: a single-residue chain makes "
+            "squeeze_features collapse seq_length to a 0-dim tensor and the "
+            "loader raises IndexError."
         ),
     }
     manifest_path = args.cache.with_name("validation_length_cap.json")
