@@ -1,0 +1,34 @@
+--- train_openfold.py	(upstream)
++++ train_openfold.py	(COMP702)
+@@ -586,6 +586,13 @@
+     'num_nodes', 'precision', 'max_epochs', 'log_every_n_steps',
+     'num_sanity_val_steps', 'reload_dataloaders_every_n_epochs',
+     'accumulate_grad_batches', 'check_val_every_n_epoch',
++    # Without these two in the list the CLI values never reach the Trainer and
++    # Lightning's default of "no clipping" stands. AlphaFold clips by global
++    # norm 0.1; this run diverged twice without it -- a single epoch took the
++    # loss from 34.8 to 689.9 and destroyed weights that had reached a held-out
++    # lDDT-CA of 0.71. With accumulate_grad_batches the clip applies to the
++    # accumulated gradient, which is the intended behaviour.
++    'gradient_clip_val', 'gradient_clip_algorithm',
+     ]
+ 
+     trainer_args = {k: v for k, v in vars(args).items() if k in trainer_kws}
+@@ -820,6 +827,17 @@
+                 searched on rather than the deposited polymer."""
+     )
+     parser.add_argument(
++        "--gradient_clip_val", type=float, default=None,
++        help="""Clip gradients to this global norm. AlphaFold uses 0.1.
++                Lightning's default is no clipping at all, which lets one
++                pathological batch destroy the weights in a single step."""
++    )
++    parser.add_argument(
++        "--gradient_clip_algorithm", type=str, default="norm",
++        choices=["norm", "value"],
++        help="Clip by global norm (AlphaFold's choice) or elementwise value."
++    )
++    parser.add_argument(
+         "--val_projection_index_path", type=str, default=None,
+         help="""The same projection index, for the held-out validation chains.
+                 Without it validation features the deposited polymer while

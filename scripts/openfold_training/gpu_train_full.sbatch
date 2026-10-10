@@ -407,9 +407,26 @@ echo "openfold source : $OFSRC (from da89cd28446abcd7be95459b7b349dedaee666c0)"
 nvidia-smi --query-gpu=name,memory.total,driver_version --format=csv,noheader
 
 # -- resume from this run's own newest checkpoint, never from released weights
+#
+# OF_RESUME_CKPT overrides "newest". Newest is the right default for a wall-clock
+# requeue, and the wrong one after a divergence: on 2026-10-08 a single epoch
+# took the loss from 34.8 to 689.9 and destroyed weights that had reached a
+# held-out lDDT-CA of 0.71, so the newest checkpoint was a ruined model and the
+# good one was fourteen epochs behind it. Naming a checkpoint explicitly is how
+# the run goes back to the last good state instead of re-climbing from the
+# wreckage.
 RESUME=""
-LATEST="$(find "$RUN_ROOT" -name '*.ckpt' -printf '%T@ %p\n' 2>/dev/null \
-          | sort -rn | head -1 | cut -d' ' -f2- || true)"
+if [[ -n "${OF_RESUME_CKPT:-}" ]]; then
+    if [[ ! -f "$OF_RESUME_CKPT" ]]; then
+        echo "OF_RESUME_CKPT is set but does not exist: $OF_RESUME_CKPT" >&2
+        exit 2
+    fi
+    LATEST="$OF_RESUME_CKPT"
+    echo "resume override : OF_RESUME_CKPT"
+else
+    LATEST="$(find "$RUN_ROOT" -name '*.ckpt' -printf '%T@ %p\n' 2>/dev/null \
+              | sort -rn | head -1 | cut -d' ' -f2- || true)"
+fi
 
 if [[ -n "$LATEST" ]]; then
     echo "resuming from   : $LATEST"
@@ -470,6 +487,8 @@ srun --kill-on-bad-exit=1 "$ENV/bin/python" train_openfold.py \
     --log_lr \
     --num_sanity_val_steps 0 \
     --checkpoint_every_epoch \
+    --gradient_clip_val "${OF_GRAD_CLIP:-0.1}" \
+    --gradient_clip_algorithm norm \
     "${VAL_ARGS[@]}" \
     $RESUME
 STATUS=$?
