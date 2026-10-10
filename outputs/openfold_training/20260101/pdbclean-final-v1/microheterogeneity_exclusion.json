@@ -1,0 +1,30 @@
+{
+  "chains_after": 138047,
+  "chains_before": 138055,
+  "confirmed_bad_chains": [
+    "1aw8_E",
+    "6rxh_B",
+    "6v24_A",
+    "8au0_A",
+    "8au0_C",
+    "8tx9_A",
+    "8tx9_B",
+    "8tx9_D",
+    "9ixd_A"
+  ],
+  "entries_scanned": 79785,
+  "flagged_chains": [
+    "1aw8_E",
+    "2hal_I",
+    "6rxh_B",
+    "6v24_A",
+    "8au0_A",
+    "8au0_C",
+    "8tx9_A",
+    "8tx9_B",
+    "8tx9_D",
+    "9ixd_A"
+  ],
+  "reason": "OpenFold builds seqres by walking _entity_poly_seq and appends every row; an entry with point microheterogeneity repeats a residue number, shifting all later indices, so the Gold-retained projection reads the wrong residues. The input-view adapter refuses these rather than train against a misaligned MSA.",
+  "stage": "microheterogeneity_exclusion"
+}

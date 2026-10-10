@@ -1,0 +1,21 @@
+{
+  "confirmed_bad": [],
+  "confirmed_bad_count": 0,
+  "entries_scanned": 79785,
+  "flagged_chains": [
+    "1aw8_E",
+    "2hal_I",
+    "6rxh_B",
+    "6v24_A",
+    "8au0_A",
+    "8au0_C",
+    "8tx9_A",
+    "8tx9_B",
+    "8tx9_D",
+    "9ixd_A"
+  ],
+  "flagged_count": 10,
+  "num_shards": 1,
+  "shard": 0,
+  "unreadable_entries": []
+}

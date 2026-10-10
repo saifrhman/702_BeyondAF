@@ -1,0 +1,67 @@
+{
+  "confirmed_bad": [
+    {
+      "chain": "1aw8_E",
+      "expected": "9cbcb6d2f2c76a4c",
+      "observed": "bbed7bbe5191774c"
+    },
+    {
+      "chain": "6rxh_B",
+      "expected": "8b283b41a19d87af",
+      "observed": "1ba81c01f8a92dbd"
+    },
+    {
+      "chain": "6v24_A",
+      "expected": "d2e7b29f800f90e4",
+      "observed": "927f46bc040b33b8"
+    },
+    {
+      "chain": "8au0_A",
+      "expected": "3f144e1ca779c018",
+      "observed": "1eeba405208c40e9"
+    },
+    {
+      "chain": "8au0_C",
+      "expected": "2c646ab03d5940ca",
+      "observed": "23fed8885fec8a33"
+    },
+    {
+      "chain": "8tx9_A",
+      "expected": "549cbdb228b0b92a",
+      "observed": "4d6527a53efbed8f"
+    },
+    {
+      "chain": "8tx9_B",
+      "expected": "5b7ca052fa3d24d1",
+      "observed": "8295fc880b4a82b6"
+    },
+    {
+      "chain": "8tx9_D",
+      "expected": "5cc020d16a8cdfdc",
+      "observed": "139e964b1522a471"
+    },
+    {
+      "chain": "9ixd_A",
+      "expected": "27c26040c6c0f951",
+      "observed": "0359093a858a0337"
+    }
+  ],
+  "confirmed_bad_count": 9,
+  "entries_scanned": 0,
+  "flagged_chains": [
+    "1aw8_E",
+    "2hal_I",
+    "6rxh_B",
+    "6v24_A",
+    "8au0_A",
+    "8au0_C",
+    "8tx9_A",
+    "8tx9_B",
+    "8tx9_D",
+    "9ixd_A"
+  ],
+  "flagged_count": 10,
+  "num_shards": 1,
+  "shard": 0,
+  "unreadable_entries": []
+}
