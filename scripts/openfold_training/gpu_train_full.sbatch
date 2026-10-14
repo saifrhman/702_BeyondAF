@@ -431,6 +431,25 @@ fi
 if [[ -n "$LATEST" ]]; then
     echo "resuming from   : $LATEST"
     RESUME="--resume_from_ckpt $LATEST"
+
+    # OF_RESUME_WEIGHTS_ONLY takes the weights and leaves the optimizer behind.
+    #
+    # Needed because a loss spike poisons Adam, not just the weights. At epoch
+    # 54 the weights were clean -- no NaN, norms in line with epoch 49, and a
+    # held-out lDDT-CA of 0.7104 -- while exp_avg_sq had grown 23,721x and
+    # exp_avg 73x against the epoch-49 milestone. A plain resume restores that
+    # momentum and walks straight back off the cliff: the first epoch after one
+    # came out at loss 301, worse than the 72 the un-rolled-back run managed.
+    # Gradient clipping cannot help, because it bounds the incoming gradient
+    # and the damage is already banked in the running moments.
+    #
+    # This also drops the step counter, so the LR warmup restarts and epoch
+    # numbering begins again -- pass a reduced --max_epochs to land on the
+    # intended total, and shift the decay start by the steps already served.
+    if [[ "${OF_RESUME_WEIGHTS_ONLY:-0}" == "1" ]]; then
+        RESUME="$RESUME --resume_model_weights_only true"
+        echo "resume mode     : WEIGHTS ONLY (optimizer state discarded)"
+    fi
 else
     echo "resuming from   : (none -- fresh random initialisation)"
 fi
